@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Core Surface */
+  --oslo-void: #05070a;
+  --oslo-base: #0a0f17;
+  --oslo-elevated: #111827;
+  --oslo-floating: #1a2332;
+
+  /* Accent - Nordic Ice */
+  --oslo-ice: #00e5ff;
+  --oslo-ice-dim: rgba(0, 229, 255, 0.1);
+  --oslo-ice-glow: rgba(0, 229, 255, 0.4);
+
+  /* Secondary - Aurora */
+  --oslo-aurora: #7c3aed;
+  --oslo-aurora-dim: rgba(124, 58, 237, 0.1);
+
+  /* Semantic */
+  --oslo-success: #10b981;
+  --oslo-warning: #f59e0b;
+  --oslo-danger: #ef4444;
+  --oslo-danger-dim: rgba(239, 68, 68, 0.1);
+
+  /* Text */
+  --oslo-text-primary: #f8fafc;
+  --oslo-text-secondary: #94a3b8;
+  --oslo-text-muted: #475569;
+  --oslo-text-ice: #00e5ff;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background-color: var(--oslo-void);
+  color: var(--oslo-text-primary);
+  font-family: "Inter", "Geist", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--oslo-void);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--oslo-floating);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--oslo-text-muted);
+}
+
+/* Glass card utility */
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  transition: border-color 0.2s ease;
+}
+
+/* Ice glow animation */
+@keyframes ice-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.1), 0 0 12px rgba(0, 229, 255, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.2), 0 0 24px rgba(0, 229, 255, 0.1);
+  }
+}
+
+.ice-glow-pulse {
+  animation: ice-pulse 3s ease-in-out infinite;
+}
+
+/* Aurora glow animation */
+@keyframes aurora-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.1), 0 0 12px rgba(124, 58, 237, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.2), 0 0 24px rgba(124, 58, 237, 0.1);
+  }
+}
+
+.aurora-glow-pulse {
+  animation: aurora-pulse 3s ease-in-out infinite;
+}
+
+/* Shimmer skeleton */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* Count-up number style */
+.number-mono {
+  font-family: "JetBrains Mono", "SF Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Grid background pattern */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Selection highlight */
+::selection {
+  background: rgba(0, 229, 255, 0.2);
+  color: var(--oslo-text-primary);
+}
