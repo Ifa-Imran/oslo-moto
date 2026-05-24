@@ -50,6 +50,10 @@ interface IOSLODEX {
     /// @return Expected USDT output
     function getOSLOForUSDTOutput(uint256 osloAmount) external view returns (uint256);
 
+    /// @notice Receive OSLO from InvestmentEngine to replenish DEX reserves
+    /// @param osloAmount Amount of OSLO to add to reserves
+    function replenishOsloReserve(uint256 osloAmount) external;
+
     /// @notice Get reserves
     /// @return usdtRes USDT reserve
     /// @return osloRes OSLO reserve

@@ -308,6 +308,15 @@ contract OSLODEX is IOSLODEX, ReentrancyGuard {
         return usdtAmount;
     }
 
+    /// @notice Receive OSLO from InvestmentEngine to replenish DEX reserves.
+    /// @dev Called by InvestmentEngine when DEX OSLO is depleted from deposits.
+    /// @param osloAmount Amount of OSLO to add to reserves
+    function replenishOsloReserve(uint256 osloAmount) external onlyInvestmentEngine {
+        if (osloAmount == 0) revert ZeroAmount();
+        osloToken.safeTransferFrom(msg.sender, address(this), osloAmount);
+        osloReserve += osloAmount;
+    }
+
     /// @notice Get reserves
     /// @return _usdtRes USDT reserve
     /// @return _osloRes OSLO reserve

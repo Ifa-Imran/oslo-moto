@@ -168,6 +168,30 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         // Transfer USDT from user to this contract
         usdt.safeTransferFrom(msg.sender, address(this), amount);
 
+        // Ensure DEX has sufficient OSLO reserve for this deposit.
+        // DEX OSLO is consumed by every deposit but never replenished by sells
+        // (tax routing sends 70% to IE + 30% burn, 0% to DEX).
+        // InvestmentEngine holds 11M OSLO reserve — auto-refill DEX as needed.
+        {
+            uint256 dexOsloBalance = osloToken.balanceOf(osloDex);
+            uint256 estimatedOsloNeeded;
+            (uint256 dexUsdt, uint256 dexOslo) = IOSLODEX(osloDex).getReserves();
+            if (dexUsdt > 0 && dexOslo > 0) {
+                estimatedOsloNeeded = (amount * dexOslo) / (dexUsdt + amount);
+            } else {
+                estimatedOsloNeeded = amount;
+            }
+            uint256 minBuffer = 1000 * 1e18; // 1,000 OSLO minimum buffer
+            if (dexOsloBalance < estimatedOsloNeeded + minBuffer) {
+                uint256 shortfall = (estimatedOsloNeeded + minBuffer) - dexOsloBalance;
+                uint256 ieOsloBalance = osloToken.balanceOf(address(this));
+                if (ieOsloBalance >= shortfall) {
+                    osloToken.forceApprove(osloDex, shortfall);
+                    IOSLODEX(osloDex).replenishOsloReserve(shortfall);
+                }
+            }
+        }
+
         // Approve and send USDT to DEX, receive OSLO in return
         usdt.forceApprove(osloDex, amount);
         uint256 osloReceived = IOSLODEX(osloDex).processDeposit(amount);
@@ -261,13 +285,13 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         // Transfer OSLO reward to user
         osloToken.safeTransfer(msg.sender, osloAmount);
 
-        // Distribute referral commission on the profit portion
-        // Commission = 0.50% of deposit is the profit basis (per original spec)
-        // V2: commission is 5% of pendingUSDT (standard profit share)
+        // Distribute referral commission — yield on yield
+        // Commission is based on the full yield (pendingUSDT), not just a fraction.
+        // Upline receives percentage of downline's yield earnings:
+        //   L1: 30%, L2: 20%, L3-L10: 1%, L11-L15: 0.50%, L16-L20: 0.25%
         if (referral != address(0)) {
-            uint256 profitPortion = (pendingUSDT * 5) / 100; // 5% profit portion for commissions
-            if (profitPortion > 0) {
-                IReferral(referral).distributeReferralCommission(msg.sender, profitPortion);
+            if (pendingUSDT > 0) {
+                IReferral(referral).distributeReferralCommission(msg.sender, pendingUSDT);
             }
         }
 
