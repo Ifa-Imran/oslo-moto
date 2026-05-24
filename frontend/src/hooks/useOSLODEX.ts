@@ -3,7 +3,7 @@
  * 
  * Provides functions for:
  * - Getting OSLO price from OSLODEX
- * - Swapping USDT ↔ OSLO
+ * - Swapping OSLO → USDT (sell only — USDT→OSLO is protocol-restricted)
  * - Reading OSLODEX reserves
  */
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
@@ -22,7 +22,7 @@ export function useOSLODEX() {
     address: CONTRACTS.osloDEX,
     abi: osloDEXABI,
     functionName: "getPrice",
-    query: { refetchInterval: 10000 }, // Refetch every 10 seconds
+    query: { refetchInterval: 10000 },
   });
 
   // Read reserves
@@ -36,53 +36,41 @@ export function useOSLODEX() {
   const usdtReserve = reserves ? formatEther((reserves as [bigint, bigint])[0]) : "0";
   const osloReserve = reserves ? formatEther((reserves as [bigint, bigint])[1]) : "0";
 
-  // Swap USDT for OSLO
-  const { data: swapUSDTData, writeContract: swapUSDTForOSLO, isPending: isSwapPending } = useWriteContract();
+  // Swap OSLO → USDT (sell only)
+  const { data: swapData, writeContract: swapOSLOForUSDT, isPending: isSwapPending } = useWriteContract();
 
   const { isLoading: isSwapConfirming, isSuccess: isSwapConfirmed } = useWaitForTransactionReceipt({
-    hash: swapUSDTData,
+    hash: swapData,
   });
 
-  // Calculate output amount (frontend estimation)
-  const getEstimatedOutput = (inputAmount: string, isUSDTInput: boolean) => {
+  // Calculate USDT output for OSLO input (sell direction)
+  const getEstimatedOutput = (inputAmount: string) => {
     const input = parseFloat(inputAmount);
     if (!input || !reserves) return 0;
-
     const usdtRes = parseFloat(usdtReserve);
     const osloRes = parseFloat(osloReserve);
-
-    if (isUSDTInput) {
-      // USDT → OSLO: output = (input * osloReserve) / (usdtReserve + input)
-      return (input * osloRes) / (usdtRes + input);
-    } else {
-      // OSLO → USDT: output = (input * usdtReserve) / (osloReserve + input)
-      return (input * usdtRes) / (osloRes + input);
-    }
+    // OSLO → USDT: output = (input * usdtReserve) / (osloReserve + input)
+    return (input * usdtRes) / (osloRes + input);
   };
 
-  // Execute swap USDT → OSLO
-  const handleSwapUSDTForOSLO = async (usdtAmount: string) => {
-    const amount = parseEther(usdtAmount);
-    const estimatedOutput = getEstimatedOutput(usdtAmount, true);
-    const minOutput = estimatedOutput * (1 - slippage / 100);
-    const minAmount = parseEther(minOutput.toString());
-
-    swapUSDTForOSLO({
-      address: CONTRACTS.osloDEX,
-      abi: osloDEXABI,
-      functionName: "swapUSDTForOSLO",
-      args: [amount, minAmount],
-    });
+  // Helper: convert USDT amount to estimated OSLO output (for display only)
+  const getOSLOOutput = (usdtAmount: number) => {
+    if (!usdtAmount || !reserves) return 0;
+    const usdtRes = parseFloat(usdtReserve);
+    const osloRes = parseFloat(osloReserve);
+    if (usdtRes === 0 || osloRes === 0) return 0;
+    // USDT → OSLO: output = (usdtAmount * osloReserve) / (usdtReserve + usdtAmount)
+    return (usdtAmount * osloRes) / (usdtRes + usdtAmount);
   };
 
   // Execute swap OSLO → USDT
   const handleSwapOSLOForUSDT = async (osloAmount: string) => {
     const amount = parseEther(osloAmount);
-    const estimatedOutput = getEstimatedOutput(osloAmount, false);
+    const estimatedOutput = getEstimatedOutput(osloAmount);
     const minOutput = estimatedOutput * (1 - slippage / 100);
     const minAmount = parseEther(minOutput.toString());
 
-    swapUSDTForOSLO({
+    swapOSLOForUSDT({
       address: CONTRACTS.osloDEX,
       abi: osloDEXABI,
       functionName: "swapOSLOForUSDT",
@@ -101,9 +89,9 @@ export function useOSLODEX() {
     setSlippage,
     
     // Actions
-    handleSwapUSDTForOSLO,
     handleSwapOSLOForUSDT,
     getEstimatedOutput,
+    getOSLOOutput,
     refetchPrice,
     refetchReserves,
     

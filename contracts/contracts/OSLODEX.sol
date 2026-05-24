@@ -255,11 +255,14 @@ contract OSLODEX is IOSLODEX, ReentrancyGuard {
 
     // ─── Public Swap Functions ─────────────────────────────────────────
 
-    /// @notice Swap USDT for OSLO
+    /// @notice Swap USDT for OSLO — restricted to InvestmentEngine only.
+    /// @dev Regular users cannot swap USDT→OSLO. Only the InvestmentEngine
+    ///      may use this for protocol operations (yield auto-buy uses swapYieldForOSLO).
     /// @param usdtAmount Amount of USDT to swap
     /// @param minOsloAmount Minimum OSLO to receive (slippage protection)
     /// @return osloAmount Amount of OSLO received
-    function swapUSDTForOSLO(uint256 usdtAmount, uint256 minOsloAmount) external nonReentrant returns (uint256 osloAmount) {
+    function swapUSDTForOSLO(uint256 usdtAmount, uint256 minOsloAmount)
+        external onlyInvestmentEngine nonReentrant returns (uint256 osloAmount) {
         if (usdtAmount == 0) revert ZeroAmount();
         if (usdtReserve == 0 || osloReserve == 0) revert InsufficientReserve();
 

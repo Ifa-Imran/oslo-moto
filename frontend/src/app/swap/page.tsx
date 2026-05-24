@@ -17,7 +17,6 @@ export default function SwapPage() {
     setSwapInput,
     slippage,
     setSlippage,
-    handleSwapUSDTForOSLO,
     handleSwapOSLOForUSDT,
     getEstimatedOutput,
     isSwapPending,
@@ -25,42 +24,24 @@ export default function SwapPage() {
     isSwapConfirmed,
   } = useOSLODEX();
 
-  const { data: usdtBal } = useBalance({
-    address,
-    token: CONTRACTS.usdt as `0x${string}`,
-  });
-
   const { data: osloBal } = useBalance({
     address,
     token: CONTRACTS.osloToken as `0x${string}`,
   });
 
-  const [swapDirection, setSwapDirection] = useState<"USDT_TO_OSLO" | "OSLO_TO_USDT">("USDT_TO_OSLO");
   const [showSlippageSettings, setShowSlippageSettings] = useState(false);
 
-  const estimatedOutput = getEstimatedOutput(swapInput, swapDirection === "USDT_TO_OSLO");
+  const estimatedOutput = getEstimatedOutput(swapInput);
   
   const handleMax = () => {
-    if (swapDirection === "USDT_TO_OSLO" && usdtBal) {
-      setSwapInput((Number(usdtBal.formatted) - 0.01).toString()); // Leave some for gas
-    } else if (swapDirection === "OSLO_TO_USDT" && osloBal) {
+    if (osloBal) {
       setSwapInput(osloBal.formatted);
     }
   };
 
   const handleSwap = async () => {
     if (!swapInput || parseFloat(swapInput) <= 0) return;
-    
-    if (swapDirection === "USDT_TO_OSLO") {
-      await handleSwapUSDTForOSLO(swapInput);
-    } else {
-      await handleSwapOSLOForUSDT(swapInput);
-    }
-  };
-
-  const switchDirection = () => {
-    setSwapDirection(swapDirection === "USDT_TO_OSLO" ? "OSLO_TO_USDT" : "USDT_TO_OSLO");
-    setSwapInput("");
+    await handleSwapOSLOForUSDT(swapInput);
   };
 
   if (!isConnected) {
@@ -83,7 +64,7 @@ export default function SwapPage() {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
             OSLO DEX
           </h1>
-          <p className="text-gray-400">Swap USDT ↔ OSLO with protocol-controlled liquidity</p>
+          <p className="text-gray-400">Sell OSLO for USDT at the protocol-controlled exchange rate</p>
         </div>
 
         {/* Price Display */}
@@ -112,7 +93,7 @@ export default function SwapPage() {
               <label className="text-sm text-gray-300 font-medium">From</label>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-400">
-                  Balance: {swapDirection === "USDT_TO_OSLO" ? usdtBal?.formatted || "0" : osloBal?.formatted || "0"}
+                  Balance: {osloBal?.formatted || "0"}
                 </span>
                 <button
                   onClick={handleMax}
@@ -131,24 +112,14 @@ export default function SwapPage() {
                 className="w-full bg-transparent text-white text-2xl font-semibold outline-none placeholder-gray-600"
               />
               <div className="flex items-center gap-2 mt-2">
-                <div className={`w-8 h-8 rounded-full ${swapDirection === "USDT_TO_OSLO" ? "bg-green-500" : "bg-blue-500"} flex items-center justify-center text-white font-bold text-sm`}>
-                  {swapDirection === "USDT_TO_OSLO" ? "U" : "O"}
+                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">
+                  O
                 </div>
                 <span className="text-white font-semibold">
-                  {swapDirection === "USDT_TO_OSLO" ? "USDT" : "OSLO"}
+                  OSLO
                 </span>
               </div>
             </div>
-          </div>
-
-          {/* Switch Direction Button */}
-          <div className="flex justify-center my-4">
-            <button
-              onClick={switchDirection}
-              className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 rounded-full flex items-center justify-center text-white text-2xl font-bold transition-all transform hover:scale-110 shadow-lg"
-            >
-              ↓
-            </button>
           </div>
 
           {/* Output Section */}
@@ -161,11 +132,11 @@ export default function SwapPage() {
                 {estimatedOutput > 0 ? estimatedOutput.toFixed(6) : "0.0"}
               </div>
               <div className="flex items-center gap-2 mt-2">
-                <div className={`w-8 h-8 rounded-full ${swapDirection === "USDT_TO_OSLO" ? "bg-blue-500" : "bg-green-500"} flex items-center justify-center text-white font-bold text-sm`}>
-                  {swapDirection === "USDT_TO_OSLO" ? "O" : "U"}
+                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-sm">
+                  U
                 </div>
                 <span className="text-white font-semibold">
-                  {swapDirection === "USDT_TO_OSLO" ? "OSLO" : "USDT"}
+                  USDT
                 </span>
               </div>
             </div>
@@ -223,12 +194,13 @@ export default function SwapPage() {
         <div className="mt-8 bg-blue-900/30 backdrop-blur-xl border border-blue-500/30 rounded-2xl p-6">
           <h3 className="text-lg font-bold text-white mb-3">ℹ️ About OSLO DEX</h3>
           <ul className="space-y-2 text-sm text-gray-300">
+            <li>• <strong>Sell OSLO → USDT:</strong> Convert your OSLO tokens to USDT anytime</li>
             <li>• <strong>Protocol-Controlled Liquidity:</strong> All liquidity is managed by the OSLO protocol</li>
             <li>• <strong>Fair Pricing:</strong> Price = USDT Reserve / OSLO Reserve</li>
             <li>• <strong>Slippage Protection:</strong> Customizable slippage tolerance for every swap</li>
-            <li>• <strong>Fee Structure:</strong> 10% fee → OSLO burned · USDT value stays in DEX as additional liquidity</li>
+            <li>• <strong>10% Sell Fee:</strong> 10% fee → OSLO burned · USDT value stays in DEX as additional liquidity</li>
             <li>• <strong>Burn Cap:</strong> Burning stops when 90% of supply (9.99M OSLO) is burned; 1.11M OSLO remain</li>
-            <li>• <strong>No External AMM:</strong> Built-in DEX, no third-party dependencies</li>
+            <li>• <strong>Buy OSLO:</strong> OSLO is earned through yield on your staked USDT — not purchasable directly</li>
           </ul>
         </div>
       </div>

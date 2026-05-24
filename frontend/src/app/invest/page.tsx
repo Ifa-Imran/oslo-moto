@@ -456,6 +456,14 @@ function DepositCard({
   );
   const { osloBalance } = useTokenReads(address);
 
+  // DEX reserves for OSLO yield conversion
+  const { data: dexReserves } = useReadContract({
+    address: CONTRACTS.osloDEX,
+    abi: osloDEXAbi,
+    functionName: "getReserves",
+    query: { refetchInterval: 10000 },
+  });
+
   const deposit = depositData.data as [bigint, bigint, bigint, bigint, bigint, bigint, bigint, boolean] | undefined;
   const rewards = pendingRewards.data as [bigint, bigint] | undefined;
 
@@ -471,6 +479,18 @@ function DepositCard({
   const capProgress = (claimedNum / (amountNum * RETURN_CAP_MULTIPLIER)) * 100;
   const invReturn = rewards ? Number(rewards[0]) / 1e18 : 0;
   const profReturn = rewards ? Number(rewards[1]) / 1e18 : 0;
+
+  // Calculate OSLO equivalent of pending USDT yield using DEX rate
+  const dexRes = dexReserves as [bigint, bigint] | undefined;
+  const dexUsdtNum = dexRes ? Number(dexRes[0]) / 1e18 : 0;
+  const dexOsloNum = dexRes ? Number(dexRes[1]) / 1e18 : 0;
+  const osloYield = dexUsdtNum > 0 && dexOsloNum > 0 && invReturn > 0
+    ? (invReturn * dexOsloNum) / (dexUsdtNum + invReturn)
+    : 0;
+  // Total claimed converted to OSLO at current DEX rate
+  const claimedOslo = dexUsdtNum > 0 && dexOsloNum > 0 && claimedNum > 0
+    ? (claimedNum * dexOsloNum) / (dexUsdtNum + claimedNum)
+    : 0;
   const osloBal = osloBalance?.data as bigint | undefined;
   const osloBalNum = osloBal ? Number(osloBal) / 1e18 : 0;
 
@@ -530,22 +550,22 @@ function DepositCard({
         </p>
       </div>
 
-      {/* Accrued — V3: Yield displayed in USDT, auto-buys OSLO on claim */}
+      {/* Accrued — V3: Yield displayed in OSLO, auto-buys on claim */}
       <div className="grid grid-cols-2 gap-3 mb-4 p-3 rounded-lg bg-white/[0.03]">
         <div>
           <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">
-            Yield (USDT)
+            Yield (OSLO)
           </p>
           <p className="text-sm font-mono text-oslo-text-primary">
-            ${formatNumber(invReturn, 4)}
+            {formatNumber(osloYield, 4)} OSLO
           </p>
         </div>
         <div>
           <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">
-            Profit (USDT)
+            Total Claimed
           </p>
           <p className="text-sm font-mono text-oslo-text-primary">
-            ${formatNumber(profReturn, 4)}
+            {formatNumber(claimedOslo, 4)} OSLO
           </p>
         </div>
       </div>
@@ -603,9 +623,9 @@ function DepositCard({
       {/* Actions */}
       {active && (
         <div className="space-y-2">
-          {/* V3: Auto-buy note — yield USDT auto-buys OSLO at DEX rate, zero fee */}
+          {/* V3: Yield accrues in USDT internally, displayed as OSLO. Claim sends OSLO to wallet. */}
           <p className="text-[10px] text-oslo-text-muted leading-relaxed">
-            Yield accrues in USDT. On claim, it auto-buys OSLO at the DEX rate — <span className="text-oslo-success">zero fee</span>.
+            Yield accrues in OSLO. Claim to receive tokens directly to your wallet — <span className="text-oslo-success">zero fee</span>.
           </p>
           <IceButton
             size="sm"
