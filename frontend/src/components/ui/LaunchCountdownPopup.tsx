@@ -8,17 +8,17 @@ const STORAGE_KEY = "oslo_launch_target_ts";
 const DISMISS_KEY = "oslo_launch_popup_dismissed";
 
 /**
- * Returns the next 11 PM JST (Japan Standard Time = UTC+9) target timestamp in ms.
- * 11 PM JST = 14:00 UTC. If we're past today's 11 PM JST, returns tomorrow's.
+ * Returns the next 4 AM JST (Japan Standard Time = UTC+9) target timestamp in ms.
+ * 4 AM JST = 19:00 UTC. If we're past today's 4 AM JST, returns tomorrow's.
  * Caches the computed target in localStorage so it persists across reloads.
  */
-function getJST11PMTarget(): number {
+function getJST4AMTarget(): number {
   if (typeof window === "undefined") {
     // SSR fallback: compute fresh
     const now = new Date();
     const target = new Date(Date.UTC(
       now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(),
-      14, 0, 0, 0
+      19, 0, 0, 0
     ));
     if (now.getTime() >= target.getTime()) {
       target.setUTCDate(target.getUTCDate() + 1);
@@ -37,11 +37,11 @@ function getJST11PMTarget(): number {
   // If cached target is still in the future, keep it
   if (cachedTarget > now) return cachedTarget;
 
-  // Compute fresh next 11 PM JST target
+  // Compute fresh next 4 AM JST target
   const nowDate = new Date();
   const target = new Date(Date.UTC(
     nowDate.getUTCFullYear(), nowDate.getUTCMonth(), nowDate.getUTCDate(),
-    14, 0, 0, 0
+    19, 0, 0, 0
   ));
   if (now >= target.getTime()) {
     target.setUTCDate(target.getUTCDate() + 1);
@@ -69,7 +69,7 @@ export function LaunchCountdownPopup() {
 
   useEffect(() => {
     setMounted(true);
-    const t = getJST11PMTarget();
+    const t = getJST4AMTarget();
     setTarget(t);
     setTimeLeft(calculateTimeLeft(t));
 
@@ -153,7 +153,7 @@ export function LaunchCountdownPopup() {
               OSLO Protocol Goes Live
             </h2>
             <p className="text-sm text-oslo-text-secondary text-center mt-2 mb-6">
-              Every day at <strong className="text-oslo-ice">11 PM JST</strong> brings a new opportunity.
+              Every day at <strong className="text-oslo-ice">4 AM JST</strong> brings a new opportunity.
               Get ready to stake, earn, and grow with OSLO.
             </p>
 
