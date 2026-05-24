@@ -167,6 +167,17 @@ async function main() {
   await tx.wait();
   console.log("Minted 10,000 USDT to deployer for testing");
 
+  // ─── Step 12b: Seed DEX with initial liquidity ────────────────────
+  console.log("\n--- Step 12b: Seeding DEX with initial liquidity ---");
+  const seedUSDT = ethers.parseEther("1000");
+  tx = await mockUSDT.transfer(liquidityManagerAddress, seedUSDT);
+  await tx.wait();
+  console.log("Transferred", ethers.formatEther(seedUSDT), "USDT to LiquidityManager");
+  tx = await liquidityManager.addInitialLiquidity(seedUSDT);
+  await tx.wait();
+  const [dexUsdt, dexOslo] = await osloDEX.getReserves();
+  console.log("DEX seeded:", ethers.formatEther(dexUsdt), "USDT +", ethers.formatEther(dexOslo), "OSLO");
+
   // ─── Step 13: Register deployer as root referral ──────────────────
   console.log("\n--- Step 13: Registering root referral ---");
   tx = await mockUSDT.approve(referralAddress, ethers.parseEther("1"));
