@@ -31,6 +31,7 @@ export interface OSLODEXInterface extends Interface {
       | "admin"
       | "completeSetup"
       | "configure"
+      | "forceSetInvestmentEngine"
       | "getOSLOForUSDTOutput"
       | "getPrice"
       | "getReserves"
@@ -43,6 +44,7 @@ export interface OSLODEXInterface extends Interface {
       | "processDeposit"
       | "processWithdrawal"
       | "replenishOsloReserve"
+      | "setInvestmentEngine"
       | "setupComplete"
       | "swapOSLOForUSDT"
       | "swapUSDTForOSLO"
@@ -79,6 +81,10 @@ export interface OSLODEXInterface extends Interface {
   encodeFunctionData(
     functionFragment: "configure",
     values: [AddressLike, AddressLike, AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "forceSetInvestmentEngine",
+    values: [AddressLike]
   ): string;
   encodeFunctionData(
     functionFragment: "getOSLOForUSDTOutput",
@@ -118,6 +124,10 @@ export interface OSLODEXInterface extends Interface {
   encodeFunctionData(
     functionFragment: "replenishOsloReserve",
     values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setInvestmentEngine",
+    values: [AddressLike]
   ): string;
   encodeFunctionData(
     functionFragment: "setupComplete",
@@ -165,6 +175,10 @@ export interface OSLODEXInterface extends Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "configure", data: BytesLike): Result;
   decodeFunctionResult(
+    functionFragment: "forceSetInvestmentEngine",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "getOSLOForUSDTOutput",
     data: BytesLike
   ): Result;
@@ -201,6 +215,10 @@ export interface OSLODEXInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "replenishOsloReserve",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setInvestmentEngine",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -389,6 +407,12 @@ export interface OSLODEX extends BaseContract {
     "nonpayable"
   >;
 
+  forceSetInvestmentEngine: TypedContractMethod<
+    [_investmentEngine: AddressLike],
+    [void],
+    "nonpayable"
+  >;
+
   getOSLOForUSDTOutput: TypedContractMethod<
     [osloAmount: BigNumberish],
     [bigint],
@@ -433,6 +457,12 @@ export interface OSLODEX extends BaseContract {
 
   replenishOsloReserve: TypedContractMethod<
     [osloAmount: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
+  setInvestmentEngine: TypedContractMethod<
+    [_investmentEngine: AddressLike],
     [void],
     "nonpayable"
   >;
@@ -499,6 +529,13 @@ export interface OSLODEX extends BaseContract {
     "nonpayable"
   >;
   getFunction(
+    nameOrSignature: "forceSetInvestmentEngine"
+  ): TypedContractMethod<
+    [_investmentEngine: AddressLike],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "getOSLOForUSDTOutput"
   ): TypedContractMethod<[osloAmount: BigNumberish], [bigint], "view">;
   getFunction(
@@ -542,6 +579,13 @@ export interface OSLODEX extends BaseContract {
   getFunction(
     nameOrSignature: "replenishOsloReserve"
   ): TypedContractMethod<[osloAmount: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "setInvestmentEngine"
+  ): TypedContractMethod<
+    [_investmentEngine: AddressLike],
+    [void],
+    "nonpayable"
+  >;
   getFunction(
     nameOrSignature: "setupComplete"
   ): TypedContractMethod<[], [boolean], "view">;

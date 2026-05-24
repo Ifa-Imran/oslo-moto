@@ -715,7 +715,7 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLOToken.sol": {
-      "lastModificationDate": 1779639466443,
+      "lastModificationDate": 1779639957321,
       "contentHash": "cd3d04cf111899a3c10ec87cb360d158",
       "sourceName": "contracts/OSLOToken.sol",
       "solcConfig": {
@@ -908,8 +908,8 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLOInvestmentEngine.sol": {
-      "lastModificationDate": 1779639620196,
-      "contentHash": "5aca9ec426803be95dae9e11f66ad83b",
+      "lastModificationDate": 1779651580806,
+      "contentHash": "f44178f52a218f23c7ab0db162017b2d",
       "sourceName": "contracts/OSLOInvestmentEngine.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -1034,7 +1034,7 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLORankSystem.sol": {
-      "lastModificationDate": 1779625276071,
+      "lastModificationDate": 1779631696030,
       "contentHash": "b68eded0c7cce72ef9d7fa4b557b4e76",
       "sourceName": "contracts/OSLORankSystem.sol",
       "solcConfig": {
@@ -1198,7 +1198,7 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\interfaces\\IOSLODEX.sol": {
-      "lastModificationDate": 1779639358848,
+      "lastModificationDate": 1779639956899,
       "contentHash": "b20a7b97f02d5ccba02c6873f5d6610d",
       "sourceName": "contracts/interfaces/IOSLODEX.sol",
       "solcConfig": {
@@ -1234,8 +1234,8 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLODEX.sol": {
-      "lastModificationDate": 1779645725815,
-      "contentHash": "7ed19d38d61d2622654f53c048fb1064",
+      "lastModificationDate": 1779651841194,
+      "contentHash": "bf1b47a0fd445075796f33e0210d9d6c",
       "sourceName": "contracts/OSLODEX.sol",
       "solcConfig": {
         "version": "0.8.24",

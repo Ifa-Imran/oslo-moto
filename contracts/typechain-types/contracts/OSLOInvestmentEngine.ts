@@ -41,6 +41,7 @@ export interface OSLOInvestmentEngineInterface extends Interface {
       | "getUserTier"
       | "isInEarlyExitPeriod"
       | "launchTimestamp"
+      | "minClaimThreshold"
       | "notifyLevelIncome"
       | "notifyRankBonus"
       | "osloDex"
@@ -48,6 +49,7 @@ export interface OSLOInvestmentEngineInterface extends Interface {
       | "rankSystem"
       | "referral"
       | "setDepositsPaused"
+      | "setMinClaimThreshold"
       | "setReferral"
       | "setupComplete"
       | "timelock"
@@ -130,6 +132,10 @@ export interface OSLOInvestmentEngineInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "minClaimThreshold",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "notifyLevelIncome",
     values: [AddressLike, BigNumberish]
   ): string;
@@ -147,6 +153,10 @@ export interface OSLOInvestmentEngineInterface extends Interface {
   encodeFunctionData(
     functionFragment: "setDepositsPaused",
     values: [boolean]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setMinClaimThreshold",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "setReferral",
@@ -226,6 +236,10 @@ export interface OSLOInvestmentEngineInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "minClaimThreshold",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "notifyLevelIncome",
     data: BytesLike
   ): Result;
@@ -239,6 +253,10 @@ export interface OSLOInvestmentEngineInterface extends Interface {
   decodeFunctionResult(functionFragment: "referral", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "setDepositsPaused",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setMinClaimThreshold",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -538,6 +556,8 @@ export interface OSLOInvestmentEngine extends BaseContract {
 
   launchTimestamp: TypedContractMethod<[], [bigint], "view">;
 
+  minClaimThreshold: TypedContractMethod<[], [bigint], "view">;
+
   notifyLevelIncome: TypedContractMethod<
     [user: AddressLike, amount: BigNumberish],
     [void],
@@ -560,6 +580,12 @@ export interface OSLOInvestmentEngine extends BaseContract {
 
   setDepositsPaused: TypedContractMethod<
     [_paused: boolean],
+    [void],
+    "nonpayable"
+  >;
+
+  setMinClaimThreshold: TypedContractMethod<
+    [_threshold: BigNumberish],
     [void],
     "nonpayable"
   >;
@@ -692,6 +718,9 @@ export interface OSLOInvestmentEngine extends BaseContract {
     nameOrSignature: "launchTimestamp"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
+    nameOrSignature: "minClaimThreshold"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
     nameOrSignature: "notifyLevelIncome"
   ): TypedContractMethod<
     [user: AddressLike, amount: BigNumberish],
@@ -720,6 +749,9 @@ export interface OSLOInvestmentEngine extends BaseContract {
   getFunction(
     nameOrSignature: "setDepositsPaused"
   ): TypedContractMethod<[_paused: boolean], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "setMinClaimThreshold"
+  ): TypedContractMethod<[_threshold: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "setReferral"
   ): TypedContractMethod<[_referral: AddressLike], [void], "nonpayable">;

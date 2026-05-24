@@ -100,6 +100,20 @@ contract OSLODEX is IOSLODEX, ReentrancyGuard {
         admin = address(0);
     }
 
+    /// @notice Update the InvestmentEngine address. Only callable by Timelock.
+    /// @param _investmentEngine New InvestmentEngine address
+    function setInvestmentEngine(address _investmentEngine) external onlyTimelock {
+        if (_investmentEngine == address(0)) revert ZeroAddress();
+        investmentEngine = _investmentEngine;
+    }
+
+    /// @notice Force-update InvestmentEngine address. Only callable by Admin (pre-setup).
+    /// @dev Used when redeploying IE before completeSetup is called.
+    function forceSetInvestmentEngine(address _investmentEngine) external onlyAdmin {
+        if (_investmentEngine == address(0)) revert ZeroAddress();
+        investmentEngine = _investmentEngine;
+    }
+
     // ─── Liquidity Management (Protocol-Controlled Only) ────────────────
 
     /// @notice Add initial liquidity to the DEX (called once during deployment)

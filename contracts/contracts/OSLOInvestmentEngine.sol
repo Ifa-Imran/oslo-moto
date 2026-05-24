@@ -50,6 +50,7 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
     address public timelock;
     bool public setupComplete;
     bool public depositsPaused;      // Emergency pause for new deposits only
+    uint256 public minClaimThreshold = 1 * 1e18; // $1 USDT minimum to claim (settable by timelock)
 
     mapping(address => Deposit[]) public userDeposits;
     mapping(address => UserInfo) public users;
@@ -154,6 +155,12 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         referral = _referral;
     }
 
+    /// @notice Set the minimum claim threshold in USDT (18 decimals). Only callable by Timelock.
+    /// @param _threshold New minimum threshold (e.g. 1 * 1e18 = $1)
+    function setMinClaimThreshold(uint256 _threshold) external onlyTimelock {
+        minClaimThreshold = _threshold;
+    }
+
     // ─── Core Functions ─────────────────────────────────────────────────
 
     /// @notice Deposit USDT into the investment engine. No deposit fee — full amount staked.
@@ -242,8 +249,8 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         uint256 pendingUSDT = _calculatePendingRewards(msg.sender, dep);
         if (pendingUSDT == 0) revert NothingToClaim();
 
-        // Minimum withdrawal threshold check
-        if (pendingUSDT < OSLOConstants.MIN_WITHDRAWAL_THRESHOLD) revert BelowWithdrawalThreshold();
+        // Minimum withdrawal threshold check (settable by timelock, default $1)
+        if (pendingUSDT < minClaimThreshold) revert BelowWithdrawalThreshold();
 
         // Combined 3X cap check
         uint256 maxCombined = dep.amount * OSLOConstants.RETURN_CAP_MULTIPLIER;
