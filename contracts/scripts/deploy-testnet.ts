@@ -112,7 +112,7 @@ async function main() {
   console.log("RankSystem configured");
 
   // Referral configure
-  tx = await referral.configure(investmentEngineAddress, timelockAddress);
+  tx = await referral.configure(investmentEngineAddress, osloDEXAddress, timelockAddress);
   await tx.wait();
   console.log("Referral configured");
 
@@ -169,6 +169,9 @@ async function main() {
 
   // ─── Step 13: Register deployer as root referral ──────────────────
   console.log("\n--- Step 13: Registering root referral ---");
+  tx = await mockUSDT.approve(referralAddress, ethers.parseEther("1"));
+  await tx.wait();
+  console.log("USDT approved for referral registration");
   tx = await referral.register(deployer.address, ethers.ZeroAddress);
   await tx.wait();
   console.log("Deployer registered as root referral");
