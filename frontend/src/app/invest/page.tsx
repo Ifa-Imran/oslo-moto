@@ -456,7 +456,7 @@ function DepositCard({
   );
   const { osloBalance } = useTokenReads(address);
 
-  const deposit = depositData.data as [bigint, bigint, bigint, bigint, bigint, boolean] | undefined;
+  const deposit = depositData.data as [bigint, bigint, bigint, bigint, bigint, bigint, bigint, boolean] | undefined;
   const rewards = pendingRewards.data as [bigint, bigint] | undefined;
 
   const [convertingOslo, setConvertingOslo] = useState(false);
@@ -464,7 +464,7 @@ function DepositCard({
 
   if (!deposit) return <Skeleton className="h-64" />;
 
-  const [amount, tier, depositTime, lastClaimTime, totalClaimed, active] = deposit;
+  const [amount, tier, _dailyRate, depositTime, lastClaimTime, totalClaimed, _maxReturn, active] = deposit;
   const amountNum = Number(amount) / 1e18;
   const tierNum = Number(tier);
   const claimedNum = Number(totalClaimed) / 1e18;

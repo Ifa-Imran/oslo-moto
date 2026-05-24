@@ -1,0 +1,908 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "OSLOConstants",
+  "sourceName": "contracts/libraries/OSLOConstants.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "BASIS_POINTS",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "CONTRACT_RESERVE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "DAO_MONTHLY_ROYALTY_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "DAO_TEAM_SIZE_REQUIREMENT",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "DEAD_ADDRESS",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "DEX_ALLOCATION",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "EARLY_EXIT_FEE_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "EARLY_EXIT_PERIOD",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "LAUNCH_TIMESTAMP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "LIFETIME_RATE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "LIFETIME_RATE_START",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "MAX_BURN_SUPPLY",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "MAX_DAO_MEMBERS",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "MAX_DEPOSIT_PER_TX",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "MAX_REFERRAL_LEVELS",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "MIN_REMAINING_SUPPLY",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "MIN_WITHDRAWAL_THRESHOLD",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "PROPOSAL_THRESHOLD_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "QUALIFIED_DIRECT_MIN_DEPOSIT",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "RANK1_BONUS_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "RANK1_TURNOVER",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "RANK2_BONUS_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "RANK2_TURNOVER",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "RANK3_BONUS_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "RANK3_TURNOVER",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "RANK4_BONUS_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "RANK4_TURNOVER",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "RANK5_BONUS_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "RANK5_TURNOVER",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "RANK6_BONUS_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "RANK6_TURNOVER",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "RANK7_BONUS_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "RANK7_TURNOVER",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "RANK_MAIN_LEG_MAX_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "RANK_OTHER_LEGS_MIN_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "REFERRAL_L11_15_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "REFERRAL_L16_20_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "REFERRAL_L1_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "REFERRAL_L2_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "REFERRAL_L3_10_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "RETURN_CAP_MULTIPLIER",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "SELL_TAX_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "SELL_TAX_FEE_BURN_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "SELL_TAX_TO_BURN_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "SELL_TAX_TO_CONTRACT_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TIER1_MAX",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TIER1_MIN",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TIER1_RATE_MAX",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TIER1_RATE_MIN",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TIER2_MAX",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TIER2_MIN",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TIER2_RATE_MAX",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TIER2_RATE_MIN",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TIER3_MAX",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TIER3_MIN",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TIER3_RATE_MAX",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TIER3_RATE_MIN",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TIER4_IMPLICIT_MAX",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TIER4_MIN",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TIER4_RATE_MAX",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TIER4_RATE_MIN",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TIMELOCK_DELAY",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TOTAL_SUPPLY",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TREASURY_TO_DAO_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TREASURY_TO_LP_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TREASURY_TO_RANK_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "VOTING_PERIOD_BLOCKS",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "WEEK_DURATION",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "WITHDRAWAL_FEE_BP",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x6106e661003a600b82828239805160001a60731461002d57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600436106104115760003560e01c806376f5f7001161022a578063a497b1341161013a578063dadf4022116100c2578063e954f41d11610091578063e954f41d14610673578063ed4d5f971461067e578063f5dd1f5d1461068f578063f64ff5b014610697578063fdce696c146106a857600080fd5b8063dadf402214610547578063dc67edbe14610455578063e1f1c4a714610617578063e4bd07c41461066357600080fd5b8063c7ccbafe11610109578063c7ccbafe14610639578063c86ebc991461057c578063cbbe2e8f146104ea578063ce18b69f1461064a578063d64667661461065257600080fd5b8063a497b1341461060e578063a4f8bd1514610617578063b136bdda14610620578063c5f7dd3c1461062957600080fd5b80638bfef2f4116101bd578063902d55a51161018c578063902d55a5146105da5780639fa42572146105ec578063a23df8dc14610455578063a29dfff3146105fc578063a35e793d1461060657600080fd5b80638bfef2f4146105b65780638bffc5b5146104555780638c46387a146105c85780638d419d71146104c857600080fd5b806382b14df3116101f957806382b14df3146104bf578063831f23ee1461059457806386f72d9f1461059c578063882d893b146105ad57600080fd5b806376f5f700146105725780637961954c1461057c5780637a8ba8ad14610525578063810f01b91461058b57600080fd5b8063484d395f1161032557806359942d29116102b8578063617b99d211610287578063617b99d21461054757806364d19609146104165780636e464a001461054f5780636f140bb714610557578063740bb5fa1461056157600080fd5b806359942d29146104555780635ba1c1a91461052d5780635cbbd382146104ea5780635ecd37e21461053757600080fd5b80634e6fd6c4116102f45780634e6fd6c4146104fc5780634edeb4bb1461051d5780635049700f1461052557806356b50540146104ea57600080fd5b8063484d395f146104d95780634936704e146104ea5780634bcaeb8d146104f25780634cdf912b1461041657600080fd5b80631d55c1c4116103a857806327d88e9f1161037757806327d88e9f1461045557806330b05bf5146104af578063313b0df4146104b75780633ca73ba1146104bf57806341f1c0d9146104c857600080fd5b80631d55c1c41461047e57806320f5735014610486578063232c53481461049757806324ebae691461049f57600080fd5b80630c48c5ee116103e45780630c48c5ee146104555780630e3fce461461045d57806318b64e03146104655780631b14f4eb1461046d57600080fd5b8063018b21f614610416578063039a9a2814610432578063063f391114610416578063080c1b3e14610443575b600080fd5b61041f6103e881565b6040519081526020015b60405180910390f35b61041f69054b40b1f852bda0000081565b61041f6a09195731e2ce35eb00000081565b61041f606481565b61041f602d81565b61041f601981565b61041f69152d02c7e14af680000081565b61041f601e81565b61041f6969e10de76676d080000081565b61041f60c881565b61041f681b0d04202f47ec000081565b61041f604b81565b61041f600f81565b61041f6107d081565b61041f69010f0cf064dd5920000081565b61041f690fe1c215e8f838e0000081565b61041f603281565b61041f6276a70081565b61050561dead81565b6040516001600160a01b039091168152602001610429565b61041f609681565b61041f600081565b61041f6202a30081565b61041f688778977bbb052c000081565b61041f601481565b61041f607381565b61041f620d2f0081565b61041f69fe1c215e8f838e00000081565b61041f62093a8081565b61041f678ac7230489e8000081565b61041f610fa081565b61041f600a81565b61041f692a5a058fc295ed00000081565b61041f610bb881565b61041f6a021165458500521280000081565b61041f6a084376fc33378d97c0000081565b61041f6a092e8434aaaf80e180000081565b61041f68056bc75e2d6310000081565b61041f6201518081565b61041f60fa81565b61041f61177081565b61041f61271081565b61041f611b5881565b61041f68878678326eac90000081565b61041f69021e19e0c9bab240000081565b61041f600381565b61041f690a968163f0a57b40000081565b61041f681b1ae4d6e2ef50000081565b61041f6369ffca8081565b61041f69eb0d387777f349c0000081565b61041f60af81565b61041f69010eff0fae29b1bc000081565b61041f60058156fea2646970667358221220387130dc5cc88e6b395b5aaabcf60cc1cedc0e8668689624920efebf6bd9983064736f6c63430008180033",
+  "deployedBytecode": "0x73000000000000000000000000000000000000000030146080604052600436106104115760003560e01c806376f5f7001161022a578063a497b1341161013a578063dadf4022116100c2578063e954f41d11610091578063e954f41d14610673578063ed4d5f971461067e578063f5dd1f5d1461068f578063f64ff5b014610697578063fdce696c146106a857600080fd5b8063dadf402214610547578063dc67edbe14610455578063e1f1c4a714610617578063e4bd07c41461066357600080fd5b8063c7ccbafe11610109578063c7ccbafe14610639578063c86ebc991461057c578063cbbe2e8f146104ea578063ce18b69f1461064a578063d64667661461065257600080fd5b8063a497b1341461060e578063a4f8bd1514610617578063b136bdda14610620578063c5f7dd3c1461062957600080fd5b80638bfef2f4116101bd578063902d55a51161018c578063902d55a5146105da5780639fa42572146105ec578063a23df8dc14610455578063a29dfff3146105fc578063a35e793d1461060657600080fd5b80638bfef2f4146105b65780638bffc5b5146104555780638c46387a146105c85780638d419d71146104c857600080fd5b806382b14df3116101f957806382b14df3146104bf578063831f23ee1461059457806386f72d9f1461059c578063882d893b146105ad57600080fd5b806376f5f700146105725780637961954c1461057c5780637a8ba8ad14610525578063810f01b91461058b57600080fd5b8063484d395f1161032557806359942d29116102b8578063617b99d211610287578063617b99d21461054757806364d19609146104165780636e464a001461054f5780636f140bb714610557578063740bb5fa1461056157600080fd5b806359942d29146104555780635ba1c1a91461052d5780635cbbd382146104ea5780635ecd37e21461053757600080fd5b80634e6fd6c4116102f45780634e6fd6c4146104fc5780634edeb4bb1461051d5780635049700f1461052557806356b50540146104ea57600080fd5b8063484d395f146104d95780634936704e146104ea5780634bcaeb8d146104f25780634cdf912b1461041657600080fd5b80631d55c1c4116103a857806327d88e9f1161037757806327d88e9f1461045557806330b05bf5146104af578063313b0df4146104b75780633ca73ba1146104bf57806341f1c0d9146104c857600080fd5b80631d55c1c41461047e57806320f5735014610486578063232c53481461049757806324ebae691461049f57600080fd5b80630c48c5ee116103e45780630c48c5ee146104555780630e3fce461461045d57806318b64e03146104655780631b14f4eb1461046d57600080fd5b8063018b21f614610416578063039a9a2814610432578063063f391114610416578063080c1b3e14610443575b600080fd5b61041f6103e881565b6040519081526020015b60405180910390f35b61041f69054b40b1f852bda0000081565b61041f6a09195731e2ce35eb00000081565b61041f606481565b61041f602d81565b61041f601981565b61041f69152d02c7e14af680000081565b61041f601e81565b61041f6969e10de76676d080000081565b61041f60c881565b61041f681b0d04202f47ec000081565b61041f604b81565b61041f600f81565b61041f6107d081565b61041f69010f0cf064dd5920000081565b61041f690fe1c215e8f838e0000081565b61041f603281565b61041f6276a70081565b61050561dead81565b6040516001600160a01b039091168152602001610429565b61041f609681565b61041f600081565b61041f6202a30081565b61041f688778977bbb052c000081565b61041f601481565b61041f607381565b61041f620d2f0081565b61041f69fe1c215e8f838e00000081565b61041f62093a8081565b61041f678ac7230489e8000081565b61041f610fa081565b61041f600a81565b61041f692a5a058fc295ed00000081565b61041f610bb881565b61041f6a021165458500521280000081565b61041f6a084376fc33378d97c0000081565b61041f6a092e8434aaaf80e180000081565b61041f68056bc75e2d6310000081565b61041f6201518081565b61041f60fa81565b61041f61177081565b61041f61271081565b61041f611b5881565b61041f68878678326eac90000081565b61041f69021e19e0c9bab240000081565b61041f600381565b61041f690a968163f0a57b40000081565b61041f681b1ae4d6e2ef50000081565b61041f6369ffca8081565b61041f69eb0d387777f349c0000081565b61041f60af81565b61041f69010eff0fae29b1bc000081565b61041f60058156fea2646970667358221220387130dc5cc88e6b395b5aaabcf60cc1cedc0e8668689624920efebf6bd9983064736f6c63430008180033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
