@@ -10,16 +10,16 @@ export const CONTRACT_RESERVE = 11_000_000;
 export const DEX_ALLOCATION = 100_000;
 
 // ─── Fees ───────────────────────────────────────────────────────────────
-export const WITHDRAWAL_FEE_PCT = 10; // 10% on profit claims
+// V3: No withdrawal fee on yield claims — full yield auto-buys OSLO at DEX rate.
+export const WITHDRAWAL_FEE_PCT = 0; // 0% — removed in V3 (tax-free yield auto-buy)
 export const MIN_WITHDRAWAL_THRESHOLD = 10; // $10 USDT minimum
 
 // ─── Sell Tax / Swap Fee Distribution (V3) ───────────────────────────────
-// On every sell: 10% fee burned + 20% deflationary burn + 70% to contract
-// Total burn per sell = 30% (fee paid in tokens, USDT stays in DEX as liquidity)
-export const SELL_TAX_PCT = 10; // 10% fee → burned
-export const SWAP_TO_CONTRACT_PCT = 70; // 70% → InvestmentEngine (contract reserve)
-export const SWAP_TO_BURN_PCT = 20; // 20% → additional deflationary burn
-export const SWAP_TOTAL_BURN_PCT = 30; // 10% fee + 20% burn = 30% total burned per sell
+// V3: 10% fee on sells → OSLO burned. USDT fee stays in DEX as LP.
+//     90% of sold OSLO goes to DEX for swap. No IE routing.
+export const SELL_TAX_PCT = 10; // 10% fee → OSLO burned, USDT to LP
+export const SWAP_TO_LP_PCT = 10; // 10% → LP (USDT stays in DEX)
+export const SWAP_OSLO_RECEIVED_PCT = 90; // 90% → DEX receives for swap
 
 // ─── Burn Cap ────────────────────────────────────────────────────────────
 export const TOTAL_SUPPLY_TOKENS = 11_100_000;

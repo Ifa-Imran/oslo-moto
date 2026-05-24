@@ -226,7 +226,7 @@ export default function SwapPage() {
             <li>• <strong>Protocol-Controlled Liquidity:</strong> All liquidity is managed by the OSLO protocol</li>
             <li>• <strong>Fair Pricing:</strong> Price = USDT Reserve / OSLO Reserve</li>
             <li>• <strong>Slippage Protection:</strong> Customizable slippage tolerance for every swap</li>
-            <li>• <strong>Fee Structure:</strong> 30% tokens burned (10% fee + 20% deflationary) · 70% → Contract Reserve</li>
+            <li>• <strong>Fee Structure:</strong> 10% fee → OSLO burned · USDT value stays in DEX as additional liquidity</li>
             <li>• <strong>Burn Cap:</strong> Burning stops when 90% of supply (9.99M OSLO) is burned; 1.11M OSLO remain</li>
             <li>• <strong>No External AMM:</strong> Built-in DEX, no third-party dependencies</li>
           </ul>

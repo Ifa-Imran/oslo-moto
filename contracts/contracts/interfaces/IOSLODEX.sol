@@ -24,6 +24,13 @@ interface IOSLODEX {
     /// @return usdtAmount USDT sent to recipient
     function processWithdrawal(uint256 osloAmount, address recipient) external returns (uint256 usdtAmount);
 
+    /// @notice Tax-free yield swap: IE swaps USDT for OSLO at DEX rate with zero fee.
+    /// @dev Only callable by InvestmentEngine. Used for auto-buying OSLO with yield USDT.
+    /// @param usdtAmount Amount of USDT to swap
+    /// @param recipient Address to receive OSLO
+    /// @return osloAmount Amount of OSLO received
+    function swapYieldForOSLO(uint256 usdtAmount, address recipient) external returns (uint256 osloAmount);
+
     /// @notice Swap USDT for OSLO
     /// @param usdtAmount Amount of USDT to swap
     /// @param minOsloAmount Minimum OSLO to receive

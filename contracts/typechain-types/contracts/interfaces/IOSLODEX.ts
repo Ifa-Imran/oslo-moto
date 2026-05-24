@@ -35,6 +35,7 @@ export interface IOSLODEXInterface extends Interface {
       | "replenishOsloReserve"
       | "swapOSLOForUSDT"
       | "swapUSDTForOSLO"
+      | "swapYieldForOSLO"
   ): FunctionFragment;
 
   encodeFunctionData(
@@ -78,6 +79,10 @@ export interface IOSLODEXInterface extends Interface {
     functionFragment: "swapUSDTForOSLO",
     values: [BigNumberish, BigNumberish]
   ): string;
+  encodeFunctionData(
+    functionFragment: "swapYieldForOSLO",
+    values: [BigNumberish, AddressLike]
+  ): string;
 
   decodeFunctionResult(
     functionFragment: "addInitialLiquidity",
@@ -118,6 +123,10 @@ export interface IOSLODEXInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "swapUSDTForOSLO",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "swapYieldForOSLO",
     data: BytesLike
   ): Result;
 }
@@ -227,6 +236,12 @@ export interface IOSLODEX extends BaseContract {
     "nonpayable"
   >;
 
+  swapYieldForOSLO: TypedContractMethod<
+    [usdtAmount: BigNumberish, recipient: AddressLike],
+    [bigint],
+    "nonpayable"
+  >;
+
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
   ): T;
@@ -281,6 +296,13 @@ export interface IOSLODEX extends BaseContract {
     nameOrSignature: "swapUSDTForOSLO"
   ): TypedContractMethod<
     [usdtAmount: BigNumberish, minOsloAmount: BigNumberish],
+    [bigint],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "swapYieldForOSLO"
+  ): TypedContractMethod<
+    [usdtAmount: BigNumberish, recipient: AddressLike],
     [bigint],
     "nonpayable"
   >;

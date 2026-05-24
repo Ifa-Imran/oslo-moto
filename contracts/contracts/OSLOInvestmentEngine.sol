@@ -231,7 +231,10 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         emit Deposited(msg.sender, amount, tier, dailyRate, userDeposits[msg.sender].length - 1);
     }
 
-    /// @notice Claim accrued rewards from a specific deposit. Rewards paid in OSLO from contract reserve.
+    /// @notice Claim accrued rewards from a specific deposit.
+    /// @dev V3: Yield is calculated in USDT. No withdrawal fee — full yield is auto-bought
+    ///      into OSLO at the DEX spot rate and sent to the investor.
+    ///      OSLO is paid from the contract's reserve (accumulated from deposit swaps).
     /// @param depositIndex Index of the deposit in user's deposits array
     function claimRewards(uint256 depositIndex) external nonReentrant {
         Deposit storage dep = _getActiveDeposit(msg.sender, depositIndex);
@@ -259,12 +262,9 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
             pendingUSDT = remainingCap;
         }
 
-        // Apply 10% withdrawal fee on rewards
-        uint256 fee = (pendingUSDT * OSLOConstants.WITHDRAWAL_FEE_BP) / OSLOConstants.BASIS_POINTS;
-        uint256 netUSDT = pendingUSDT - fee;
-
-        // Convert net USDT reward to OSLO at DEX spot price
-        uint256 osloAmount = IOSLODEX(osloDex).getUSDTForOSLOOutput(netUSDT);
+        // V3: No withdrawal fee — full yield is auto-bought into OSLO.
+        // Convert pending USDT yield to OSLO at DEX spot price (tax-free).
+        uint256 osloAmount = IOSLODEX(osloDex).getUSDTForOSLOOutput(pendingUSDT);
         if (osloAmount == 0) revert DEXNotPriced();
 
         // Verify contract has enough OSLO reserve
@@ -282,7 +282,8 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
             emit CombinedCapReached(msg.sender);
         }
 
-        // Transfer OSLO reward to user
+        // Auto-buy: send OSLO tokens to investor (from contract reserve).
+        // Frontend displays this as "$X USDT yield → Y OSLO at DEX rate".
         osloToken.safeTransfer(msg.sender, osloAmount);
 
         // Distribute referral commission — yield on yield

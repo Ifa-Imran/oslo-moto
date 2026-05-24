@@ -46,6 +46,7 @@ export interface OSLODEXInterface extends Interface {
       | "setupComplete"
       | "swapOSLOForUSDT"
       | "swapUSDTForOSLO"
+      | "swapYieldForOSLO"
       | "timelock"
       | "totalSwaps"
       | "totalVolumeUSDT"
@@ -130,6 +131,10 @@ export interface OSLODEXInterface extends Interface {
     functionFragment: "swapUSDTForOSLO",
     values: [BigNumberish, BigNumberish]
   ): string;
+  encodeFunctionData(
+    functionFragment: "swapYieldForOSLO",
+    values: [BigNumberish, AddressLike]
+  ): string;
   encodeFunctionData(functionFragment: "timelock", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "totalSwaps",
@@ -208,6 +213,10 @@ export interface OSLODEXInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "swapUSDTForOSLO",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "swapYieldForOSLO",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "timelock", data: BytesLike): Result;
@@ -442,6 +451,12 @@ export interface OSLODEX extends BaseContract {
     "nonpayable"
   >;
 
+  swapYieldForOSLO: TypedContractMethod<
+    [usdtAmount: BigNumberish, recipient: AddressLike],
+    [bigint],
+    "nonpayable"
+  >;
+
   timelock: TypedContractMethod<[], [string], "view">;
 
   totalSwaps: TypedContractMethod<[], [bigint], "view">;
@@ -541,6 +556,13 @@ export interface OSLODEX extends BaseContract {
     nameOrSignature: "swapUSDTForOSLO"
   ): TypedContractMethod<
     [usdtAmount: BigNumberish, minOsloAmount: BigNumberish],
+    [bigint],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "swapYieldForOSLO"
+  ): TypedContractMethod<
+    [usdtAmount: BigNumberish, recipient: AddressLike],
     [bigint],
     "nonpayable"
   >;

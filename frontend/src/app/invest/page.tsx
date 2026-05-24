@@ -530,11 +530,11 @@ function DepositCard({
         </p>
       </div>
 
-      {/* Accrued */}
+      {/* Accrued — V3: Yield displayed in USDT, auto-buys OSLO on claim */}
       <div className="grid grid-cols-2 gap-3 mb-4 p-3 rounded-lg bg-white/[0.03]">
         <div>
           <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">
-            Investment Return
+            Yield (USDT)
           </p>
           <p className="text-sm font-mono text-oslo-text-primary">
             ${formatNumber(invReturn, 4)}
@@ -542,7 +542,7 @@ function DepositCard({
         </div>
         <div>
           <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">
-            Profit Return
+            Profit (USDT)
           </p>
           <p className="text-sm font-mono text-oslo-text-primary">
             ${formatNumber(profReturn, 4)}
@@ -602,30 +602,39 @@ function DepositCard({
 
       {/* Actions */}
       {active && (
-        <div className="flex gap-2">
+        <div className="space-y-2">
+          {/* V3: Auto-buy note — yield USDT auto-buys OSLO at DEX rate, zero fee */}
+          <p className="text-[10px] text-oslo-text-muted leading-relaxed">
+            Yield accrues in USDT. On claim, it auto-buys OSLO at the DEX rate — <span className="text-oslo-success">zero fee</span>.
+          </p>
           <IceButton
             size="sm"
             variant="secondary"
-            className="flex-1"
+            className="w-full"
             onClick={() => onClaim(index)}
             disabled={invReturn + profReturn <= 0}
           >
-            Claim OSLO
+            Auto-Buy OSLO
           </IceButton>
         </div>
       )}
-      {/* Convert OSLO to USDT */}
+      {/* Convert OSLO to USDT — V3: 10% fee (USDT→LP, OSLO→burn) */}
       {osloBalNum > 0 && (
-        <IceButton
-          size="sm"
-          variant="primary"
-          className="w-full mt-2"
-          onClick={handleConvertOsloToUSDT}
-          loading={convertingOslo}
-          disabled={convertingOslo}
-        >
-          Convert {formatNumber(osloBalNum)} OSLO → USDT
-        </IceButton>
+        <div className="space-y-1">
+          <p className="text-[10px] text-oslo-text-muted">
+            Sell OSLO for USDT — <span className="text-oslo-aurora">10% fee</span> (to LP + burn)
+          </p>
+          <IceButton
+            size="sm"
+            variant="primary"
+            className="w-full mt-1"
+            onClick={handleConvertOsloToUSDT}
+            loading={convertingOslo}
+            disabled={convertingOslo}
+          >
+            Sell {formatNumber(osloBalNum)} OSLO → USDT
+          </IceButton>
+        </div>
       )}
       {/* Early Exit button — within 10-day window, returns USDT */}
       {active && inEarlyExit && exitNetReturn > 0 && (

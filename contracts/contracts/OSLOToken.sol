@@ -7,8 +7,9 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./libraries/OSLOConstants.sol";
 
 /// @title OSLOToken
-/// @notice BEP-20 token with fixed supply and deflationary sell tax. No minting capability.
-/// @dev 30% burn on sells (10% fee burn + 20% deflationary burn). 70% → InvestmentEngine. V2: mint removed.
+/// @notice BEP-20 token with fixed supply and sell tax. No minting capability.
+/// @dev V3: 10% fee on sells → OSLO burned. USDT fee stays in DEX as LP (handled by DEX contract).
+///      No routing to InvestmentEngine. 90% of sold OSLO goes to DEX for the swap.
 contract OSLOToken is ERC20, ERC20Burnable, ReentrancyGuard {
     /// @notice Total tokens permanently burned
     uint256 public totalBurned;
@@ -136,50 +137,30 @@ contract OSLOToken is ERC20, ERC20Burnable, ReentrancyGuard {
             return;
         }
 
-        // Distribution on every sell/withdrawal (swap via DEX):
-        // - 10% fee → burned (fee paid by burning tokens; USDT stays in DEX as liquidity)
-        // - 70% of total → InvestmentEngine (contract reserve for rewards)
-        // - 20% of total → burned (additional deflationary burn)
-        // - Total burn per sell = 30% (until burn cap is reached)
-        // - DEX receives 0 tokens; draws from InvestmentEngine via processDeposit
+        // V3 Sell Tax: 10% fee on sells → OSLO burned.
+        // USDT equivalent of the fee stays in DEX as LP (handled by OSLODEX.swapOSLOForUSDT).
+        // Remaining 90% of OSLO goes to DEX for the swap.
+        // No routing to InvestmentEngine (V2 had 70%→IE + 20% deflationary burn).
 
         // 10% fee → burned
         uint256 feeToBurn = (amount * OSLOConstants.SELL_TAX_BP) / OSLOConstants.BASIS_POINTS;
 
-        // 70% → InvestmentEngine
-        uint256 toContract = (amount * 7_000) / OSLOConstants.BASIS_POINTS;
+        // 90% → destination (DEX receives tokens for the swap)
+        uint256 netToDestination = amount - feeToBurn;
 
-        // 20% → additional burn (subject to burn cap)
-        uint256 toBurn = (amount * 2_000) / OSLOConstants.BASIS_POINTS;
-
-        // Total to burn = 10% fee + 20% deflationary = 30%
-        uint256 totalToBurn = feeToBurn + toBurn;
-
-        // Net to destination (DEX) = amount - totalToBurn - toContract = 0
-        uint256 netToDestination = amount - totalToBurn - toContract;
-
-        // Transfer net amount to destination (DEX receives 0 on sells)
+        // Transfer net amount to destination (DEX)
         super._update(from, to, netToDestination);
 
-        // Send to InvestmentEngine (contract reserve)
-        if (toContract > 0 && investmentEngine != address(0)) {
-            super._update(from, investmentEngine, toContract);
-        }
-
-        // Burn fee + deflationary burn — check burn cap (stop when 90% of supply is burned)
+        // Burn fee — check burn cap (stop when 90% of supply is burned)
         uint256 actualBurn = 0;
-        if (totalToBurn > 0) {
+        if (feeToBurn > 0) {
             uint256 burnCapacity = OSLOConstants.MAX_BURN_SUPPLY > totalBurned
                 ? OSLOConstants.MAX_BURN_SUPPLY - totalBurned
                 : 0;
-            actualBurn = totalToBurn > burnCapacity ? burnCapacity : totalToBurn;
+            actualBurn = feeToBurn > burnCapacity ? burnCapacity : feeToBurn;
             if (actualBurn > 0) {
                 super._update(from, OSLOConstants.DEAD_ADDRESS, actualBurn);
                 totalBurned += actualBurn;
-            }
-            // Any excess over burn cap goes to InvestmentEngine
-            if (totalToBurn > actualBurn && investmentEngine != address(0)) {
-                super._update(from, investmentEngine, totalToBurn - actualBurn);
             }
         }
 
