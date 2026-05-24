@@ -108,6 +108,14 @@ contract OSLOToken is ERC20, ERC20Burnable, ReentrancyGuard {
 
     // ─── View Functions ─────────────────────────────────────────────────
 
+    /// @notice Update the InvestmentEngine address. Only callable by Timelock after setup.
+    /// @dev Used when redeploying InvestmentEngine with new features.
+    function setInvestmentEngine(address _investmentEngine) external onlyTimelock {
+        if (_investmentEngine == address(0)) revert ZeroAddress();
+        investmentEngine = _investmentEngine;
+        _taxWhitelist[_investmentEngine] = true;
+    }
+
     /// @notice Check if an address is exempt from sell tax
     function isTaxWhitelisted(address account) external view returns (bool) {
         return _taxWhitelist[account];

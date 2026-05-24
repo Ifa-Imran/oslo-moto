@@ -50,6 +50,7 @@ contract OSLORankSystem is IRankSystem, ReentrancyGuard {
 
     // ─── Errors ─────────────────────────────────────────────────────────
     error OnlyAdmin();
+    error OnlyTimelock();
     error SetupAlreadyComplete();
     error AlreadyClaimed();
     error NoBonus();
@@ -59,6 +60,11 @@ contract OSLORankSystem is IRankSystem, ReentrancyGuard {
 
     modifier onlyAdmin() {
         if (msg.sender != admin) revert OnlyAdmin();
+        _;
+    }
+
+    modifier onlyTimelock() {
+        if (msg.sender != timelock) revert OnlyTimelock();
         _;
     }
 
@@ -83,6 +89,12 @@ contract OSLORankSystem is IRankSystem, ReentrancyGuard {
         if (setupComplete) revert SetupAlreadyComplete();
         setupComplete = true;
         admin = address(0);
+    }
+
+    /// @notice Update the InvestmentEngine address. Only callable by Timelock after setup.
+    /// @dev Used when redeploying InvestmentEngine with new features.
+    function setInvestmentEngine(address _investmentEngine) external onlyTimelock {
+        investmentEngine = _investmentEngine;
     }
 
     // ─── Core Functions ─────────────────────────────────────────────────

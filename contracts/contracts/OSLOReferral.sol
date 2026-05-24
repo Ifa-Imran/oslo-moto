@@ -54,6 +54,7 @@ contract OSLOReferral is IReferral, ReentrancyGuard {
     // ─── Errors ─────────────────────────────────────────────────────────
     error OnlyAdmin();
     error OnlyInvestmentEngine();
+    error OnlyTimelock();
     error SetupAlreadyComplete();
     error AlreadyRegistered();
     error InvalidReferrer();
@@ -69,6 +70,11 @@ contract OSLOReferral is IReferral, ReentrancyGuard {
 
     modifier onlyInvestmentEngine() {
         if (msg.sender != investmentEngine) revert OnlyInvestmentEngine();
+        _;
+    }
+
+    modifier onlyTimelock() {
+        if (msg.sender != timelock) revert OnlyTimelock();
         _;
     }
 
@@ -206,6 +212,12 @@ contract OSLOReferral is IReferral, ReentrancyGuard {
         usdt.safeTransfer(msg.sender, amount);
 
         emit ReferralRewardsClaimed(msg.sender, amount);
+    }
+
+    /// @notice Update the InvestmentEngine address. Only callable by Timelock after setup.
+    /// @dev Used when redeploying InvestmentEngine with new features.
+    function setInvestmentEngine(address _investmentEngine) external onlyTimelock {
+        investmentEngine = _investmentEngine;
     }
 
     // ─── View Functions ─────────────────────────────────────────────────
