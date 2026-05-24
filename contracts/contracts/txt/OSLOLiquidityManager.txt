@@ -1,0 +1,155 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./libraries/OSLOConstants.sol";
+import "./interfaces/ILiquidityManager.sol";
+import "./interfaces/IPancakeRouter.sol";
+
+/// @title OSLOLiquidityManager
+/// @notice Automated liquidity provision and OSLO buyback/burn via PancakeSwap.
+/// @dev Receives BUSD from Treasury and penalties. LP tokens locked at 0xdead permanently.
+contract OSLOLiquidityManager is ILiquidityManager, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
+    IERC20 public immutable busd;
+    IERC20 public immutable osloToken;
+    IPancakeRouter02 public immutable router;
+
+    address public admin;
+    address public timelock;
+    bool public setupComplete;
+
+    uint256 public totalLiquidityAdded;
+    uint256 public totalBurnedViaSwap;
+
+    // ─── Events ─────────────────────────────────────────────────────────
+    event LiquidityAdded(uint256 busdAmount, uint256 osloAmount, uint256 liquidity);
+    event BuybackBurned(uint256 busdSpent, uint256 osloBurned);
+    event TokensRescued(address indexed token, uint256 amount);
+
+    // ─── Errors ─────────────────────────────────────────────────────────
+    error OnlyAdmin();
+    error OnlyTimelock();
+    error SetupAlreadyComplete();
+    error ZeroAmount();
+    error ZeroAddress();
+    error CannotRescueProtocolTokens();
+
+    modifier onlyAdmin() {
+        if (msg.sender != admin) revert OnlyAdmin();
+        _;
+    }
+
+    modifier onlyTimelock() {
+        if (msg.sender != timelock) revert OnlyTimelock();
+        _;
+    }
+
+    constructor(
+        address _busd,
+        address _osloToken,
+        address _router
+    ) {
+        if (_busd == address(0) || _osloToken == address(0) || _router == address(0))
+            revert ZeroAddress();
+        busd = IERC20(_busd);
+        osloToken = IERC20(_osloToken);
+        router = IPancakeRouter02(_router);
+        admin = msg.sender;
+    }
+
+    function configure(address _timelock) external onlyAdmin {
+        if (setupComplete) revert SetupAlreadyComplete();
+        timelock = _timelock;
+    }
+
+    function completeSetup() external onlyAdmin {
+        if (setupComplete) revert SetupAlreadyComplete();
+        setupComplete = true;
+        admin = address(0);
+    }
+
+    // ─── Core Functions ─────────────────────────────────────────────────
+
+    /// @notice Add liquidity from fee distributions. Swaps 50% BUSD for OSLO, adds LP.
+    /// @dev LP tokens are sent to DEAD_ADDRESS (permanently locked).
+    function addLiquidityFromFees(uint256 busdAmount) external override nonReentrant {
+        if (busdAmount == 0) revert ZeroAmount();
+        busd.safeTransferFrom(msg.sender, address(this), busdAmount);
+
+        uint256 halfBusd = busdAmount / 2;
+        uint256 otherHalf = busdAmount - halfBusd;
+
+        // Swap half BUSD for OSLO
+        uint256 osloBefore = osloToken.balanceOf(address(this));
+        _swapBusdForOslo(halfBusd);
+        uint256 osloSwapped = osloToken.balanceOf(address(this)) - osloBefore;
+
+        // Add liquidity with the other half + swapped OSLO
+        _addLiquidity(otherHalf, osloSwapped);
+    }
+
+    /// @notice Buyback OSLO with BUSD and burn it (send to 0xdead).
+    /// @param busdAmount Amount of BUSD to spend on buyback
+    function buybackAndBurn(uint256 busdAmount) external override nonReentrant {
+        if (busdAmount == 0) revert ZeroAmount();
+        busd.safeTransferFrom(msg.sender, address(this), busdAmount);
+
+        uint256 osloBefore = osloToken.balanceOf(address(this));
+        _swapBusdForOslo(busdAmount);
+        uint256 osloSwapped = osloToken.balanceOf(address(this)) - osloBefore;
+
+        // Send to dead address
+        osloToken.safeTransfer(OSLOConstants.DEAD_ADDRESS, osloSwapped);
+        totalBurnedViaSwap += osloSwapped;
+
+        emit BuybackBurned(busdAmount, osloSwapped);
+    }
+
+    /// @notice Rescue accidentally sent tokens. Only by DAO Timelock.
+    function rescueERC20(address token, uint256 amount) external onlyTimelock {
+        if (token == address(busd) || token == address(osloToken))
+            revert CannotRescueProtocolTokens();
+        IERC20(token).safeTransfer(timelock, amount);
+        emit TokensRescued(token, amount);
+    }
+
+    // ─── Internal Functions ─────────────────────────────────────────────
+
+    function _swapBusdForOslo(uint256 busdAmount) internal {
+        busd.forceApprove(address(router), busdAmount);
+        address[] memory path = new address[](2);
+        path[0] = address(busd);
+        path[1] = address(osloToken);
+
+        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            busdAmount,
+            0, // Accept any amount (slippage handled off-chain)
+            path,
+            address(this),
+            block.timestamp + 300
+        );
+    }
+
+    function _addLiquidity(uint256 busdAmount, uint256 osloAmount) internal {
+        busd.forceApprove(address(router), busdAmount);
+        osloToken.forceApprove(address(router), osloAmount);
+
+        (uint256 amountA, uint256 amountB, uint256 liquidity) = router.addLiquidity(
+            address(busd),
+            address(osloToken),
+            busdAmount,
+            osloAmount,
+            0, // Min amounts (slippage tolerance)
+            0,
+            OSLOConstants.DEAD_ADDRESS, // LP tokens permanently locked
+            block.timestamp + 300
+        );
+
+        totalLiquidityAdded += liquidity;
+        emit LiquidityAdded(amountA, amountB, liquidity);
+    }
+}

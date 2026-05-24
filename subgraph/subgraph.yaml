@@ -1,0 +1,185 @@
+specVersion: 1.0.0
+indexerHints:
+  prune: auto
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: OSLOToken
+    network: bsc
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: OSLOToken
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - SellTax
+        - ProtocolStat
+      abis:
+        - name: OSLOToken
+          file: ./abis/OSLOToken.json
+      eventHandlers:
+        - event: SellTaxApplied(indexed address,uint256,uint256,uint256)
+          handler: handleSellTaxApplied
+      file: ./src/token.ts
+
+  - kind: ethereum
+    name: OSLOInvestmentEngine
+    network: bsc
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: OSLOInvestmentEngine
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Deposit
+        - User
+        - Withdrawal
+        - ProtocolStat
+      abis:
+        - name: OSLOInvestmentEngine
+          file: ./abis/OSLOInvestmentEngine.json
+      eventHandlers:
+        - event: Deposited(indexed address,uint256,uint256,uint256,uint256)
+          handler: handleDeposited
+        - event: RewardsClaimed(indexed address,uint256,uint256,uint256)
+          handler: handleRewardsClaimed
+        - event: PrincipalWithdrawn(indexed address,uint256,uint256,uint256)
+          handler: handlePrincipalWithdrawn
+      file: ./src/investment-engine.ts
+
+  - kind: ethereum
+    name: OSLOReferral
+    network: bsc
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: OSLOReferral
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - User
+        - ReferralPayment
+        - ProtocolStat
+      abis:
+        - name: OSLOReferral
+          file: ./abis/OSLOReferral.json
+      eventHandlers:
+        - event: UserRegistered(indexed address,indexed address,uint256)
+          handler: handleUserRegistered
+        - event: LevelUnlocked(indexed address,uint256)
+          handler: handleLevelUnlocked
+        - event: ReferralPaid(indexed address,indexed address,uint256,uint256)
+          handler: handleReferralPaid
+        - event: ReferralRewardsClaimed(indexed address,uint256)
+          handler: handleReferralRewardsClaimed
+      file: ./src/referral.ts
+
+  - kind: ethereum
+    name: OSLORankSystem
+    network: bsc
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: OSLORankSystem
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - RankAchievement
+        - RankBonusClaim
+        - WeeklyTurnover
+        - User
+      abis:
+        - name: OSLORankSystem
+          file: ./abis/OSLORankSystem.json
+      eventHandlers:
+        - event: RankAchieved(indexed address,uint256,uint256,uint256)
+          handler: handleRankAchieved
+        - event: RankBonusClaimed(indexed address,uint256,uint256)
+          handler: handleRankBonusClaimed
+        - event: TurnoverRecorded(indexed address,uint256,uint256)
+          handler: handleTurnoverRecorded
+      file: ./src/rank-system.ts
+
+  - kind: ethereum
+    name: OSLODAO
+    network: bsc
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: OSLODAO
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - DAOMember
+        - RoyaltyClaim
+        - User
+      abis:
+        - name: OSLODAO
+          file: ./abis/OSLODAO.json
+      eventHandlers:
+        - event: DAOMemberQualified(indexed address,uint256,uint256)
+          handler: handleDAOMemberQualified
+        - event: RoyaltyClaimed(indexed address,uint256,uint256)
+          handler: handleRoyaltyClaimed
+      file: ./src/dao.ts
+
+  - kind: ethereum
+    name: OSLOTreasury
+    network: bsc
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: OSLOTreasury
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - TreasuryDistribution
+        - ProtocolStat
+      abis:
+        - name: OSLOTreasury
+          file: ./abis/OSLOTreasury.json
+      eventHandlers:
+        - event: FeesReceived(uint256)
+          handler: handleFeesReceived
+        - event: Distributed(uint256,uint256,uint256)
+          handler: handleDistributed
+      file: ./src/treasury.ts
+
+  - kind: ethereum
+    name: OSLOLiquidityManager
+    network: bsc
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: OSLOLiquidityManager
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - LiquidityEvent
+        - BuybackBurn
+      abis:
+        - name: OSLOLiquidityManager
+          file: ./abis/OSLOLiquidityManager.json
+      eventHandlers:
+        - event: LiquidityAdded(uint256,uint256,uint256)
+          handler: handleLiquidityAdded
+        - event: BuybackBurned(uint256,uint256)
+          handler: handleBuybackBurned
+      file: ./src/liquidity-manager.ts

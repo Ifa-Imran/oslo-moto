@@ -1,0 +1,404 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./libraries/OSLOConstants.sol";
+import "./interfaces/IInvestmentEngine.sol";
+import "./interfaces/ITreasury.sol";
+import "./interfaces/IReferral.sol";
+import "./interfaces/IRankSystem.sol";
+import "./interfaces/ILiquidityManager.sol";
+
+/// @title OSLOInvestmentEngine
+/// @notice Core staking contract: deposits, daily yield, 10-day trial, 3X cap, compounding.
+contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
+    // ─── Structs ────────────────────────────────────────────────────────
+
+    struct Deposit {
+        uint256 amount;          // Active deposit amount (after fee)
+        uint256 tier;            // Tier 1-5
+        uint256 depositTime;     // Timestamp of deposit
+        uint256 lastClaimTime;   // Last time rewards were claimed
+        uint256 totalClaimed;    // Total rewards claimed from this deposit
+        bool active;             // Whether this deposit is still yielding
+    }
+
+    struct UserInfo {
+        uint256 totalActiveDeposit; // Sum of all active deposits
+        uint256 depositCount;       // Number of deposits
+    }
+
+    // ─── State ──────────────────────────────────────────────────────────
+
+    IERC20 public immutable busd;
+    address public treasury;
+    address public referral;
+    address public rankSystem;
+    address public liquidityManager;
+    address public admin;
+    address public timelock;
+    bool public setupComplete;
+    bool public depositsPaused; // Emergency pause for new deposits only
+
+    mapping(address => Deposit[]) public userDeposits;
+    mapping(address => UserInfo) public users;
+
+    uint256 public totalDeposited;
+    uint256 public totalWithdrawn;
+    uint256 public totalRewardsPaid;
+
+    // ─── Events ─────────────────────────────────────────────────────────
+    event Deposited(address indexed user, uint256 amount, uint256 netAmount, uint256 tier, uint256 depositIndex);
+    event RewardsClaimed(address indexed user, uint256 investmentReturn, uint256 profitReturn, uint256 depositIndex);
+    event PrincipalWithdrawn(address indexed user, uint256 amount, uint256 penalty, uint256 depositIndex);
+    event Compounded(address indexed user, uint256 amount, uint256 newTier);
+    event DepositsPaused(bool paused);
+
+    // ─── Errors ─────────────────────────────────────────────────────────
+    error OnlyAdmin();
+    error OnlyTimelock();
+    error SetupAlreadyComplete();
+    error NotConfigured();
+    error DepositTooLow();
+    error DepositsPausedError();
+    error InvalidDeposit();
+    error DepositCapped();
+    error NothingToClaim();
+    error ZeroAddress();
+
+    modifier onlyAdmin() {
+        if (msg.sender != admin) revert OnlyAdmin();
+        _;
+    }
+
+    modifier onlyTimelock() {
+        if (msg.sender != timelock) revert OnlyTimelock();
+        _;
+    }
+
+    constructor(address _busd) {
+        if (_busd == address(0)) revert ZeroAddress();
+        busd = IERC20(_busd);
+        admin = msg.sender;
+    }
+
+    // ─── Setup ──────────────────────────────────────────────────────────
+
+    function configure(
+        address _treasury,
+        address _referral,
+        address _rankSystem,
+        address _liquidityManager,
+        address _timelock
+    ) external onlyAdmin {
+        if (setupComplete) revert SetupAlreadyComplete();
+        treasury = _treasury;
+        referral = _referral;
+        rankSystem = _rankSystem;
+        liquidityManager = _liquidityManager;
+        timelock = _timelock;
+    }
+
+    function completeSetup() external onlyAdmin {
+        if (setupComplete) revert SetupAlreadyComplete();
+        if (treasury == address(0)) revert NotConfigured();
+        setupComplete = true;
+        admin = address(0);
+    }
+
+    /// @notice Emergency pause for new deposits only. Only callable by Timelock.
+    function setDepositsPaused(bool _paused) external onlyTimelock {
+        depositsPaused = _paused;
+        emit DepositsPaused(_paused);
+    }
+
+    // ─── Core Functions ─────────────────────────────────────────────────
+
+    /// @notice Deposit BUSD into the investment engine
+    /// @param amount Amount of BUSD to deposit
+    /// @param referrer Address of referrer (address(0) if none / already registered)
+    function deposit(uint256 amount, address referrer) external nonReentrant {
+        if (depositsPaused) revert DepositsPausedError();
+        if (amount < OSLOConstants.TIER1_MIN) revert DepositTooLow();
+
+        // Transfer BUSD from user
+        busd.safeTransferFrom(msg.sender, address(this), amount);
+
+        // 5% deposit fee to treasury
+        uint256 fee = (amount * OSLOConstants.DEPOSIT_FEE_BP) / OSLOConstants.BASIS_POINTS;
+        uint256 netAmount = amount - fee;
+
+        busd.forceApprove(treasury, fee);
+        ITreasury(treasury).receiveFees(fee);
+
+        // Register referral if needed
+        if (referral != address(0) && !IReferral(referral).isRegistered(msg.sender) && referrer != address(0)) {
+            IReferral(referral).register(msg.sender, referrer);
+        }
+
+        // Determine tier
+        uint256 tier = _getTier(netAmount);
+
+        // Create deposit
+        userDeposits[msg.sender].push(Deposit({
+            amount: netAmount,
+            tier: tier,
+            depositTime: block.timestamp,
+            lastClaimTime: block.timestamp,
+            totalClaimed: 0,
+            active: true
+        }));
+
+        users[msg.sender].totalActiveDeposit += netAmount;
+        users[msg.sender].depositCount++;
+        totalDeposited += netAmount;
+
+        // Update referral levels
+        if (referral != address(0)) {
+            IReferral(referral).checkAndUnlockLevels(msg.sender);
+        }
+
+        // Record turnover for rank system (for all uplines)
+        if (rankSystem != address(0)) {
+            _recordTurnoverForUplines(msg.sender, amount);
+        }
+
+        emit Deposited(msg.sender, amount, netAmount, tier, userDeposits[msg.sender].length - 1);
+    }
+
+    /// @notice Claim accrued rewards from a specific deposit
+    /// @param depositIndex Index of the deposit in user's deposits array
+    function claimRewards(uint256 depositIndex) external nonReentrant {
+        Deposit storage dep = _getActiveDeposit(msg.sender, depositIndex);
+
+        (uint256 investmentReturn, uint256 profitReturn) = _calculatePendingRewards(dep);
+        uint256 totalReturn = investmentReturn + profitReturn;
+        if (totalReturn == 0) revert NothingToClaim();
+
+        // Check 3X cap
+        uint256 maxReturn = dep.amount * OSLOConstants.RETURN_CAP_MULTIPLIER;
+        if (dep.totalClaimed + totalReturn >= maxReturn) {
+            totalReturn = maxReturn - dep.totalClaimed;
+            // Recalculate split proportionally
+            if (investmentReturn + profitReturn > 0) {
+                profitReturn = (totalReturn * profitReturn) / (investmentReturn + profitReturn);
+                investmentReturn = totalReturn - profitReturn;
+            }
+            dep.active = false; // Cap reached, stop yielding
+        }
+
+        dep.totalClaimed += totalReturn;
+        dep.lastClaimTime = block.timestamp;
+        totalRewardsPaid += totalReturn;
+
+        // Transfer rewards in BUSD
+        busd.safeTransfer(msg.sender, totalReturn);
+
+        // Distribute referral commission on profit portion
+        if (referral != address(0) && profitReturn > 0) {
+            IReferral(referral).distributeReferralCommission(msg.sender, profitReturn);
+        }
+
+        emit RewardsClaimed(msg.sender, investmentReturn, profitReturn, depositIndex);
+    }
+
+    /// @notice Withdraw principal from a specific deposit
+    /// @param depositIndex Index of the deposit
+    function withdrawPrincipal(uint256 depositIndex) external nonReentrant {
+        Deposit storage dep = _getActiveDeposit(msg.sender, depositIndex);
+
+        uint256 principal = dep.amount;
+        uint256 penalty = 0;
+
+        // Check if within trial period
+        if (block.timestamp < dep.depositTime + OSLOConstants.TRIAL_PERIOD) {
+            // Early exit penalty: 10% of principal
+            penalty = (principal * OSLOConstants.TRIAL_PENALTY_BP) / OSLOConstants.BASIS_POINTS;
+            uint256 toLp = (penalty * OSLOConstants.TRIAL_PENALTY_TO_LP_BP) / OSLOConstants.BASIS_POINTS;
+            uint256 toBurn = penalty - toLp;
+
+            // Send penalty portions
+            if (liquidityManager != address(0)) {
+                busd.forceApprove(liquidityManager, toLp);
+                ILiquidityManager(liquidityManager).addLiquidityFromFees(toLp);
+            }
+            if (liquidityManager != address(0)) {
+                busd.forceApprove(liquidityManager, toBurn);
+                ILiquidityManager(liquidityManager).buybackAndBurn(toBurn);
+            }
+        }
+
+        // Mark deposit as inactive
+        dep.active = false;
+        users[msg.sender].totalActiveDeposit -= principal;
+        totalWithdrawn += principal;
+
+        // Transfer remaining principal
+        busd.safeTransfer(msg.sender, principal - penalty);
+
+        // Update referral levels
+        if (referral != address(0)) {
+            IReferral(referral).checkAndUnlockLevels(msg.sender);
+        }
+
+        emit PrincipalWithdrawn(msg.sender, principal, penalty, depositIndex);
+    }
+
+    /// @notice Compound accrued rewards back into a new deposit
+    /// @param depositIndex Index of the deposit to compound from
+    function compound(uint256 depositIndex) external nonReentrant {
+        if (depositsPaused) revert DepositsPausedError();
+        Deposit storage dep = _getActiveDeposit(msg.sender, depositIndex);
+
+        (uint256 investmentReturn, uint256 profitReturn) = _calculatePendingRewards(dep);
+        uint256 totalReturn = investmentReturn + profitReturn;
+        if (totalReturn == 0) revert NothingToClaim();
+
+        // Check 3X cap
+        uint256 maxReturn = dep.amount * OSLOConstants.RETURN_CAP_MULTIPLIER;
+        if (dep.totalClaimed + totalReturn >= maxReturn) {
+            totalReturn = maxReturn - dep.totalClaimed;
+            profitReturn = (totalReturn * profitReturn) / (investmentReturn + profitReturn);
+            dep.active = false;
+        }
+
+        dep.totalClaimed += totalReturn;
+        dep.lastClaimTime = block.timestamp;
+
+        // Apply 5% fee on compounded amount
+        uint256 fee = (totalReturn * OSLOConstants.DEPOSIT_FEE_BP) / OSLOConstants.BASIS_POINTS;
+        uint256 netAmount = totalReturn - fee;
+
+        // Send fee to treasury
+        busd.forceApprove(treasury, fee);
+        ITreasury(treasury).receiveFees(fee);
+
+        // Create new deposit with compounded amount
+        uint256 tier = _getTier(netAmount);
+        userDeposits[msg.sender].push(Deposit({
+            amount: netAmount,
+            tier: tier,
+            depositTime: block.timestamp,
+            lastClaimTime: block.timestamp,
+            totalClaimed: 0,
+            active: true
+        }));
+
+        users[msg.sender].totalActiveDeposit += netAmount;
+        users[msg.sender].depositCount++;
+
+        // Record turnover for rank system
+        if (rankSystem != address(0)) {
+            _recordTurnoverForUplines(msg.sender, totalReturn);
+        }
+
+        emit Compounded(msg.sender, netAmount, tier);
+    }
+
+    // ─── View Functions ─────────────────────────────────────────────────
+
+    function getActiveDeposit(address user) external view override returns (uint256) {
+        return users[user].totalActiveDeposit;
+    }
+
+    function getUserTier(address user) external view override returns (uint256) {
+        if (users[user].totalActiveDeposit == 0) return 0;
+        return _getTier(users[user].totalActiveDeposit);
+    }
+
+    function getDepositCount(address user) external view returns (uint256) {
+        return userDeposits[user].length;
+    }
+
+    function getPendingRewards(address user, uint256 depositIndex) external view returns (uint256 investmentReturn, uint256 profitReturn) {
+        if (depositIndex >= userDeposits[user].length) return (0, 0);
+        Deposit storage dep = userDeposits[user][depositIndex];
+        if (!dep.active) return (0, 0);
+        return _calculatePendingRewards(dep);
+    }
+
+    function isInTrialPeriod(address user, uint256 depositIndex) external view returns (bool) {
+        if (depositIndex >= userDeposits[user].length) return false;
+        return block.timestamp < userDeposits[user][depositIndex].depositTime + OSLOConstants.TRIAL_PERIOD;
+    }
+
+    function getTrialTimeRemaining(address user, uint256 depositIndex) external view returns (uint256) {
+        if (depositIndex >= userDeposits[user].length) return 0;
+        uint256 trialEnd = userDeposits[user][depositIndex].depositTime + OSLOConstants.TRIAL_PERIOD;
+        if (block.timestamp >= trialEnd) return 0;
+        return trialEnd - block.timestamp;
+    }
+
+    // ─── Internal Functions ─────────────────────────────────────────────
+
+    function _getActiveDeposit(address user, uint256 index) internal view returns (Deposit storage) {
+        if (index >= userDeposits[user].length) revert InvalidDeposit();
+        Deposit storage dep = userDeposits[user][index];
+        if (!dep.active) revert DepositCapped();
+        return dep;
+    }
+
+    function _getTier(uint256 amount) internal pure returns (uint256) {
+        if (amount >= OSLOConstants.TIER5_MIN) return 5;
+        if (amount >= OSLOConstants.TIER4_MIN) return 4;
+        if (amount >= OSLOConstants.TIER3_MIN) return 3;
+        if (amount >= OSLOConstants.TIER2_MIN) return 2;
+        return 1;
+    }
+
+    function _getDailyRate(uint256 tier) internal pure returns (uint256) {
+        if (tier == 5) return OSLOConstants.TIER5_DAILY_RATE;
+        if (tier == 4) return OSLOConstants.TIER4_DAILY_RATE;
+        if (tier == 3) return OSLOConstants.TIER3_DAILY_RATE;
+        if (tier == 2) return OSLOConstants.TIER2_DAILY_RATE;
+        return OSLOConstants.TIER1_DAILY_RATE;
+    }
+
+    function _getInvestmentRate(uint256 tier) internal pure returns (uint256) {
+        if (tier == 5) return OSLOConstants.TIER5_INVESTMENT_RATE;
+        if (tier == 4) return OSLOConstants.TIER4_INVESTMENT_RATE;
+        if (tier == 3) return OSLOConstants.TIER3_INVESTMENT_RATE;
+        if (tier == 2) return OSLOConstants.TIER2_INVESTMENT_RATE;
+        return OSLOConstants.TIER1_INVESTMENT_RATE;
+    }
+
+    function _calculatePendingRewards(Deposit storage dep) internal view returns (uint256 investmentReturn, uint256 profitReturn) {
+        if (!dep.active) return (0, 0);
+
+        uint256 timeElapsed = block.timestamp - dep.lastClaimTime;
+        if (timeElapsed == 0) return (0, 0);
+
+        uint256 investmentRate = _getInvestmentRate(dep.tier);
+        uint256 profitRate = OSLOConstants.PROFIT_RATE;
+
+        // pending = (depositAmount * rate * timeElapsed) / (1 day * BASIS_POINTS)
+        investmentReturn = (dep.amount * investmentRate * timeElapsed) / (1 days * OSLOConstants.BASIS_POINTS);
+        profitReturn = (dep.amount * profitRate * timeElapsed) / (1 days * OSLOConstants.BASIS_POINTS);
+
+        // Cap check
+        uint256 maxReturn = dep.amount * OSLOConstants.RETURN_CAP_MULTIPLIER;
+        uint256 totalPending = investmentReturn + profitReturn;
+        if (dep.totalClaimed + totalPending > maxReturn) {
+            uint256 available = maxReturn - dep.totalClaimed;
+            if (totalPending > 0) {
+                profitReturn = (available * profitReturn) / totalPending;
+                investmentReturn = available - profitReturn;
+            }
+        }
+    }
+
+    function _recordTurnoverForUplines(address user, uint256 amount) internal {
+        if (referral == address(0) || rankSystem == address(0)) return;
+        address current = user;
+        for (uint256 i = 0; i < OSLOConstants.MAX_REFERRAL_LEVELS; i++) {
+            address upline = IReferral(referral).getReferrer(current);
+            if (upline == address(0)) break;
+            IRankSystem(rankSystem).recordTurnover(upline, amount);
+            current = upline;
+        }
+    }
+}

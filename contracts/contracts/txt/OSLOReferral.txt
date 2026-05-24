@@ -1,0 +1,275 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./libraries/OSLOConstants.sol";
+import "./interfaces/IReferral.sol";
+import "./interfaces/IInvestmentEngine.sol";
+
+/// @title OSLOReferral
+/// @notice Decentralized 20-level referral tree with level unlocking and commission distribution.
+contract OSLOReferral is IReferral, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
+    // ─── Structs ────────────────────────────────────────────────────────
+
+    struct UserReferralInfo {
+        address referrer;
+        address[] directReferrals;
+        uint256 unlockedLevels;
+        uint256 totalEarned;
+        bool registered;
+    }
+
+    // ─── State ──────────────────────────────────────────────────────────
+
+    IERC20 public immutable busd;
+    IERC20 public immutable osloToken;
+    address public investmentEngine;
+    address public earlyAdopterVault;
+    address public admin;
+    address public timelock;
+    bool public setupComplete;
+
+    mapping(address => UserReferralInfo) public userInfo;
+    mapping(address => uint256) public referralRewards;
+    uint256 public totalRegistered;
+    uint256 public totalCommissionsPaid;
+
+    // ─── Events ─────────────────────────────────────────────────────────
+    event UserRegistered(address indexed user, address indexed referrer, uint256 registrationNumber);
+    event LevelUnlocked(address indexed user, uint256 level);
+    event ReferralPaid(address indexed upline, address indexed downline, uint256 level, uint256 amount);
+    event ReferralRewardsClaimed(address indexed user, uint256 amount);
+    event EarlyAdopterAirdrop(address indexed user, uint256 amount);
+
+    // ─── Errors ─────────────────────────────────────────────────────────
+    error OnlyAdmin();
+    error OnlyInvestmentEngine();
+    error SetupAlreadyComplete();
+    error AlreadyRegistered();
+    error InvalidReferrer();
+    error NotRegistered();
+    error NothingToClaim();
+    error SelfReferral();
+    error ZeroAddress();
+
+    modifier onlyAdmin() {
+        if (msg.sender != admin) revert OnlyAdmin();
+        _;
+    }
+
+    modifier onlyInvestmentEngine() {
+        if (msg.sender != investmentEngine) revert OnlyInvestmentEngine();
+        _;
+    }
+
+    constructor(address _busd, address _osloToken) {
+        if (_busd == address(0) || _osloToken == address(0)) revert ZeroAddress();
+        busd = IERC20(_busd);
+        osloToken = IERC20(_osloToken);
+        admin = msg.sender;
+    }
+
+    // ─── Setup ──────────────────────────────────────────────────────────
+
+    function configure(
+        address _investmentEngine,
+        address _earlyAdopterVault,
+        address _timelock
+    ) external onlyAdmin {
+        if (setupComplete) revert SetupAlreadyComplete();
+        investmentEngine = _investmentEngine;
+        earlyAdopterVault = _earlyAdopterVault;
+        timelock = _timelock;
+    }
+
+    function completeSetup() external onlyAdmin {
+        if (setupComplete) revert SetupAlreadyComplete();
+        setupComplete = true;
+        admin = address(0);
+    }
+
+    // ─── Registration ───────────────────────────────────────────────────
+
+    /// @notice Register a new user with a referrer
+    function register(address user, address referrer) external override {
+        if (user == address(0)) revert ZeroAddress();
+        if (userInfo[user].registered) revert AlreadyRegistered();
+        if (user == referrer) revert SelfReferral();
+        if (referrer != address(0) && !userInfo[referrer].registered) revert InvalidReferrer();
+
+        userInfo[user].registered = true;
+        userInfo[user].referrer = referrer;
+        userInfo[user].unlockedLevels = 0;
+
+        if (referrer != address(0)) {
+            userInfo[referrer].directReferrals.push(user);
+        }
+
+        totalRegistered++;
+
+        // Early adopter airdrop for first 20,000 registrants
+        if (totalRegistered <= OSLOConstants.EARLY_ADOPTER_AIRDROP_THRESHOLD && earlyAdopterVault != address(0)) {
+            uint256 airdropAmount = _getEarlyAdopterAmount(totalRegistered);
+            if (airdropAmount > 0 && osloToken.balanceOf(earlyAdopterVault) >= airdropAmount) {
+                // Transfer from vault (vault must have approved this contract)
+                osloToken.safeTransferFrom(earlyAdopterVault, user, airdropAmount);
+                emit EarlyAdopterAirdrop(user, airdropAmount);
+            }
+        }
+
+        emit UserRegistered(user, referrer, totalRegistered);
+    }
+
+    // ─── Level Unlocking ────────────────────────────────────────────────
+
+    /// @notice Check and auto-unlock levels based on qualified direct referrals
+    function checkAndUnlockLevels(address user) external override {
+        if (!userInfo[user].registered) return;
+
+        uint256 qualifiedDirects = _countQualifiedDirects(user);
+        uint256 newLevel = _getMaxUnlockedLevel(qualifiedDirects);
+
+        if (newLevel > userInfo[user].unlockedLevels) {
+            uint256 oldLevel = userInfo[user].unlockedLevels;
+            userInfo[user].unlockedLevels = newLevel;
+            for (uint256 i = oldLevel + 1; i <= newLevel; i++) {
+                emit LevelUnlocked(user, i);
+            }
+        }
+    }
+
+    // ─── Commission Distribution ────────────────────────────────────────
+
+    /// @notice Distribute referral commissions on the profit portion of downline earnings
+    /// @param user The user whose earnings generated the commission
+    /// @param profitAmount The profit portion of the user's claim
+    function distributeReferralCommission(address user, uint256 profitAmount) external override {
+        if (profitAmount == 0) return;
+
+        address current = user;
+        for (uint256 level = 1; level <= OSLOConstants.MAX_REFERRAL_LEVELS; level++) {
+            address upline = userInfo[current].referrer;
+            if (upline == address(0)) break;
+
+            // Check if upline has this level unlocked
+            if (userInfo[upline].unlockedLevels >= level) {
+                uint256 commissionRate = _getCommissionRate(level);
+                uint256 commission = (profitAmount * commissionRate) / OSLOConstants.BASIS_POINTS;
+
+                if (commission > 0) {
+                    referralRewards[upline] += commission;
+                    userInfo[upline].totalEarned += commission;
+                    totalCommissionsPaid += commission;
+                    emit ReferralPaid(upline, user, level, commission);
+                }
+            }
+
+            current = upline;
+        }
+    }
+
+    /// @notice Claim accumulated referral rewards (pull-based)
+    function claimReferralRewards() external override nonReentrant {
+        uint256 amount = referralRewards[msg.sender];
+        if (amount == 0) revert NothingToClaim();
+
+        referralRewards[msg.sender] = 0;
+        busd.safeTransfer(msg.sender, amount);
+
+        emit ReferralRewardsClaimed(msg.sender, amount);
+    }
+
+    // ─── View Functions ─────────────────────────────────────────────────
+
+    function isRegistered(address user) external view override returns (bool) {
+        return userInfo[user].registered;
+    }
+
+    function getReferrer(address user) external view override returns (address) {
+        return userInfo[user].referrer;
+    }
+
+    function getDirectReferrals(address user) external view override returns (address[] memory) {
+        return userInfo[user].directReferrals;
+    }
+
+    function getQualifiedDirectsCount(address user) external view override returns (uint256) {
+        return _countQualifiedDirects(user);
+    }
+
+    function getUnlockedLevels(address user) external view override returns (uint256) {
+        return userInfo[user].unlockedLevels;
+    }
+
+    function getTeamSize(address user) external view override returns (uint256) {
+        return _getTeamSize(user, 0);
+    }
+
+    // ─── Internal Functions ─────────────────────────────────────────────
+
+    /// @dev Count direct referrals with >= $100 active deposit
+    function _countQualifiedDirects(address user) internal view returns (uint256) {
+        uint256 count = 0;
+        address[] storage directs = userInfo[user].directReferrals;
+        for (uint256 i = 0; i < directs.length; i++) {
+            if (investmentEngine != address(0)) {
+                uint256 activeDeposit = IInvestmentEngine(investmentEngine).getActiveDeposit(directs[i]);
+                if (activeDeposit >= OSLOConstants.QUALIFIED_DIRECT_MIN_DEPOSIT) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    /// @dev Get maximum unlocked level based on qualified directs count
+    /// Levels 1-3: 1 qualified direct
+    /// Levels 4-8: 2 qualified directs
+    /// Levels 9-12: 3 qualified directs
+    /// Levels 13-16: 5 qualified directs
+    /// Levels 17-20: 7 qualified directs
+    function _getMaxUnlockedLevel(uint256 qualifiedDirects) internal pure returns (uint256) {
+        if (qualifiedDirects >= 7) return 20;
+        if (qualifiedDirects >= 5) return 16;
+        if (qualifiedDirects >= 3) return 12;
+        if (qualifiedDirects >= 2) return 8;
+        if (qualifiedDirects >= 1) return 3;
+        return 0;
+    }
+
+    /// @dev Get commission rate for a specific level
+    function _getCommissionRate(uint256 level) internal pure returns (uint256) {
+        if (level == 1) return OSLOConstants.REFERRAL_L1_BP;
+        if (level == 2) return OSLOConstants.REFERRAL_L2_BP;
+        if (level >= 3 && level <= 10) return OSLOConstants.REFERRAL_L3_10_BP;
+        if (level >= 11 && level <= 15) return OSLOConstants.REFERRAL_L11_15_BP;
+        if (level >= 16 && level <= 20) return OSLOConstants.REFERRAL_L16_20_BP;
+        return 0;
+    }
+
+    /// @dev Recursively count team size across 20 levels
+    function _getTeamSize(address user, uint256 depth) internal view returns (uint256) {
+        if (depth >= OSLOConstants.MAX_REFERRAL_LEVELS) return 0;
+
+        address[] storage directs = userInfo[user].directReferrals;
+        uint256 size = directs.length;
+        for (uint256 i = 0; i < directs.length; i++) {
+            size += _getTeamSize(directs[i], depth + 1);
+        }
+        return size;
+    }
+
+    /// @dev Calculate early adopter airdrop amount based on registration number
+    function _getEarlyAdopterAmount(uint256 regNumber) internal pure returns (uint256) {
+        // Tiered airdrop: earlier registrants get more
+        if (regNumber <= 1_000) return 10 * 1e18;    // First 1K: 10 OSLO
+        if (regNumber <= 5_000) return 5 * 1e18;     // 1K-5K: 5 OSLO
+        if (regNumber <= 10_000) return 2 * 1e18;    // 5K-10K: 2 OSLO
+        if (regNumber <= 20_000) return 1 * 1e18;    // 10K-20K: 1 OSLO
+        return 0;
+    }
+}

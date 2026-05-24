@@ -1,0 +1,151 @@
+# OSLO Protocol Subgraph Schema
+
+# --- Protocol Stats (singleton) ---
+type ProtocolStat @entity {
+  id: ID!
+  totalDeposited: BigDecimal!
+  totalRewardsPaid: BigDecimal!
+  totalUsers: BigInt!
+  totalBurned: BigDecimal!
+  totalFeesCollected: BigDecimal!
+}
+
+# --- User ---
+type User @entity {
+  id: Bytes! # address
+  deposits: [Deposit!]! @derivedFrom(field: "user")
+  referrer: Bytes
+  directReferrals: [Bytes!]!
+  teamSize: BigInt!
+  unlockedLevels: BigInt!
+  totalDeposited: BigDecimal!
+  totalClaimed: BigDecimal!
+  totalReferralEarned: BigDecimal!
+  currentRank: Int!
+  isDAOMember: Boolean!
+  registrationNumber: BigInt!
+  registeredAt: BigInt!
+}
+
+# --- Deposit ---
+type Deposit @entity {
+  id: ID! # user-depositIndex
+  user: User!
+  amount: BigDecimal!
+  netAmount: BigDecimal!
+  tier: Int!
+  depositTime: BigInt!
+  totalClaimed: BigDecimal!
+  active: Boolean!
+  depositIndex: BigInt!
+}
+
+# --- Referral Commission ---
+type ReferralPayment @entity {
+  id: ID!
+  upline: Bytes!
+  downline: Bytes!
+  level: Int!
+  amount: BigDecimal!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+# --- Rank Event ---
+type RankAchievement @entity {
+  id: ID!
+  user: Bytes!
+  rank: Int!
+  weekId: BigInt!
+  turnover: BigDecimal!
+  timestamp: BigInt!
+}
+
+# --- Rank Bonus Claim ---
+type RankBonusClaim @entity {
+  id: ID!
+  user: Bytes!
+  amount: BigDecimal!
+  weekId: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+# --- DAO Member ---
+type DAOMember @entity {
+  id: Bytes! # address
+  memberNumber: BigInt!
+  teamSize: BigInt!
+  qualifiedAt: BigInt!
+  totalRoyaltyClaimed: BigDecimal!
+}
+
+# --- Royalty Claim ---
+type RoyaltyClaim @entity {
+  id: ID!
+  user: Bytes!
+  amount: BigDecimal!
+  monthId: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+# --- Treasury Distribution ---
+type TreasuryDistribution @entity {
+  id: ID!
+  toRank: BigDecimal!
+  toDao: BigDecimal!
+  toLiquidity: BigDecimal!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+# --- Sell Tax Event ---
+type SellTax @entity {
+  id: ID!
+  from: Bytes!
+  taxAmount: BigDecimal!
+  toLp: BigDecimal!
+  burned: BigDecimal!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+# --- Liquidity Added ---
+type LiquidityEvent @entity {
+  id: ID!
+  busdAmount: BigDecimal!
+  osloAmount: BigDecimal!
+  liquidity: BigDecimal!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+# --- Buyback & Burn ---
+type BuybackBurn @entity {
+  id: ID!
+  busdSpent: BigDecimal!
+  osloBurned: BigDecimal!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+# --- Weekly Turnover ---
+type WeeklyTurnover @entity {
+  id: ID! # user-weekId
+  user: Bytes!
+  weekId: BigInt!
+  amount: BigDecimal!
+}
+
+# --- Withdrawal ---
+type Withdrawal @entity {
+  id: ID!
+  user: Bytes!
+  amount: BigDecimal!
+  penalty: BigDecimal!
+  depositIndex: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+

@@ -1,0 +1,189 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./libraries/OSLOConstants.sol";
+import "./interfaces/IDAO.sol";
+import "./interfaces/IInvestmentEngine.sol";
+
+/// @title OSLODAO
+/// @notice DAO entry qualification, monthly royalty distribution, and protocol governance.
+/// @dev V2: USDT-based. First 200 users with 250+ team members qualify permanently for monthly royalties. Royalties paid in USDT.
+contract OSLODAO is IDAO, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
+    // ─── State ──────────────────────────────────────────────────────────
+
+    IERC20 public immutable usdt;
+    address public investmentEngine;   // For combined 3X cap tracking
+
+    address[] public daoMembers;
+    mapping(address => bool) public override isDAOMember;
+
+    /// @notice Monthly turnover tracking: monthId => totalTurnover
+    mapping(uint256 => uint256) public monthlyTurnover;
+
+    /// @notice Whether a member has claimed royalty for a given month
+    mapping(address => mapping(uint256 => bool)) public royaltyClaimed;
+
+    /// @notice Royalty pool balance (USDT)
+    uint256 public royaltyPoolBalance;
+
+    /// @notice Total royalties distributed all-time (USDT)
+    uint256 public totalRoyaltiesDistributed;
+
+    /// @notice Genesis timestamp for month calculation
+    uint256 public immutable genesisTimestamp;
+
+    address public admin;
+    address public timelock;
+    bool public setupComplete;
+
+    // ─── Events ─────────────────────────────────────────────────────────
+    event DAOMemberQualified(address indexed user, uint256 memberNumber, uint256 teamSize);
+    event RoyaltyClaimed(address indexed user, uint256 amount, uint256 monthId);
+    event RoyaltyPoolFunded(uint256 amount);
+    event MonthlyTurnoverRecorded(uint256 monthId, uint256 amount);
+
+    // ─── Errors ─────────────────────────────────────────────────────────
+    error OnlyAdmin();
+    error OnlyTimelock();
+    error SetupAlreadyComplete();
+    error MaxDAOMembersReached();
+    error AlreadyDAOMember();
+    error NotDAOMember();
+    error AlreadyClaimed();
+    error NoRoyalty();
+    error InsufficientRoyaltyPool();
+    error CurrentMonthNotClaimable();
+    error ZeroAddress();
+
+    modifier onlyAdmin() {
+        if (msg.sender != admin) revert OnlyAdmin();
+        _;
+    }
+
+    constructor(address _usdt) {
+        if (_usdt == address(0)) revert ZeroAddress();
+        usdt = IERC20(_usdt);
+        admin = msg.sender;
+        genesisTimestamp = block.timestamp;
+    }
+
+    // ─── Setup ──────────────────────────────────────────────────────────
+
+    function configure(address _timelock, address _investmentEngine) external onlyAdmin {
+        if (setupComplete) revert SetupAlreadyComplete();
+        timelock = _timelock;
+        investmentEngine = _investmentEngine;
+    }
+
+    function completeSetup() external onlyAdmin {
+        if (setupComplete) revert SetupAlreadyComplete();
+        setupComplete = true;
+        admin = address(0);
+    }
+
+    // ─── Core Functions ─────────────────────────────────────────────────
+
+    /// @notice Check if a user qualifies for DAO membership (called by Referral or Engine)
+    /// @param user Address to check
+    /// @param teamSize Total team size across 20 levels
+    function checkAndQualify(address user, uint256 teamSize) external override {
+        if (isDAOMember[user]) return;
+        if (daoMembers.length >= OSLOConstants.MAX_DAO_MEMBERS) return;
+        if (teamSize < OSLOConstants.DAO_TEAM_SIZE_REQUIREMENT) return;
+
+        isDAOMember[user] = true;
+        daoMembers.push(user);
+
+        emit DAOMemberQualified(user, daoMembers.length, teamSize);
+    }
+
+    /// @notice Receive USDT into the royalty pool from Treasury
+    function receiveRoyaltyPool(uint256 amount) external override {
+        usdt.safeTransferFrom(msg.sender, address(this), amount);
+        royaltyPoolBalance += amount;
+        emit RoyaltyPoolFunded(amount);
+    }
+
+    /// @notice Record monthly protocol turnover for royalty calculation
+    function recordMonthlyTurnover(uint256 amount) external override {
+        uint256 monthId = getCurrentMonthId();
+        monthlyTurnover[monthId] += amount;
+        emit MonthlyTurnoverRecorded(monthId, amount);
+    }
+
+    /// @notice Claim monthly royalty (0.5% of previous month's turnover, split among DAO members)
+    /// @dev Paid in USDT directly. Notifies InvestmentEngine for combined 3X cap tracking.
+    function claimRoyalty() external override nonReentrant {
+        if (!isDAOMember[msg.sender]) revert NotDAOMember();
+
+        uint256 currentMonth = getCurrentMonthId();
+        if (currentMonth <= 1) revert NoRoyalty();
+
+        uint256 claimMonth = currentMonth - 1;
+        if (royaltyClaimed[msg.sender][claimMonth]) revert AlreadyClaimed();
+
+        uint256 turnover = monthlyTurnover[claimMonth];
+        if (turnover == 0) revert NoRoyalty();
+
+        // Total royalty pool for the month = 0.5% of turnover
+        uint256 totalRoyalty = (turnover * OSLOConstants.DAO_MONTHLY_ROYALTY_BP) / OSLOConstants.BASIS_POINTS;
+        // Each member gets equal share
+        uint256 memberCount = daoMembers.length;
+        if (memberCount == 0) revert NoRoyalty();
+
+        uint256 memberShare = totalRoyalty / memberCount;
+        if (memberShare == 0) revert NoRoyalty();
+        if (memberShare > royaltyPoolBalance) revert InsufficientRoyaltyPool();
+
+        royaltyClaimed[msg.sender][claimMonth] = true;
+        royaltyPoolBalance -= memberShare;
+        totalRoyaltiesDistributed += memberShare;
+
+        // Notify InvestmentEngine for combined 3X cap tracking
+        if (investmentEngine != address(0)) {
+            IInvestmentEngine(investmentEngine).notifyLevelIncome(msg.sender, memberShare);
+        }
+
+        // Pay royalty in USDT directly
+        usdt.safeTransfer(msg.sender, memberShare);
+
+        emit RoyaltyClaimed(msg.sender, memberShare, claimMonth);
+    }
+
+    // ─── View Functions ─────────────────────────────────────────────────
+
+    function daoMemberCount() external view override returns (uint256) {
+        return daoMembers.length;
+    }
+
+    function getCurrentMonthId() public view returns (uint256) {
+        return (block.timestamp - genesisTimestamp) / 30 days + 1;
+    }
+
+    function getPendingRoyalty(address user) external view returns (uint256) {
+        if (!isDAOMember[user]) return 0;
+        uint256 currentMonth = getCurrentMonthId();
+        if (currentMonth <= 1) return 0;
+
+        uint256 claimMonth = currentMonth - 1;
+        if (royaltyClaimed[user][claimMonth]) return 0;
+
+        uint256 turnover = monthlyTurnover[claimMonth];
+        if (turnover == 0) return 0;
+
+        uint256 totalRoyalty = (turnover * OSLOConstants.DAO_MONTHLY_ROYALTY_BP) / OSLOConstants.BASIS_POINTS;
+        uint256 memberCount = daoMembers.length;
+        if (memberCount == 0) return 0;
+
+        return totalRoyalty / memberCount;
+    }
+
+    function getAllDAOMembers() external view returns (address[] memory) {
+        return daoMembers;
+    }
+}

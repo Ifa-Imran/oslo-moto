@@ -1,0 +1,135 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./libraries/OSLOConstants.sol";
+import "./interfaces/ITreasury.sol";
+import "./interfaces/IRankSystem.sol";
+import "./interfaces/IDAO.sol";
+import "./interfaces/ILiquidityManager.sol";
+
+/// @title OSLOTreasury
+/// @notice Autonomous fee router. No EOA can withdraw funds.
+/// @dev Receives 5% deposit fees and trial penalties, distributes to Rank/DAO/LP pools.
+contract OSLOTreasury is ITreasury, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
+    IERC20 public immutable busd;
+    IERC20 public immutable osloToken;
+
+    address public rankSystem;
+    address public dao;
+    address public liquidityManager;
+    address public timelock;
+    address public admin; // Only for initial setup, then renounced
+
+    uint256 public override totalReceived;
+    uint256 public totalDistributed;
+    uint256 public pendingDistribution;
+
+    bool public setupComplete;
+
+    // ─── Events ─────────────────────────────────────────────────────────
+    event FeesReceived(uint256 amount);
+    event Distributed(uint256 toRank, uint256 toDao, uint256 toLiquidity);
+    event TokensRescued(address indexed token, uint256 amount, address to);
+
+    // ─── Errors ─────────────────────────────────────────────────────────
+    error OnlyAdmin();
+    error OnlyTimelock();
+    error SetupAlreadyComplete();
+    error NotConfigured();
+    error NothingToDistribute();
+    error CannotRescueProtocolTokens();
+    error ZeroAddress();
+
+    modifier onlyAdmin() {
+        if (msg.sender != admin) revert OnlyAdmin();
+        _;
+    }
+
+    modifier onlyTimelock() {
+        if (msg.sender != timelock) revert OnlyTimelock();
+        _;
+    }
+
+    constructor(address _busd, address _osloToken) {
+        if (_busd == address(0) || _osloToken == address(0)) revert ZeroAddress();
+        busd = IERC20(_busd);
+        osloToken = IERC20(_osloToken);
+        admin = msg.sender;
+    }
+
+    // ─── Setup (pre-Timelock) ───────────────────────────────────────────
+
+    function configure(
+        address _rankSystem,
+        address _dao,
+        address _liquidityManager,
+        address _timelock
+    ) external onlyAdmin {
+        if (setupComplete) revert SetupAlreadyComplete();
+        rankSystem = _rankSystem;
+        dao = _dao;
+        liquidityManager = _liquidityManager;
+        timelock = _timelock;
+    }
+
+    function completeSetup() external onlyAdmin {
+        if (setupComplete) revert SetupAlreadyComplete();
+        if (rankSystem == address(0) || dao == address(0) || liquidityManager == address(0))
+            revert NotConfigured();
+        setupComplete = true;
+        admin = address(0);
+    }
+
+    // ─── Core Functions ─────────────────────────────────────────────────
+
+    /// @notice Called by InvestmentEngine to deposit fees. Caller must have approved BUSD.
+    function receiveFees(uint256 amount) external override {
+        busd.safeTransferFrom(msg.sender, address(this), amount);
+        totalReceived += amount;
+        pendingDistribution += amount;
+        emit FeesReceived(amount);
+    }
+
+    /// @notice Permissionless distribution of accumulated fees.
+    /// @dev Anyone can call this to distribute fees to Rank/DAO/LP pools.
+    function distribute() external override nonReentrant {
+        if (pendingDistribution == 0) revert NothingToDistribute();
+        if (rankSystem == address(0)) revert NotConfigured();
+
+        uint256 amount = pendingDistribution;
+        pendingDistribution = 0;
+
+        uint256 toRank = (amount * OSLOConstants.TREASURY_TO_RANK_BP) / OSLOConstants.BASIS_POINTS;
+        uint256 toDao = (amount * OSLOConstants.TREASURY_TO_DAO_BP) / OSLOConstants.BASIS_POINTS;
+        uint256 toLiquidity = amount - toRank - toDao; // Remainder to avoid rounding dust
+
+        // Transfer to RankSystem bonus pool
+        busd.forceApprove(rankSystem, toRank);
+        IRankSystem(rankSystem).receiveBonusPool(toRank);
+
+        // Transfer to DAO royalty pool
+        busd.forceApprove(dao, toDao);
+        IDAO(dao).receiveRoyaltyPool(toDao);
+
+        // Transfer to Liquidity Manager
+        busd.forceApprove(liquidityManager, toLiquidity);
+        ILiquidityManager(liquidityManager).addLiquidityFromFees(toLiquidity);
+
+        totalDistributed += amount;
+        emit Distributed(toRank, toDao, toLiquidity);
+    }
+
+    /// @notice Rescue accidentally sent tokens. Only callable by DAO Timelock.
+    /// @dev Explicitly blocked for BUSD and OSLO to prevent rug pulls.
+    function rescueERC20(address token, uint256 amount) external onlyTimelock {
+        if (token == address(busd) || token == address(osloToken))
+            revert CannotRescueProtocolTokens();
+        IERC20(token).safeTransfer(timelock, amount);
+        emit TokensRescued(token, amount, timelock);
+    }
+}
