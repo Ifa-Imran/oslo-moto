@@ -13,10 +13,23 @@ export const DEX_ALLOCATION = 100_000;
 export const WITHDRAWAL_FEE_PCT = 10; // 10% on profit claims
 export const MIN_WITHDRAWAL_THRESHOLD = 10; // $10 USDT minimum
 
-// ─── Sell Tax ───────────────────────────────────────────────────────────
-export const SELL_TAX_PCT = 10; // 10%
-export const SELL_TAX_TO_LP_PCT = 90; // 90% of sell tax
-export const SELL_TAX_TO_BURN_PCT = 10; // 10% of sell tax
+// ─── Sell Tax / Swap Fee Distribution (V3) ───────────────────────────────
+// On every sell: 10% fee burned + 20% deflationary burn + 70% to contract
+// Total burn per sell = 30% (fee paid in tokens, USDT stays in DEX as liquidity)
+export const SELL_TAX_PCT = 10; // 10% fee → burned
+export const SWAP_TO_CONTRACT_PCT = 70; // 70% → InvestmentEngine (contract reserve)
+export const SWAP_TO_BURN_PCT = 20; // 20% → additional deflationary burn
+export const SWAP_TOTAL_BURN_PCT = 30; // 10% fee + 20% burn = 30% total burned per sell
+
+// ─── Burn Cap ────────────────────────────────────────────────────────────
+export const TOTAL_SUPPLY_TOKENS = 11_100_000;
+export const MAX_BURN_TOKENS = 9_990_000; // 90% of supply — burn stops here
+export const MIN_REMAINING_TOKENS = 1_110_000; // 10% remains after max burn
+
+// ─── Early Exit ──────────────────────────────────────────────────────────
+export const EARLY_EXIT_PERIOD_DAYS = 10;
+export const EARLY_EXIT_PERIOD_SECONDS = 10 * 86400;
+export const EARLY_EXIT_FEE_PCT = 10; // 10% fee on early exit
 
 // ─── Return Cap ─────────────────────────────────────────────────────────
 export const RETURN_CAP_MULTIPLIER = 3; // 3X combined cap

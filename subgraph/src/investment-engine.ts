@@ -1,9 +1,8 @@
 import {
   Deposited,
   RewardsClaimed,
-  PrincipalWithdrawn,
 } from "../generated/OSLOInvestmentEngine/OSLOInvestmentEngine";
-import { Deposit, Withdrawal } from "../generated/schema";
+import { Deposit } from "../generated/schema";
 import { toDecimal, getOrCreateProtocolStat, getOrCreateUser, ZERO_BD } from "./helpers";
 
 export function handleDeposited(event: Deposited): void {
@@ -46,24 +45,5 @@ export function handleRewardsClaimed(event: RewardsClaimed): void {
   let stats = getOrCreateProtocolStat();
   stats.totalRewardsPaid = stats.totalRewardsPaid.plus(total);
   stats.save();
-}
-
-export function handlePrincipalWithdrawn(event: PrincipalWithdrawn): void {
-  let id = event.transaction.hash.toHexString() + "-" + event.logIndex.toString();
-  let withdrawal = new Withdrawal(id);
-  withdrawal.user = event.params.user;
-  withdrawal.amount = toDecimal(event.params.amount);
-  withdrawal.penalty = toDecimal(event.params.penalty);
-  withdrawal.depositIndex = event.params.depositIndex;
-  withdrawal.timestamp = event.block.timestamp;
-  withdrawal.txHash = event.transaction.hash;
-  withdrawal.save();
-
-  let depositId = event.params.user.toHexString() + "-" + event.params.depositIndex.toString();
-  let deposit = Deposit.load(depositId);
-  if (deposit != null) {
-    deposit.active = false;
-    deposit.save();
-  }
 }
 

@@ -28,6 +28,9 @@ import {
   LIFETIME_RATE_BP,
   LAUNCH_TIMESTAMP,
   LIFETIME_RATE_START,
+  EARLY_EXIT_PERIOD_DAYS,
+  EARLY_EXIT_FEE_PCT,
+  EARLY_EXIT_PERIOD_SECONDS,
 } from "@/lib/constants";
 import { motion } from "framer-motion";
 import {
@@ -58,7 +61,7 @@ export default function InvestPage() {
   const publicClient = usePublicClient();
   const { totalActiveDeposit, userTier, depositCount, launchTimestamp, completedCycles, dAppBalance } =
     useInvestmentEngineReads(address);
-  const { deposit, claimRewards, withdrawPrincipal, isLoading } =
+  const { deposit, claimRewards, earlyExit, isLoading } =
     useInvestmentEngineWrites();
 
   const [amount, setAmount] = useState("");
@@ -162,14 +165,14 @@ export default function InvestPage() {
     }
   };
 
-  const handleWithdraw = async (index: number) => {
+  const handleEarlyExit = async (index: number) => {
     try {
-      addToast({ title: "Withdrawing...", status: "pending" });
-      const tx = await withdrawPrincipal(index);
-      addToast({ title: "Principal Withdrawn", status: "success", txHash: tx });
+      addToast({ title: "Early Exit — Returning USDT...", status: "pending" });
+      const tx = await earlyExit(index);
+      addToast({ title: "Early Exit Complete — USDT Returned", status: "success", txHash: tx });
     } catch (err: any) {
       addToast({
-        title: "Withdraw Failed",
+        title: "Early Exit Failed",
         description: err?.message?.slice(0, 100) || "Transaction rejected",
         status: "error",
       });
@@ -423,7 +426,7 @@ export default function InvestPage() {
                 key={i}
                 index={i}
                 onClaim={handleClaim}
-                onWithdraw={handleWithdraw}
+                onEarlyExit={handleEarlyExit}
               />
             ))}
           </div>
@@ -438,16 +441,16 @@ export default function InvestPage() {
 function DepositCard({
   index,
   onClaim,
-  onWithdraw,
+  onEarlyExit,
 }: {
   index: number;
   onClaim: (i: number) => void;
-  onWithdraw: (i: number) => void;
+  onEarlyExit: (i: number) => void;
 }) {
   const { address } = useAccount();
   const { addToast } = useAppStore();
   const { writeContractAsync } = useWriteContract();
-  const { depositData, pendingRewards } = useDepositRead(
+  const { depositData, pendingRewards, isInEarlyExit, earlyExitAmount } = useDepositRead(
     address,
     index
   );
@@ -457,6 +460,7 @@ function DepositCard({
   const rewards = pendingRewards.data as [bigint, bigint] | undefined;
 
   const [convertingOslo, setConvertingOslo] = useState(false);
+  const [earlyExiting, setEarlyExiting] = useState(false);
 
   if (!deposit) return <Skeleton className="h-64" />;
 
@@ -469,6 +473,18 @@ function DepositCard({
   const profReturn = rewards ? Number(rewards[1]) / 1e18 : 0;
   const osloBal = osloBalance?.data as bigint | undefined;
   const osloBalNum = osloBal ? Number(osloBal) / 1e18 : 0;
+
+  // Early exit data
+  const inEarlyExit = (isInEarlyExit?.data as boolean) || false;
+  const exitData = earlyExitAmount?.data as [bigint, bigint, bigint, bigint] | undefined;
+  const exitPrincipal = exitData ? Number(exitData[0]) / 1e18 : 0;
+  const exitAccruedYield = exitData ? Number(exitData[1]) / 1e18 : 0;
+  const exitFee = exitData ? Number(exitData[2]) / 1e18 : 0;
+  const exitNetReturn = exitData ? Number(exitData[3]) / 1e18 : 0;
+  const depositTimestamp = Number(depositTime);
+  const exitDeadline = depositTimestamp + EARLY_EXIT_PERIOD_SECONDS;
+  const exitDaysLeft = Math.max(0, Math.ceil((exitDeadline - Date.now() / 1000) / 86400));
+  const exitHoursLeft = Math.max(0, Math.ceil((exitDeadline - Date.now() / 1000) / 3600));
 
   const handleConvertOsloToUSDT = async () => {
     if (!osloBal || osloBal === 0n) return;
@@ -562,14 +578,24 @@ function DepositCard({
         </div>
       </div>
 
-      {/* V2: early exit always available */}
-      {active && (
-        <div className="mb-4 p-2 rounded-lg bg-oslo-ice/5 border border-oslo-ice/10">
+      {/* V3: Early Exit — 10-day window with 10% fee + yield deduction, paid in USDT */}
+      {active && inEarlyExit && exitNetReturn > 0 && (
+        <div className="mb-4 p-3 rounded-lg bg-oslo-aurora/5 border border-oslo-aurora/10 space-y-2">
           <div className="flex items-center gap-1.5">
-            <ShieldCheck className="w-3 h-3 text-oslo-ice" />
-            <span className="text-[10px] text-oslo-ice">
-              Early exit available — profits deducted from principal ({WITHDRAWAL_FEE_PCT}% fee)
+            <ShieldCheck className="w-3 h-3 text-oslo-aurora" />
+            <span className="text-[10px] text-oslo-aurora font-medium">
+              Early Exit Available — {exitDaysLeft > 0 ? `${exitDaysLeft}d remaining` : `${exitHoursLeft}h remaining`}
             </span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+            <span className="text-oslo-text-muted">Principal</span>
+            <span className="font-mono text-oslo-text-primary text-right">${formatNumber(exitPrincipal)}</span>
+            <span className="text-oslo-text-muted">Accrued Yield</span>
+            <span className="font-mono text-oslo-success text-right">-${formatNumber(exitAccruedYield, 4)}</span>
+            <span className="text-oslo-text-muted">{EARLY_EXIT_FEE_PCT}% Exit Fee</span>
+            <span className="font-mono text-oslo-danger text-right">-${formatNumber(exitFee)}</span>
+            <span className="text-oslo-text-muted pt-1 border-t border-white/5">You Receive (USDT)</span>
+            <span className="font-mono text-oslo-ice text-right pt-1 border-t border-white/5">${formatNumber(exitNetReturn)}</span>
           </div>
         </div>
       )}
@@ -601,15 +627,20 @@ function DepositCard({
           Convert {formatNumber(osloBalNum)} OSLO → USDT
         </IceButton>
       )}
-      {/* Withdraw button — always available in V2 */}
-      {active && (
+      {/* Early Exit button — within 10-day window, returns USDT */}
+      {active && inEarlyExit && exitNetReturn > 0 && (
         <IceButton
           size="sm"
-          variant="danger"
-          className="w-full mt-2"
-          onClick={() => onWithdraw(index)}
+          variant="primary"
+          className="w-full mt-2 bg-oslo-aurora hover:bg-oslo-aurora/80"
+          onClick={() => {
+            setEarlyExiting(true);
+            onEarlyExit(index);
+          }}
+          loading={earlyExiting}
+          disabled={earlyExiting}
         >
-          Withdraw Principal
+          Early Exit — Get ${formatNumber(exitNetReturn)} USDT
         </IceButton>
       )}
     </GlassCard>

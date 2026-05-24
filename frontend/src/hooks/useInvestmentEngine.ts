@@ -99,18 +99,18 @@ export function useDepositRead(userAddress?: Address, depositIndex?: number) {
     query: { enabled },
   });
 
-  const isInTrial = useReadContract({
+  const isInEarlyExit = useReadContract({
     address: CONTRACTS.investmentEngine,
     abi: investmentEngineAbi,
-    functionName: "isInTrialPeriod",
+    functionName: "isInEarlyExitPeriod",
     args: enabled ? [userAddress!, depositIndex!] : undefined,
     query: { enabled },
   });
 
-  const trialTimeRemaining = useReadContract({
+  const earlyExitAmount = useReadContract({
     address: CONTRACTS.investmentEngine,
     abi: investmentEngineAbi,
-    functionName: "getTrialTimeRemaining",
+    functionName: "getEarlyExitAmount",
     args: enabled ? [userAddress!, depositIndex!] : undefined,
     query: { enabled },
   });
@@ -123,13 +123,13 @@ export function useDepositRead(userAddress?: Address, depositIndex?: number) {
     query: { enabled },
   });
 
-  return { pendingRewards, isInTrial, trialTimeRemaining, depositData };
+  return { pendingRewards, isInEarlyExit, earlyExitAmount, depositData };
 }
 
 export function useInvestmentEngineWrites() {
   const { writeContractAsync, ...depositWrite } = useWriteContract();
   const { writeContractAsync: claimAsync, ...claimWrite } = useWriteContract();
-  const { writeContractAsync: withdrawAsync, ...withdrawWrite } = useWriteContract();
+  const { writeContractAsync: earlyExitAsync, ...earlyExitWrite } = useWriteContract();
 
   const deposit = async (amount: bigint) => {
     return writeContractAsync({
@@ -149,11 +149,11 @@ export function useInvestmentEngineWrites() {
     });
   };
 
-  const withdrawPrincipal = async (depositIndex: number) => {
-    return withdrawAsync({
+  const earlyExit = async (depositIndex: number) => {
+    return earlyExitAsync({
       address: CONTRACTS.investmentEngine,
       abi: investmentEngineAbi,
-      functionName: "withdrawPrincipal",
+      functionName: "earlyExit",
       args: [BigInt(depositIndex)],
     });
   };
@@ -161,11 +161,11 @@ export function useInvestmentEngineWrites() {
   return {
     deposit,
     claimRewards,
-    withdrawPrincipal,
+    earlyExit,
     isLoading:
       depositWrite.isPending ||
       claimWrite.isPending ||
-      withdrawWrite.isPending,
+      earlyExitWrite.isPending,
   };
 }
 
@@ -181,13 +181,6 @@ export function useDepositEvents(onEvent?: (event: any) => void) {
     address: CONTRACTS.investmentEngine,
     abi: investmentEngineAbi,
     eventName: "RewardsClaimed",
-    onLogs: (logs) => logs.forEach((log) => onEvent?.(log)),
-  });
-
-  useWatchContractEvent({
-    address: CONTRACTS.investmentEngine,
-    abi: investmentEngineAbi,
-    eventName: "PrincipalWithdrawn",
     onLogs: (logs) => logs.forEach((log) => onEvent?.(log)),
   });
 

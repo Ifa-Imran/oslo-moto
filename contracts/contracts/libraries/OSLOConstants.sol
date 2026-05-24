@@ -20,9 +20,16 @@ library OSLOConstants {
     uint256 public constant MIN_WITHDRAWAL_THRESHOLD = 10 * 1e18; // $10 USDT minimum to withdraw
 
     // ─── Sell Tax ───────────────────────────────────────────────────────
-    uint256 public constant SELL_TAX_BP = 1_000;         // 10% sell tax
-    uint256 public constant SELL_TAX_TO_LP_BP = 9_000;   // 90% of sell tax → LP
-    uint256 public constant SELL_TAX_TO_BURN_BP = 1_000; // 10% of sell tax → burn
+    // On every sell/swap, tokens are distributed:
+    //   10% fee → burned (the fee is paid by burning tokens)
+    //   70% → InvestmentEngine (contract reserve for rewards)
+    //   20% → additionally burned (deflationary)
+    //   Total burn per sell = 30% (until burn cap is reached)
+    //   USDT from the swap stays in the DEX as liquidity.
+    uint256 public constant SELL_TAX_BP = 1_000;         // 10% sell tax (burned as fee)
+    uint256 public constant SELL_TAX_TO_CONTRACT_BP = 7_000; // 70% → InvestmentEngine (contract reserve)
+    uint256 public constant SELL_TAX_TO_BURN_BP = 2_000;     // 20% additional burn
+    uint256 public constant SELL_TAX_FEE_BURN_BP = 1_000;    // 10% fee → burned (was LP, now burn)
 
     // ─── 3X Return Cap ──────────────────────────────────────────────────
     uint256 public constant RETURN_CAP_MULTIPLIER = 3; // 3X combined cap on all earnings
@@ -51,6 +58,14 @@ library OSLOConstants {
 
     // ─── Dead Address ───────────────────────────────────────────────────
     address public constant DEAD_ADDRESS = 0x000000000000000000000000000000000000dEaD;
+
+    // ─── Burn Cap ───────────────────────────────────────────────────────
+    uint256 public constant MAX_BURN_SUPPLY = 9_990_000 * 1e18;   // 90% of 11.1M — stop burning when this much is burned
+    uint256 public constant MIN_REMAINING_SUPPLY = 1_110_000 * 1e18; // 10% of 11.1M — minimum tokens remaining after burn
+
+    // ─── Early Exit Period ───────────────────────────────────────────────
+    uint256 public constant EARLY_EXIT_PERIOD = 10 days;           // 10-day early exit window
+    uint256 public constant EARLY_EXIT_FEE_BP = 1_000;             // 10% early exit fee
 
     // ─── Investment Tier Boundaries (in USDT, 18 decimals) ──────────────
     uint256 public constant MAX_DEPOSIT_PER_TX = 5_000 * 1e18; // $5,000 max per single deposit

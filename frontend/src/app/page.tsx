@@ -608,10 +608,13 @@ function LandingPage() {
       {/* Live Yield Dashboard */}
       {isConnected && registered && activeDeposit && activeDeposit > 0n && (
         <RealTimeYield
-          depositAmount={activeDepositNum}
-          dailyRate={dailyRate / 100}
+          deposits={[{
+            amount: activeDepositNum,
+            dailyRate: dailyRate / 100,
+            pendingUSDT: pendingTotalNum,
+            active: true,
+          }]}
           osloPrice={osloPriceNum}
-          pendingUSDT={pendingTotalNum}
         />
       )}
 

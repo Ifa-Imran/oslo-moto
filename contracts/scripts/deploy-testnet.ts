@@ -67,7 +67,7 @@ async function main() {
   // ─── Step 7: Deploy Referral ──────────────────────────────────────
   console.log("\n--- Step 7: Deploying OSLOReferral ---");
   const OSLOReferral = await ethers.getContractFactory("OSLOReferral");
-  const referral = await OSLOReferral.deploy(USDT_ADDRESS);
+  const referral = await OSLOReferral.deploy(USDT_ADDRESS, osloAddress);
   await referral.waitForDeployment();
   const referralAddress = await referral.getAddress();
   console.log("OSLOReferral deployed to:", referralAddress);
@@ -124,7 +124,7 @@ async function main() {
   // ─── Step 10: Token Configuration ──────────────────────────────────
   console.log("\n--- Step 10: Configuring OSLOToken ---");
 
-  tx = await osloToken.setSellTaxAddresses(liquidityManagerAddress);
+  tx = await osloToken.setSellTaxAddresses(liquidityManagerAddress, investmentEngineAddress);
   await tx.wait();
   console.log("Sell tax addresses set");
 

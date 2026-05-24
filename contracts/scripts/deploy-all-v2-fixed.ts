@@ -120,7 +120,7 @@ async function main() {
   // ─── Step 10: Configure OSLOToken ──────────────────────────────────
   console.log("\n--- Step 10: Configuring OSLOToken ---");
 
-  tx = await token.setSellTaxAddresses(LM_ADDR);
+  tx = await token.setSellTaxAddresses(LM_ADDR, IE_ADDR);
   await tx.wait();
   console.log("Sell tax → LM");
 

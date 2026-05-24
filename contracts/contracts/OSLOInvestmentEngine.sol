@@ -62,6 +62,7 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
     event Deposited(address indexed user, uint256 amount, uint256 tier, uint256 dailyRate, uint256 depositIndex);
     event RewardsClaimed(address indexed user, uint256 usdtReward, uint256 osloAmount, uint256 depositIndex);
     event PrincipalWithdrawn(address indexed user, uint256 netPrincipal, uint256 depositIndex);
+    event EarlyExited(address indexed user, uint256 amountReturned, uint256 feeDeducted, uint256 yieldDeducted, uint256 depositIndex);
     event DepositsPaused(bool paused);
     event CombinedCapReached(address indexed user);
     event CombinedEarningsUpdated(address indexed user, uint256 totalCombined);
@@ -84,6 +85,8 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
     error DEXNotPriced();
     error ZeroAddress();
     error InsufficientOsloReserve();
+    error NotInEarlyExitPeriod();
+    error InsufficientUSDTReserve();
 
     modifier onlyAdmin() {
         if (msg.sender != admin) revert OnlyAdmin();
@@ -272,21 +275,36 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         emit CombinedEarningsUpdated(msg.sender, userInfo.totalCombinedEarnings);
     }
 
-    /// @notice Early exit — withdraw remaining principal at any time.
-    /// @dev Deducts already-claimed rewards from principal. Returns net principal in USDT from DEX.
+
+
+    /// @notice Early exit — withdraw within 10-day window. Returns USDT directly.
+    /// @dev Deducts 10% early exit fee + all accrued yield. Net returned in USDT, not tokens.
+    ///      Available only within EARLY_EXIT_PERIOD (10 days) from deposit.
+    ///      Example: $100 deposit, 4 days elapsed, $4 yield earned
+    ///               → Deduct $4 (yield) + $10 (10% fee) = $14
+    ///               → Return $86 USDT to investor
     /// @param depositIndex Index of the deposit
-    function withdrawPrincipal(uint256 depositIndex) external nonReentrant {
+    function earlyExit(uint256 depositIndex) external nonReentrant {
         Deposit storage dep = _getActiveDeposit(msg.sender, depositIndex);
 
-        uint256 principal = dep.amount;
-        uint256 netPrincipal;
-
-        // Deduct already-claimed rewards from principal
-        if (principal > dep.totalClaimed) {
-            netPrincipal = principal - dep.totalClaimed;
-        } else {
-            netPrincipal = 0; // All principal has been returned as rewards
+        // Must be within 10-day early exit window
+        if (block.timestamp > dep.depositTime + OSLOConstants.EARLY_EXIT_PERIOD) {
+            revert NotInEarlyExitPeriod();
         }
+
+        uint256 principal = dep.amount;
+
+        // Calculate accrued yield (same formula as _calculatePendingRewards)
+        uint256 accruedYield = _calculatePendingRewards(msg.sender, dep);
+
+        // 10% early exit fee on principal
+        uint256 exitFee = (principal * OSLOConstants.EARLY_EXIT_FEE_BP) / OSLOConstants.BASIS_POINTS;
+
+        // Total deductions = accrued yield + 10% fee
+        uint256 totalDeductions = accruedYield + exitFee;
+
+        // Net return to investor
+        uint256 netReturn = principal > totalDeductions ? principal - totalDeductions : 0;
 
         // Mark deposit as inactive
         dep.active = false;
@@ -298,20 +316,61 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
             IReferral(referral).checkAndUnlockLevels(msg.sender);
         }
 
-        // Return net principal in USDT (pull from DEX liquidity)
-        if (netPrincipal > 0) {
-            // Approve OSLO to send to DEX, get USDT back
-            uint256 osloAmount = IOSLODEX(osloDex).getUSDTForOSLOOutput(netPrincipal);
-            if (osloAmount > 0 && osloToken.balanceOf(address(this)) >= osloAmount) {
-                osloToken.forceApprove(osloDex, osloAmount);
-                IOSLODEX(osloDex).processWithdrawal(osloAmount, msg.sender);
+        // Return net amount in USDT directly (not tokens)
+        if (netReturn > 0) {
+            // Try to get USDT from contract balance first (from fees)
+            uint256 usdtBalance = usdt.balanceOf(address(this));
+            if (usdtBalance >= netReturn) {
+                usdt.safeTransfer(msg.sender, netReturn);
             } else {
-                // Fallback: send USDT directly if available
-                usdt.safeTransfer(msg.sender, netPrincipal);
+                // Fallback: pull from DEX liquidity
+                if (usdtBalance > 0) {
+                    usdt.safeTransfer(msg.sender, usdtBalance);
+                    netReturn -= usdtBalance;
+                }
+                uint256 osloAmount = IOSLODEX(osloDex).getUSDTForOSLOOutput(netReturn);
+                if (osloAmount > 0 && osloToken.balanceOf(address(this)) >= osloAmount) {
+                    osloToken.forceApprove(osloDex, osloAmount);
+                    IOSLODEX(osloDex).processWithdrawal(osloAmount, msg.sender);
+                }
             }
         }
 
-        emit PrincipalWithdrawn(msg.sender, netPrincipal, depositIndex);
+        emit EarlyExited(msg.sender, netReturn, exitFee, accruedYield, depositIndex);
+    }
+
+    /// @notice Check if a deposit is within the early exit period
+    /// @param user Address of the investor
+    /// @param depositIndex Index of the deposit
+    /// @return bool True if early exit is available
+    function isInEarlyExitPeriod(address user, uint256 depositIndex) external view returns (bool) {
+        if (depositIndex >= userDeposits[user].length) return false;
+        Deposit storage dep = userDeposits[user][depositIndex];
+        if (!dep.active) return false;
+        return block.timestamp <= dep.depositTime + OSLOConstants.EARLY_EXIT_PERIOD;
+    }
+
+    /// @notice Get the early exit amount breakdown for a deposit
+    /// @param user Address of the investor
+    /// @param depositIndex Index of the deposit
+    /// @return principal The original deposit amount
+    /// @return accruedYield Yield earned so far
+    /// @return exitFee 10% early exit fee
+    /// @return netReturn Amount investor would receive in USDT
+    function getEarlyExitAmount(address user, uint256 depositIndex)
+        external view returns (uint256 principal, uint256 accruedYield, uint256 exitFee, uint256 netReturn)
+    {
+        if (depositIndex >= userDeposits[user].length) return (0, 0, 0, 0);
+        Deposit storage dep = userDeposits[user][depositIndex];
+        if (!dep.active || block.timestamp > dep.depositTime + OSLOConstants.EARLY_EXIT_PERIOD) {
+            return (0, 0, 0, 0);
+        }
+
+        principal = dep.amount;
+        accruedYield = _calculatePendingRewards(user, dep);
+        exitFee = (principal * OSLOConstants.EARLY_EXIT_FEE_BP) / OSLOConstants.BASIS_POINTS;
+        uint256 totalDeductions = accruedYield + exitFee;
+        netReturn = principal > totalDeductions ? principal - totalDeductions : 0;
     }
 
     // ─── Cross-Contract Notifications ───────────────────────────────────

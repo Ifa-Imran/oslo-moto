@@ -244,6 +244,9 @@ contract OSLODEX is IOSLODEX, ReentrancyGuard {
     }
 
     /// @notice Swap OSLO for USDT
+    /// @dev V3: 10% fee burned + 20% deflationary burn + 70% to InvestmentEngine (applied in OSLOToken._update).
+    ///      DEX receives 0 OSLO from sells; tokens are burned or routed to InvestmentEngine.
+    ///      USDT stays in DEX as liquidity. osloReserve tracks only tokens actually held by DEX.
     /// @param osloAmount Amount of OSLO to swap
     /// @param minUSDTAmount Minimum USDT to receive (slippage protection)
     /// @return usdtAmount Amount of USDT received
@@ -251,16 +254,24 @@ contract OSLODEX is IOSLODEX, ReentrancyGuard {
         if (osloAmount == 0) revert ZeroAmount();
         if (usdtReserve == 0 || osloReserve == 0) revert InsufficientReserve();
 
+        // Record OSLO balance before transfer (tax routing in OSLOToken._update:
+        // 30% burned, 70% to InvestmentEngine, 0% to DEX)
+        uint256 osloBefore = osloToken.balanceOf(address(this));
+        osloToken.safeTransferFrom(msg.sender, address(this), osloAmount);
+        uint256 osloReceived = osloToken.balanceOf(address(this)) - osloBefore;
+
+        // Calculate USDT output using the declared osloAmount for fair pricing
         usdtAmount = (osloAmount * usdtReserve) / (osloReserve + osloAmount);
 
         if (usdtAmount == 0 || usdtAmount < minUSDTAmount) revert SlippageExceeded();
         if (usdtAmount > usdtReserve) revert InsufficientReserve();
 
-        osloToken.safeTransferFrom(msg.sender, address(this), osloAmount);
-        usdt.safeTransfer(msg.sender, usdtAmount);
-
+        // Update reserves: only add tokens actually received
         usdtReserve -= usdtAmount;
-        osloReserve += osloAmount;
+        osloReserve += osloReceived; // 0 on sells due to tax routing
+
+        // Transfer USDT to user
+        usdt.safeTransfer(msg.sender, usdtAmount);
 
         totalVolumeUSDT += usdtAmount;
         totalSwaps++;

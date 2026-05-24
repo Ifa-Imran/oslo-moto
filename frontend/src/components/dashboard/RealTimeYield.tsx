@@ -1,37 +1,66 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { formatNumber } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { Clock, Coins, TrendingUp, DollarSign } from "lucide-react";
+import { Clock, Coins, TrendingUp, DollarSign, Layers } from "lucide-react";
+
+interface DepositData {
+  amount: number;       // principal in whole USDT
+  dailyRate: number;    // effective daily rate in % (e.g. 1.00)
+  pendingUSDT: number;  // contract pending rewards in USDT
+  active: boolean;
+}
 
 interface RealTimeYieldProps {
-  depositAmount: number;    // in whole USDT units
-  dailyRate: number;        // percentage (e.g. 1.00)
+  deposits: DepositData[];  // all user deposits (at least 1)
   osloPrice: number;        // USDT per OSLO
-  pendingUSDT: number;      // contract pending rewards in USDT
 }
 
 export function RealTimeYield({
-  depositAmount,
-  dailyRate,
+  deposits,
   osloPrice,
-  pendingUSDT,
 }: RealTimeYieldProps) {
   const startTimeRef = useRef(Date.now());
   const [elapsed, setElapsed] = useState(0);
 
-  const dailyYieldUSDT = depositAmount * (dailyRate / 100);
+  // Aggregate across all active deposits
+  const activeDeposits = useMemo(
+    () => deposits.filter((d) => d.active),
+    [deposits]
+  );
+
+  const totalDeposit = useMemo(
+    () => activeDeposits.reduce((sum, d) => sum + d.amount, 0),
+    [activeDeposits]
+  );
+
+  // Weighted average daily rate
+  const avgDailyRate = useMemo(() => {
+    if (totalDeposit === 0) return 0;
+    return (
+      activeDeposits.reduce((sum, d) => sum + d.amount * d.dailyRate, 0) /
+      totalDeposit
+    );
+  }, [activeDeposits, totalDeposit]);
+
+  const totalPendingUSDT = useMemo(
+    () => activeDeposits.reduce((sum, d) => sum + d.pendingUSDT, 0),
+    [activeDeposits]
+  );
+
+  const dailyYieldUSDT = totalDeposit * (avgDailyRate / 100);
   const perSecondUSDT = dailyYieldUSDT / 86400;
   const perMinuteUSDT = dailyYieldUSDT / 1440;
   const safePrice = osloPrice > 0 ? osloPrice : 0.000001;
 
   // Reset start time when pending changes (new block fetch)
+  const pendingKey = activeDeposits.map((d) => d.pendingUSDT.toFixed(6)).join(",");
   useEffect(() => {
     startTimeRef.current = Date.now();
     setElapsed(0);
-  }, [pendingUSDT]);
+  }, [pendingKey]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -41,7 +70,7 @@ export function RealTimeYield({
   }, []);
 
   const realTimeAddon = perSecondUSDT * elapsed;
-  const totalPending = pendingUSDT + realTimeAddon;
+  const totalPending = totalPendingUSDT + realTimeAddon;
   const totalPendingOSLO = totalPending / safePrice;
   const dailyYieldOSLO = dailyYieldUSDT / safePrice;
   const perMinuteOSLO = perMinuteUSDT / safePrice;
