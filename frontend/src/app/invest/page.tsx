@@ -184,7 +184,7 @@ export default function InvestPage() {
       <div>
         <h1 className="text-3xl font-light tracking-tight">Staking Engine</h1>
         <p className="mt-1 text-sm text-oslo-text-secondary">
-          Deposit USDT and earn daily yields — {lifetimeActive ? `Lifetime ${formatRate(LIFETIME_RATE_BP)}` : `${formatRate(effectiveRateBp)} daily`}
+          Deposit USDT and earn daily OSLO yields — paid exclusively in OSLO tokens — {lifetimeActive ? `Lifetime ${formatRate(LIFETIME_RATE_BP)}` : `${formatRate(effectiveRateBp)} daily`}
         </p>
 
       </div>
@@ -634,7 +634,7 @@ function DepositCard({
             onClick={() => onClaim(index)}
             disabled={invReturn + profReturn <= 0}
           >
-            Auto-Buy OSLO
+            Claim OSLO
           </IceButton>
         </div>
       )}
