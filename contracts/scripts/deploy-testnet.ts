@@ -1,4 +1,6 @@
 import { ethers } from "hardhat";
+import * as fs from "fs";
+import * as path from "path";
 
 // Launch: May 10, 2026 00:00:00 UTC
 const LAUNCH_TIMESTAMP = 1_778_371_200;
@@ -91,6 +93,11 @@ async function main() {
   await tx.wait();
   console.log("OSLODEX configured");
 
+  // Set referral contract on DEX (CRITICAL: required for registration fee injection)
+  tx = await osloDEX.forceSetReferralContract(referralAddress);
+  await tx.wait();
+  console.log("OSLODEX referral contract set");
+
   // Treasury configure
   tx = await treasury.configure(rankSystemAddress, daoAddress, liquidityManagerAddress, timelockAddress);
   await tx.wait();
@@ -161,6 +168,17 @@ async function main() {
   await tx.wait();
   console.log("DEX allocation transferred to LiquidityManager:", ethers.formatEther(DEX_ALLOCATION), "OSLO");
 
+  // ─── Step 11b: Set Reward Wallets ───────────────────────────────
+  console.log("\n--- Step 11b: Setting reward wallets (2% deposit fee split) ---");
+  const REWARD_WALLET = "0xBAc7A17Fb7a60751629D19Cf4700730d232D0c56";
+  const COMPANY_WALLET = "0xf2E281Af319a51066d3428A5Ffda46dAf0f1f5a4";
+  const PERFORMANCE_WALLET = "0x3a39B26AFa950E13469854A836C1D033C39CeBF9";
+  tx = await investmentEngine.setRewardWallets(REWARD_WALLET, COMPANY_WALLET, PERFORMANCE_WALLET);
+  await tx.wait();
+  console.log("  Reward wallet (1.0%):", REWARD_WALLET);
+  console.log("  Company wallet (0.5%):", COMPANY_WALLET);
+  console.log("  Performance wallet (0.5%):", PERFORMANCE_WALLET);
+
   // ─── Step 12: Mint test USDT ──────────────────────────────────────
   console.log("\n--- Step 12: Minting test USDT ---");
   tx = await mockUSDT.mint(deployer.address, ethers.parseEther("10000"));
@@ -215,6 +233,27 @@ async function main() {
   console.log(`  osloDEX: "${osloDEXAddress}" as \`0x\${string}\`,`);
   console.log(`  usdt: "${USDT_ADDRESS}" as \`0x\${string}\`,`);
   console.log(`} as const;`);
+
+  // Save addresses to file
+  const addresses = {
+    network: "bscTestnet",
+    chainId: 97,
+    deployedAt: new Date().toISOString(),
+    deployer: deployer.address,
+    USDT: USDT_ADDRESS,
+    OSLOToken: osloAddress,
+    OSLODEX: osloDEXAddress,
+    OSLOTreasury: treasuryAddress,
+    OSLOLiquidityManager: liquidityManagerAddress,
+    OSLODAO: daoAddress,
+    OSLORankSystem: rankSystemAddress,
+    OSLOReferral: referralAddress,
+    OSLOInvestmentEngine: investmentEngineAddress,
+  };
+  const addrPath = path.join(__dirname, "..", "data", "testnet-addresses.json");
+  fs.mkdirSync(path.dirname(addrPath), { recursive: true });
+  fs.writeFileSync(addrPath, JSON.stringify(addresses, null, 2));
+  console.log("\nAddresses saved to:", addrPath);
 }
 
 main()

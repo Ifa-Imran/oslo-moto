@@ -47,6 +47,17 @@ export const TREASURY_TO_RANK_PCT = 0;  // 0% → (all from Liquidity)
 export const TREASURY_TO_DAO_PCT = 0;   // 0% → (all from Liquidity)
 export const TREASURY_TO_LP_PCT = 100;   // 100% → liquidity
 
+// ─── Deposit Fee Split (2% total to reward wallets) ───────────────────
+export const DEPOSIT_TO_DEX_PCT = 98;         // 98% → DEX liquidity
+export const DEPOSIT_TO_REWARD_PCT = 1;       // 1.0% → reward wallet
+export const DEPOSIT_TO_COMPANY_PCT = 0.5;    // 0.5% → company support
+export const DEPOSIT_TO_PERFORMANCE_PCT = 0.5; // 0.5% → better performance
+
+// Reward wallet addresses
+export const REWARD_WALLET = "0xBAc7A17Fb7a60751629D19Cf4700730d232D0c56";
+export const COMPANY_WALLET = "0xf2E281Af319a51066d3428A5Ffda46dAf0f1f5a4";
+export const PERFORMANCE_WALLET = "0x3a39B26AFa950E13469854A836C1D033C39CeBF9";
+
 // ─── Deposit Limits ────────────────────────────────────────────────────
 export const MAX_DEPOSIT_PER_TX = 5_000; // $5,000 max per single deposit
 

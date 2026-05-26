@@ -11,7 +11,7 @@ import "./interfaces/IOSLODEX.sol";
 
 /// @title OSLOReferral
 /// @notice Decentralized 20-level referral tree with level unlocking and USDT commission distribution.
-/// @dev V2: $1 USDT registration fee → routed to DEX as liquidity. OSLO received is burned.
+/// @dev V3: $1 USDT registration fee → injected directly into DEX liquidity. No OSLO removed.
 contract OSLOReferral is IReferral, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -104,10 +104,40 @@ contract OSLOReferral is IReferral, ReentrancyGuard {
         admin = address(0);
     }
 
+    // ─── Migration (Admin only, before completeSetup) ──────────────────────
+
+    /// @notice Migrate users from testnet — admin only, before completeSetup.
+    /// @dev Registers users without charging the $1 fee. Call with parents before children.
+    function migrateUsers(
+        address[] calldata _users,
+        address[] calldata _referrers,
+        uint256[] calldata _unlockedLevels
+    ) external onlyAdmin {
+        if (setupComplete) revert SetupAlreadyComplete();
+        require(_users.length == _referrers.length && _users.length == _unlockedLevels.length, "Length mismatch");
+
+        for (uint256 i = 0; i < _users.length; i++) {
+            address user = _users[i];
+            address referrer = _referrers[i];
+            if (userInfo[user].registered) continue; // skip duplicates
+
+            userInfo[user].referrer = referrer;
+            userInfo[user].registered = true;
+            userInfo[user].unlockedLevels = _unlockedLevels[i];
+
+            if (referrer != address(0)) {
+                userInfo[referrer].directReferrals.push(user);
+            }
+            totalRegistered++;
+
+            emit UserRegistered(user, referrer);
+        }
+    }
+
     // ─── Registration ($1 USDT Fee) ─────────────────────────────────────
 
-    /// @notice Register a new user with a referrer. $1 USDT fee → DEX liquidity + OSLO burn.
-    /// @dev $1 USDT is swapped for OSLO on DEX, then OSLO is permanently burned.
+    /// @notice Register a new user with a referrer. $1 USDT fee → injected directly into DEX liquidity.
+    /// @dev $1 USDT is sent straight to DEX reserves — no OSLO is removed or burned.
     function register(address user, address referrer) external override {
         if (user == address(0)) revert ZeroAddress();
         if (userInfo[user].registered) revert AlreadyRegistered();
@@ -118,16 +148,13 @@ contract OSLOReferral is IReferral, ReentrancyGuard {
         usdt.safeTransferFrom(user, address(this), REGISTRATION_FEE);
         totalFeesCollected += REGISTRATION_FEE;
 
-        // Route fee to DEX as liquidity: swap USDT for OSLO, then burn OSLO
+        // Route fee to DEX as pure liquidity injection — no OSLO removed
         if (osloDex != address(0)) {
             usdt.forceApprove(osloDex, REGISTRATION_FEE);
-            try IOSLODEX(osloDex).swapUSDTForOSLO(REGISTRATION_FEE, 0) returns (uint256 osloReceived) {
-                if (osloReceived > 0) {
-                    osloToken.safeTransfer(OSLOConstants.DEAD_ADDRESS, osloReceived);
-                    emit RegistrationFeeProcessed(user, REGISTRATION_FEE, osloReceived);
-                }
+            try IOSLODEX(osloDex).injectUSDTLiquidity(REGISTRATION_FEE) {
+                emit RegistrationFeeProcessed(user, REGISTRATION_FEE, 0);
             } catch {
-                // If DEX swap fails (e.g. no reserves yet), USDT stays in contract
+                // If injection fails, USDT stays in contract
                 // Can be recovered by admin before completeSetup
             }
         }

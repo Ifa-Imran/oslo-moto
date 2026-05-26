@@ -1,6 +1,5 @@
 import { CONTRACTS } from "@/lib/contracts";
-import referralArtifact from "@/abis/OSLOReferral.json";
-const referralAbi = referralArtifact.abi;
+import referralAbi from "@/abis/OSLOReferral.json";
 import { useReadContract, useWriteContract, useWatchContractEvent } from "wagmi";
 import { type Address } from "viem";
 

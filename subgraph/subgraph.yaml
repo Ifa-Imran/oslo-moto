@@ -6,11 +6,11 @@ schema:
 dataSources:
   - kind: ethereum
     name: OSLOToken
-    network: chapel
+    network: bsc
     source:
-      address: "0x7741cBCCdA576730930d4bddA5C0f769D5fC1A2E"
+      address: "0xD22fA2a8AC7F97aFaB46e580FbbF59696D3F942c"
       abi: OSLOToken
-      startBlock: 0
+      startBlock: 100569000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -28,11 +28,11 @@ dataSources:
 
   - kind: ethereum
     name: OSLOInvestmentEngine
-    network: chapel
+    network: bsc
     source:
-      address: "0x8CBba9D00b87E8948AC8b271a73982fd1E1da13B"
+      address: "0xe0625F7D8482617A2E05cf1dFdab6b75C5b9ACCa"
       abi: OSLOInvestmentEngine
-      startBlock: 0
+      startBlock: 100569000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -54,11 +54,11 @@ dataSources:
 
   - kind: ethereum
     name: OSLOReferral
-    network: chapel
+    network: bsc
     source:
-      address: "0x87Bccf752e8Af9F32AFC5E82697D6A08634393f2"
+      address: "0xe152a63A8f0587Af9C0bAe1acfccA5345642358e"
       abi: OSLOReferral
-      startBlock: 0
+      startBlock: 100569000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -83,11 +83,11 @@ dataSources:
 
   - kind: ethereum
     name: OSLORankSystem
-    network: chapel
+    network: bsc
     source:
-      address: "0x286167A466F82c6A1230D949E9783E12aa7c3a5B"
+      address: "0xf0C3bFCf6a90269b40Cbda15374EF9b4A1a9F67C"
       abi: OSLORankSystem
-      startBlock: 0
+      startBlock: 100569000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -111,11 +111,11 @@ dataSources:
 
   - kind: ethereum
     name: OSLODAO
-    network: chapel
+    network: bsc
     source:
-      address: "0x5097668b611FB18cB7257a830552cCf58e032e1f"
+      address: "0x708C360721baabb9FA982b37c79Fd3E21e374FEF"
       abi: OSLODAO
-      startBlock: 0
+      startBlock: 100569000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -136,11 +136,11 @@ dataSources:
 
   - kind: ethereum
     name: OSLOTreasury
-    network: chapel
+    network: bsc
     source:
-      address: "0x266F0004f77Fd850aA35Ff6879D70413D1A58193"
+      address: "0x2c781d6c9F78Dd09f51BC56e12c57e9c9d3200aF"
       abi: OSLOTreasury
-      startBlock: 0
+      startBlock: 100569000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -160,11 +160,11 @@ dataSources:
 
   - kind: ethereum
     name: OSLOLiquidityManager
-    network: chapel
+    network: bsc
     source:
-      address: "0xc88C215841B0a507dB42C390FfDb2C7bB4557812"
+      address: "0x993556946C2AbFDE75dEEAA2Dc393d5ac1e0038E"
       abi: OSLOLiquidityManager
-      startBlock: 0
+      startBlock: 100569000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7

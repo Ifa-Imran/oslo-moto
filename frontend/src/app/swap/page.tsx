@@ -1,14 +1,16 @@
 "use client";
 
-import { useAccount, useBalance } from "wagmi";
+import { useAccount, useBalance, useReadContract, useWriteContract, usePublicClient } from "wagmi";
 import { CONTRACTS } from "@/lib/contracts";
 import { useOSLODEX } from "@/hooks/useOSLODEX";
-import { useTokenReads } from "@/hooks/useToken";
 import { useState } from "react";
-import { parseEther } from "viem";
+import { parseEther, erc20Abi } from "viem";
+import { useAppStore } from "@/store/useAppStore";
 
 export default function SwapPage() {
   const { address, isConnected } = useAccount();
+  const publicClient = usePublicClient();
+  const { addToast } = useAppStore();
   const {
     price,
     usdtReserve,
@@ -29,6 +31,18 @@ export default function SwapPage() {
     token: CONTRACTS.osloToken as `0x${string}`,
   });
 
+  // OSLO allowance check for DEX
+  const { data: osloAllowance } = useReadContract({
+    address: CONTRACTS.osloToken,
+    abi: erc20Abi,
+    functionName: "allowance",
+    args: address ? [address, CONTRACTS.osloDEX] : undefined,
+    query: { enabled: !!address },
+  });
+
+  const { writeContractAsync: approveAsync } = useWriteContract();
+
+  const [flowStep, setFlowStep] = useState<"idle" | "approving" | "swapping">("idle");
   const [showSlippageSettings, setShowSlippageSettings] = useState(false);
 
   const estimatedOutput = getEstimatedOutput(swapInput);
@@ -40,13 +54,43 @@ export default function SwapPage() {
   };
 
   const handleSwap = async () => {
-    if (!swapInput || parseFloat(swapInput) <= 0) return;
-    await handleSwapOSLOForUSDT(swapInput);
+    if (!swapInput || parseFloat(swapInput) <= 0 || !address || !publicClient) return;
+    const osloAmountWei = parseEther(swapInput);
+    const currentAllowance = (osloAllowance as bigint) || 0n;
+
+    try {
+      // ── Step 1: Approve OSLO if needed ──────────────────────────
+      if (currentAllowance < osloAmountWei) {
+        setFlowStep("approving");
+        addToast({ title: "Approving OSLO for DEX...", status: "pending" });
+        const approveTx = await approveAsync({
+          address: CONTRACTS.osloToken,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [CONTRACTS.osloDEX, osloAmountWei],
+        });
+        await publicClient.waitForTransactionReceipt({ hash: approveTx });
+        addToast({ title: "OSLO Approved", status: "success", txHash: approveTx });
+      }
+
+      // ── Step 2: Swap ───────────────────────────────────────────
+      setFlowStep("swapping");
+      await handleSwapOSLOForUSDT(swapInput);
+      setFlowStep("idle");
+    } catch (err: any) {
+      setFlowStep("idle");
+      if (err?.message?.includes("rejected") || err?.message?.includes("denied")) return;
+      addToast({
+        title: "Swap Failed",
+        description: err?.message?.slice(0, 120) || "Unknown error",
+        status: "error",
+      });
+    }
   };
 
   if (!isConnected) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-950 via-purple-950 to-indigo-950 flex items-center justify-center">
+      <div className="min-h-screen bg-oslo-void flex items-center justify-center">
         <div className="text-center">
           <div className="text-6xl mb-4">🔒</div>
           <h2 className="text-2xl font-bold text-white mb-2">Connect Your Wallet</h2>
@@ -56,88 +100,156 @@ export default function SwapPage() {
     );
   }
 
+  // Helpers: truncate long decimals for display
+  const fmtBalance = (raw: string | undefined) => {
+    if (!raw) return "0";
+    const n = parseFloat(raw);
+    if (isNaN(n)) return "0";
+    if (n === 0) return "0";
+    // Show up to 4 decimals on mobile, 6 on desktop
+    return n < 0.0001 ? "<0.0001" : n.toFixed(n >= 1 ? 2 : 6);
+  };
+  const fmtPrice = (raw: string) => {
+    const n = parseFloat(raw);
+    if (isNaN(n)) return "0";
+    if (n >= 100) return n.toFixed(2);
+    if (n >= 1) return n.toFixed(4);
+    return n.toFixed(6);
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-950 via-purple-950 to-indigo-950 py-12 px-4">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-oslo-void py-8 sm:py-12 px-3 sm:px-4">
+      <div className="max-w-lg mx-auto">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
             OSLO DEX
           </h1>
-          <p className="text-gray-400">Sell OSLO for USDT at the protocol-controlled exchange rate</p>
+          <p className="text-sm sm:text-base text-gray-400">Sell OSLO for USDT at the protocol-controlled exchange rate</p>
         </div>
 
         {/* Price Display */}
-        <div className="bg-gradient-to-r from-blue-900/40 to-purple-900/40 backdrop-blur-xl border border-blue-500/30 rounded-2xl p-6 mb-6">
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-sm text-gray-400 mb-1">OSLO Price</p>
-              <p className="text-2xl font-bold text-white">{parseFloat(price).toFixed(6)} USDT</p>
+        <div className="bg-gradient-to-r from-blue-900/40 to-purple-900/40 backdrop-blur-xl border border-blue-500/30 rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 text-center">
+            <div className="col-span-2 sm:col-span-1">
+              <p className="text-xs sm:text-sm text-gray-400 mb-1">OSLO Price</p>
+              <p className="text-lg sm:text-2xl font-bold text-white truncate">{fmtPrice(price)} USDT</p>
             </div>
             <div>
-              <p className="text-sm text-gray-400 mb-1">USDT Reserve</p>
-              <p className="text-xl font-semibold text-blue-300">{parseFloat(usdtReserve).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+              <p className="text-xs sm:text-sm text-gray-400 mb-1">USDT Reserve</p>
+              <p className="text-base sm:text-xl font-semibold text-blue-300">{parseFloat(usdtReserve).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-400 mb-1">OSLO Reserve</p>
-              <p className="text-xl font-semibold text-purple-300">{parseFloat(osloReserve).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+              <p className="text-xs sm:text-sm text-gray-400 mb-1">OSLO Reserve</p>
+              <p className="text-base sm:text-xl font-semibold text-purple-300">{parseFloat(osloReserve).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
             </div>
           </div>
         </div>
 
         {/* Swap Card */}
-        <div className="bg-gradient-to-br from-blue-900/50 to-purple-900/50 backdrop-blur-xl border border-blue-500/40 rounded-3xl p-8 shadow-2xl">
+        <div className="bg-gradient-to-br from-blue-900/50 to-purple-900/50 backdrop-blur-xl border border-blue-500/40 rounded-3xl p-5 sm:p-8 shadow-2xl">
           {/* Input Section */}
           <div className="mb-4">
-            <div className="flex justify-between items-center mb-2">
-              <label className="text-sm text-gray-300 font-medium">From</label>
+            <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
+              <label className="text-xs sm:text-sm text-gray-300 font-medium">From</label>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-400">
-                  Balance: {osloBal?.formatted || "0"}
+                <span className="text-xs sm:text-sm text-gray-400 max-w-[140px] sm:max-w-[200px] truncate">
+                  Bal: {fmtBalance(osloBal?.formatted)}
                 </span>
                 <button
                   onClick={handleMax}
-                  className="text-xs px-2 py-1 bg-blue-600/30 hover:bg-blue-600/50 rounded text-blue-300 transition-all"
+                  className="text-xs px-2 py-1 bg-blue-600/30 hover:bg-blue-600/50 rounded text-blue-300 transition-all flex-shrink-0"
                 >
                   MAX
                 </button>
               </div>
             </div>
-            <div className="bg-blue-950/50 border border-blue-500/30 rounded-xl p-4">
+            <div className="bg-blue-950/50 border border-blue-500/30 rounded-xl p-3 sm:p-4">
               <input
                 type="number"
                 value={swapInput}
                 onChange={(e) => setSwapInput(e.target.value)}
                 placeholder="0.0"
-                className="w-full bg-transparent text-white text-2xl font-semibold outline-none placeholder-gray-600"
+                className="w-full bg-transparent text-white text-xl sm:text-2xl font-semibold outline-none placeholder-gray-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
               <div className="flex items-center gap-2 mt-2">
-                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0">
                   O
                 </div>
-                <span className="text-white font-semibold">
-                  OSLO
-                </span>
+                <span className="text-white font-semibold text-sm sm:text-base">OSLO</span>
               </div>
             </div>
           </div>
 
-          {/* Output Section */}
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-2">
-              <label className="text-sm text-gray-300 font-medium">To (estimated)</label>
+          {/* Arrow */}
+          <div className="flex justify-center -my-2 relative z-10">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-purple-800/80 border border-purple-500/40 flex items-center justify-center text-purple-300 text-lg">
+              ↓
             </div>
-            <div className="bg-purple-950/50 border border-purple-500/30 rounded-xl p-4">
-              <div className="text-2xl font-semibold text-purple-300">
+          </div>
+
+          {/* Fee Breakdown — only visible when input > 0 */}
+          {swapInput && parseFloat(swapInput) > 0 && (() => {
+            const inputOSLO = parseFloat(swapInput);
+            const feeBurn = inputOSLO * 0.1;       // 10% — burned via OSLOToken._update
+            const netToDEX = inputOSLO * 0.9;       // 90% received by DEX
+            const additionalBurn = netToDEX * 0.2;  // 20% of received → burned
+            const recycled = netToDEX * 0.7;        // 70% → InvestmentEngine
+            const toLP = netToDEX * 0.1;            // 10% → DEX LP
+            const totalBurn = feeBurn + additionalBurn;
+            return (
+              <div className="mb-4 mt-1 px-3 sm:px-4 py-3 bg-red-900/20 border border-red-500/20 rounded-xl space-y-1.5">
+                <div className="flex justify-between items-center text-xs sm:text-sm">
+                  <span className="text-gray-400">You pay (OSLO)</span>
+                  <span className="text-white font-mono font-semibold">{inputOSLO.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
+                </div>
+                <div className="border-t border-red-500/20" />
+                <div className="flex justify-between items-center text-xs sm:text-sm">
+                  <span className="text-red-400">Fee burn (10%)</span>
+                  <span className="text-red-400 font-mono">-{feeBurn.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs sm:text-sm">
+                  <span className="text-red-400">Additional burn (20%)</span>
+                  <span className="text-red-400 font-mono">-{additionalBurn.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-red-300/60">└ Total burned (30%)</span>
+                  <span className="text-red-300/60 font-mono">-{totalBurn.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs sm:text-sm">
+                  <span className="text-yellow-400">Recycled to contract (70%)</span>
+                  <span className="text-yellow-400 font-mono">-{recycled.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
+                </div>
+                <div className="border-t border-red-500/20" />
+                <div className="flex justify-between items-center text-xs sm:text-sm">
+                  <span className="text-green-400 font-medium">Added to LP (10%)</span>
+                  <span className="text-green-400 font-mono font-semibold">+{toLP.toLocaleString(undefined, { maximumFractionDigits: 4 })} OSLO</span>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Arrow 2 */}
+          {swapInput && parseFloat(swapInput) > 0 && (
+            <div className="flex justify-center -my-2 relative z-10">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-purple-800/80 border border-purple-500/40 flex items-center justify-center text-purple-300 text-lg">
+                ↓
+              </div>
+            </div>
+          )}
+
+          {/* Output Section */}
+          <div className="mb-5 sm:mb-6 mt-1">
+            <label className="text-xs sm:text-sm text-gray-300 font-medium mb-2 block">To (estimated)</label>
+            <div className="bg-purple-950/50 border border-purple-500/30 rounded-xl p-3 sm:p-4">
+              <div className="text-xl sm:text-2xl font-semibold text-purple-300 truncate">
                 {estimatedOutput > 0 ? estimatedOutput.toFixed(6) : "0.0"}
               </div>
               <div className="flex items-center gap-2 mt-2">
-                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-sm">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0">
                   U
                 </div>
-                <span className="text-white font-semibold">
-                  USDT
-                </span>
+                <span className="text-white font-semibold text-sm sm:text-base">USDT</span>
               </div>
             </div>
           </div>
@@ -169,17 +281,52 @@ export default function SwapPage() {
             )}
           </div>
 
+          {/* Allowance indicator */}
+          {swapInput && parseFloat(swapInput) > 0 && (
+            <div className="flex items-center gap-2 text-xs mb-3">
+              {(() => {
+                const osloAmountWei = parseEther(swapInput);
+                const allowance = (osloAllowance as bigint) || 0n;
+                if (allowance >= osloAmountWei) {
+                  return (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
+                      <span className="text-green-400">OSLO approved — ready to swap</span>
+                    </>
+                  );
+                }
+                return (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0" />
+                    <span className="text-yellow-400">Approval required — one-click sign below</span>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
           {/* Swap Button */}
           <button
             onClick={handleSwap}
-            disabled={!swapInput || parseFloat(swapInput) <= 0 || isSwapPending || isSwapConfirming}
+            disabled={!swapInput || parseFloat(swapInput) <= 0 || isSwapPending || isSwapConfirming || flowStep !== "idle"}
             className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${
-              !swapInput || parseFloat(swapInput) <= 0 || isSwapPending || isSwapConfirming
+              !swapInput || parseFloat(swapInput) <= 0 || isSwapPending || isSwapConfirming || flowStep !== "idle"
                 ? "bg-gray-700 text-gray-400 cursor-not-allowed"
                 : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
             }`}
           >
-            {isSwapPending ? "Waiting for Approval..." : isSwapConfirming ? "Confirming..." : isSwapConfirmed ? "✓ Success!" : "Swap"}
+            {(() => {
+              if (!isConnected) return "Connect Wallet";
+              if (flowStep === "approving") return "Approving OSLO...";
+              if (flowStep === "swapping") return "Swapping...";
+              if (isSwapPending) return "Waiting for Approval...";
+              if (isSwapConfirming) return "Confirming...";
+              if (isSwapConfirmed) return "✓ Success!";
+              if (!swapInput || parseFloat(swapInput) <= 0) return "Enter Amount";
+              const allowance = (osloAllowance as bigint) || 0n;
+              if (allowance < parseEther(swapInput)) return "Approve & Swap";
+              return "Swap";
+            })()}
           </button>
 
           {/* Transaction Status */}
@@ -198,7 +345,9 @@ export default function SwapPage() {
             <li>• <strong>Protocol-Controlled Liquidity:</strong> All liquidity is managed by the OSLO protocol</li>
             <li>• <strong>Fair Pricing:</strong> Price = USDT Reserve / OSLO Reserve</li>
             <li>• <strong>Slippage Protection:</strong> Customizable slippage tolerance for every swap</li>
-            <li>• <strong>10% Sell Fee:</strong> 10% fee → OSLO burned · USDT value stays in DEX as additional liquidity</li>
+            <li>• <strong>10% Sell Fee:</strong> 10% of your OSLO is burned · you receive USDT for the remaining 90%</li>
+            <li>• <strong>Distribution:</strong> Of the 90% reaching the DEX — 20% burned, 70% recycled to contract, 10% added to LP</li>
+            <li>• <strong>Total Deflation:</strong> 30% of swapped OSLO is permanently burned, driving up token price</li>
             <li>• <strong>Burn Cap:</strong> Burning stops when 90% of supply (9.99M OSLO) is burned; 1.11M OSLO remain</li>
             <li>• <strong>Buy OSLO:</strong> OSLO is earned through yield on your staked USDT — not purchasable directly</li>
           </ul>

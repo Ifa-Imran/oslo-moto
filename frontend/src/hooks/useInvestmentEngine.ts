@@ -1,7 +1,6 @@
 import { CONTRACTS } from "@/lib/contracts";
-import investmentEngineArtifact from "@/abis/OSLOInvestmentEngine.json";
+import investmentEngineAbi from "@/abis/OSLOInvestmentEngine.json";
 
-const investmentEngineAbi = investmentEngineArtifact.abi;
 import { useReadContract, useWriteContract, useWatchContractEvent } from "wagmi";
 import { type Address } from "viem";
 

@@ -30,6 +30,7 @@ export interface IOSLODEXInterface extends Interface {
       | "getPrice"
       | "getReserves"
       | "getUSDTForOSLOOutput"
+      | "injectUSDTLiquidity"
       | "processDeposit"
       | "processWithdrawal"
       | "replenishOsloReserve"
@@ -57,6 +58,10 @@ export interface IOSLODEXInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "getUSDTForOSLOOutput",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "injectUSDTLiquidity",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
@@ -103,6 +108,10 @@ export interface IOSLODEXInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "getUSDTForOSLOOutput",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "injectUSDTLiquidity",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -206,6 +215,12 @@ export interface IOSLODEX extends BaseContract {
     "view"
   >;
 
+  injectUSDTLiquidity: TypedContractMethod<
+    [usdtAmount: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   processDeposit: TypedContractMethod<
     [usdtAmount: BigNumberish],
     [bigint],
@@ -272,6 +287,9 @@ export interface IOSLODEX extends BaseContract {
   getFunction(
     nameOrSignature: "getUSDTForOSLOOutput"
   ): TypedContractMethod<[usdtAmount: BigNumberish], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "injectUSDTLiquidity"
+  ): TypedContractMethod<[usdtAmount: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "processDeposit"
   ): TypedContractMethod<[usdtAmount: BigNumberish], [bigint], "nonpayable">;

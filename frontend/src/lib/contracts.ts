@@ -1,15 +1,15 @@
-// OSLO Protocol V3 Contract Addresses
-// Deployed on BSC Testnet (chainId: 97)
-// V3: USDT yield display, auto-buy OSLO (0% fee), 10% sell fee→LP+burn
+// OSLO Protocol Contract Addresses
+// Deployed on BSC Mainnet (chainId: 56)
+// Deployed: 2026-05-26 | Includes DEX formula fix
 
 export const CONTRACTS = {
-  osloToken: "0x7741cBCCdA576730930d4bddA5C0f769D5fC1A2E" as `0x${string}`,
-  investmentEngine: "0x8CBba9D00b87E8948AC8b271a73982fd1E1da13B" as `0x${string}`,
-  referral: "0x87Bccf752e8Af9F32AFC5E82697D6A08634393f2" as `0x${string}`,
-  rankSystem: "0x286167A466F82c6A1230D949E9783E12aa7c3a5B" as `0x${string}`,
-  dao: "0x5097668b611FB18cB7257a830552cCf58e032e1f" as `0x${string}`,
-  treasury: "0x266F0004f77Fd850aA35Ff6879D70413D1A58193" as `0x${string}`,
-  liquidityManager: "0xc88C215841B0a507dB42C390FfDb2C7bB4557812" as `0x${string}`,
-  osloDEX: "0x53D596139Cc696520a23D64D5ee98008502e0D82" as `0x${string}`,
-  usdt: "0x4d8159AFdFD62b53758427EA468C21047DfE85C5" as `0x${string}`,
+  osloToken:        "0xD22fA2a8AC7F97aFaB46e580FbbF59696D3F942c" as `0x${string}`,
+  investmentEngine: "0xe0625F7D8482617A2E05cf1dFdab6b75C5b9ACCa" as `0x${string}`,
+  referral:         "0xe152a63A8f0587Af9C0bAe1acfccA5345642358e" as `0x${string}`,
+  rankSystem:       "0xf0C3bFCf6a90269b40Cbda15374EF9b4A1a9F67C" as `0x${string}`,
+  dao:              "0x708C360721baabb9FA982b37c79Fd3E21e374FEF" as `0x${string}`,
+  treasury:         "0x2c781d6c9F78Dd09f51BC56e12c57e9c9d3200aF" as `0x${string}`,
+  liquidityManager: "0x993556946C2AbFDE75dEEAA2Dc393d5ac1e0038E" as `0x${string}`,
+  osloDEX:          "0xCBa239e2aE0b7d84A156399ea1791C1Dd70b5e52" as `0x${string}`,
+  usdt:             "0x55d398326f99059fF775485246999027B3197955" as `0x${string}`,
 } as const;

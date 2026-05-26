@@ -17,7 +17,6 @@ const BOTTOM_ITEMS = [
   { href: "/invest", label: "Invest", icon: TrendingUp },
   { href: "/referrals", label: "Refer", icon: Users },
   { href: "/ranks", label: "Ranks", icon: Trophy },
-  { href: "/treasury", label: "Treasury", icon: Landmark },
 ];
 
 export function BottomNav() {

@@ -1,6 +1,5 @@
 import { CONTRACTS } from "@/lib/contracts";
-import daoArtifact from "@/abis/OSLODAO.json";
-const daoAbi = daoArtifact.abi;
+import daoAbi from "@/abis/OSLODAO.json";
 import { useReadContract, useWriteContract, useWatchContractEvent } from "wagmi";
 import { type Address } from "viem";
 

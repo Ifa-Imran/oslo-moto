@@ -27,6 +27,10 @@ export interface OSLOConstantsInterface extends Interface {
       | "DAO_MONTHLY_ROYALTY_BP"
       | "DAO_TEAM_SIZE_REQUIREMENT"
       | "DEAD_ADDRESS"
+      | "DEPOSIT_TO_COMPANY_BP"
+      | "DEPOSIT_TO_DEX_BP"
+      | "DEPOSIT_TO_PERFORMANCE_BP"
+      | "DEPOSIT_TO_REWARD_BP"
       | "DEX_ALLOCATION"
       | "EARLY_EXIT_FEE_BP"
       | "EARLY_EXIT_PERIOD"
@@ -111,6 +115,22 @@ export interface OSLOConstantsInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "DEAD_ADDRESS",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "DEPOSIT_TO_COMPANY_BP",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "DEPOSIT_TO_DEX_BP",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "DEPOSIT_TO_PERFORMANCE_BP",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "DEPOSIT_TO_REWARD_BP",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -367,6 +387,22 @@ export interface OSLOConstantsInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "DEAD_ADDRESS",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "DEPOSIT_TO_COMPANY_BP",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "DEPOSIT_TO_DEX_BP",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "DEPOSIT_TO_PERFORMANCE_BP",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "DEPOSIT_TO_REWARD_BP",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -659,6 +695,14 @@ export interface OSLOConstants extends BaseContract {
 
   DEAD_ADDRESS: TypedContractMethod<[], [string], "view">;
 
+  DEPOSIT_TO_COMPANY_BP: TypedContractMethod<[], [bigint], "view">;
+
+  DEPOSIT_TO_DEX_BP: TypedContractMethod<[], [bigint], "view">;
+
+  DEPOSIT_TO_PERFORMANCE_BP: TypedContractMethod<[], [bigint], "view">;
+
+  DEPOSIT_TO_REWARD_BP: TypedContractMethod<[], [bigint], "view">;
+
   DEX_ALLOCATION: TypedContractMethod<[], [bigint], "view">;
 
   EARLY_EXIT_FEE_BP: TypedContractMethod<[], [bigint], "view">;
@@ -806,6 +850,18 @@ export interface OSLOConstants extends BaseContract {
   getFunction(
     nameOrSignature: "DEAD_ADDRESS"
   ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "DEPOSIT_TO_COMPANY_BP"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "DEPOSIT_TO_DEX_BP"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "DEPOSIT_TO_PERFORMANCE_BP"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "DEPOSIT_TO_REWARD_BP"
+  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "DEX_ALLOCATION"
   ): TypedContractMethod<[], [bigint], "view">;

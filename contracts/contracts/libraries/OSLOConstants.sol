@@ -39,6 +39,12 @@ library OSLOConstants {
     uint256 public constant TREASURY_TO_DAO_BP = 0;       // 0% → (paid from Liquidity)
     uint256 public constant TREASURY_TO_LP_BP = 10_000;   // 100% → liquidity
 
+    // ─── Deposit Fee Split (2% total to reward wallets) ───────────────
+    uint256 public constant DEPOSIT_TO_DEX_BP = 9_800;        // 98% → DEX liquidity
+    uint256 public constant DEPOSIT_TO_REWARD_BP = 100;       // 1.0% → reward wallet
+    uint256 public constant DEPOSIT_TO_COMPANY_BP = 50;       // 0.5% → company support
+    uint256 public constant DEPOSIT_TO_PERFORMANCE_BP = 50;   // 0.5% → better performance
+
     // ─── Referral Commissions (basis points on profit portion) ──────────
     uint256 public constant MAX_REFERRAL_LEVELS = 20;
     uint256 public constant QUALIFIED_DIRECT_MIN_DEPOSIT = 100 * 1e18; // $100 USDT

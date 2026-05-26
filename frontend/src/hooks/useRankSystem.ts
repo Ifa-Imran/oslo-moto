@@ -1,6 +1,5 @@
 import { CONTRACTS } from "@/lib/contracts";
-import rankSystemArtifact from "@/abis/OSLORankSystem.json";
-const rankSystemAbi = rankSystemArtifact.abi;
+import rankSystemAbi from "@/abis/OSLORankSystem.json";
 import { useReadContract, useWriteContract, useWatchContractEvent } from "wagmi";
 import { type Address } from "viem";
 

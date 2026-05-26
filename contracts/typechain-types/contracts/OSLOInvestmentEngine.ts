@@ -23,11 +23,45 @@ import type {
   TypedContractMethod,
 } from "../common";
 
+export declare namespace OSLOInvestmentEngine {
+  export type DepositMigrationStruct = {
+    owner: AddressLike;
+    amount: BigNumberish;
+    tier: BigNumberish;
+    dailyRate: BigNumberish;
+    depositTime: BigNumberish;
+    lastClaimTime: BigNumberish;
+    totalClaimed: BigNumberish;
+    maxReturn: BigNumberish;
+  };
+
+  export type DepositMigrationStructOutput = [
+    owner: string,
+    amount: bigint,
+    tier: bigint,
+    dailyRate: bigint,
+    depositTime: bigint,
+    lastClaimTime: bigint,
+    totalClaimed: bigint,
+    maxReturn: bigint
+  ] & {
+    owner: string;
+    amount: bigint;
+    tier: bigint;
+    dailyRate: bigint;
+    depositTime: bigint;
+    lastClaimTime: bigint;
+    totalClaimed: bigint;
+    maxReturn: bigint;
+  };
+}
+
 export interface OSLOInvestmentEngineInterface extends Interface {
   getFunction(
     nameOrSignature:
       | "admin"
       | "claimRewards"
+      | "companyWallet"
       | "completeSetup"
       | "configure"
       | "deposit"
@@ -41,16 +75,20 @@ export interface OSLOInvestmentEngineInterface extends Interface {
       | "getUserTier"
       | "isInEarlyExitPeriod"
       | "launchTimestamp"
+      | "migrateDeposits"
       | "minClaimThreshold"
       | "notifyLevelIncome"
       | "notifyRankBonus"
       | "osloDex"
       | "osloToken"
+      | "performanceWallet"
       | "rankSystem"
       | "referral"
+      | "rewardWallet"
       | "setDepositsPaused"
       | "setMinClaimThreshold"
       | "setReferral"
+      | "setRewardWallets"
       | "setupComplete"
       | "timelock"
       | "totalDeposited"
@@ -78,6 +116,10 @@ export interface OSLOInvestmentEngineInterface extends Interface {
   encodeFunctionData(
     functionFragment: "claimRewards",
     values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "companyWallet",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "completeSetup",
@@ -132,6 +174,10 @@ export interface OSLOInvestmentEngineInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "migrateDeposits",
+    values: [OSLOInvestmentEngine.DepositMigrationStruct[]]
+  ): string;
+  encodeFunctionData(
     functionFragment: "minClaimThreshold",
     values?: undefined
   ): string;
@@ -146,10 +192,18 @@ export interface OSLOInvestmentEngineInterface extends Interface {
   encodeFunctionData(functionFragment: "osloDex", values?: undefined): string;
   encodeFunctionData(functionFragment: "osloToken", values?: undefined): string;
   encodeFunctionData(
+    functionFragment: "performanceWallet",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "rankSystem",
     values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "referral", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "rewardWallet",
+    values?: undefined
+  ): string;
   encodeFunctionData(
     functionFragment: "setDepositsPaused",
     values: [boolean]
@@ -161,6 +215,10 @@ export interface OSLOInvestmentEngineInterface extends Interface {
   encodeFunctionData(
     functionFragment: "setReferral",
     values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setRewardWallets",
+    values: [AddressLike, AddressLike, AddressLike]
   ): string;
   encodeFunctionData(
     functionFragment: "setupComplete",
@@ -190,6 +248,10 @@ export interface OSLOInvestmentEngineInterface extends Interface {
   decodeFunctionResult(functionFragment: "admin", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "claimRewards",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "companyWallet",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -236,6 +298,10 @@ export interface OSLOInvestmentEngineInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "migrateDeposits",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "minClaimThreshold",
     data: BytesLike
   ): Result;
@@ -249,8 +315,16 @@ export interface OSLOInvestmentEngineInterface extends Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "osloDex", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "osloToken", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "performanceWallet",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "rankSystem", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "referral", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "rewardWallet",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "setDepositsPaused",
     data: BytesLike
@@ -261,6 +335,10 @@ export interface OSLOInvestmentEngineInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "setReferral",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setRewardWallets",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -493,6 +571,8 @@ export interface OSLOInvestmentEngine extends BaseContract {
     "nonpayable"
   >;
 
+  companyWallet: TypedContractMethod<[], [string], "view">;
+
   completeSetup: TypedContractMethod<[], [void], "nonpayable">;
 
   configure: TypedContractMethod<
@@ -556,6 +636,12 @@ export interface OSLOInvestmentEngine extends BaseContract {
 
   launchTimestamp: TypedContractMethod<[], [bigint], "view">;
 
+  migrateDeposits: TypedContractMethod<
+    [entries: OSLOInvestmentEngine.DepositMigrationStruct[]],
+    [void],
+    "nonpayable"
+  >;
+
   minClaimThreshold: TypedContractMethod<[], [bigint], "view">;
 
   notifyLevelIncome: TypedContractMethod<
@@ -574,9 +660,13 @@ export interface OSLOInvestmentEngine extends BaseContract {
 
   osloToken: TypedContractMethod<[], [string], "view">;
 
+  performanceWallet: TypedContractMethod<[], [string], "view">;
+
   rankSystem: TypedContractMethod<[], [string], "view">;
 
   referral: TypedContractMethod<[], [string], "view">;
+
+  rewardWallet: TypedContractMethod<[], [string], "view">;
 
   setDepositsPaused: TypedContractMethod<
     [_paused: boolean],
@@ -592,6 +682,16 @@ export interface OSLOInvestmentEngine extends BaseContract {
 
   setReferral: TypedContractMethod<
     [_referral: AddressLike],
+    [void],
+    "nonpayable"
+  >;
+
+  setRewardWallets: TypedContractMethod<
+    [
+      _rewardWallet: AddressLike,
+      _companyWallet: AddressLike,
+      _performanceWallet: AddressLike
+    ],
     [void],
     "nonpayable"
   >;
@@ -649,6 +749,9 @@ export interface OSLOInvestmentEngine extends BaseContract {
   getFunction(
     nameOrSignature: "claimRewards"
   ): TypedContractMethod<[depositIndex: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "companyWallet"
+  ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "completeSetup"
   ): TypedContractMethod<[], [void], "nonpayable">;
@@ -718,6 +821,13 @@ export interface OSLOInvestmentEngine extends BaseContract {
     nameOrSignature: "launchTimestamp"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
+    nameOrSignature: "migrateDeposits"
+  ): TypedContractMethod<
+    [entries: OSLOInvestmentEngine.DepositMigrationStruct[]],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "minClaimThreshold"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
@@ -741,10 +851,16 @@ export interface OSLOInvestmentEngine extends BaseContract {
     nameOrSignature: "osloToken"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
+    nameOrSignature: "performanceWallet"
+  ): TypedContractMethod<[], [string], "view">;
+  getFunction(
     nameOrSignature: "rankSystem"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "referral"
+  ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "rewardWallet"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "setDepositsPaused"
@@ -755,6 +871,17 @@ export interface OSLOInvestmentEngine extends BaseContract {
   getFunction(
     nameOrSignature: "setReferral"
   ): TypedContractMethod<[_referral: AddressLike], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "setRewardWallets"
+  ): TypedContractMethod<
+    [
+      _rewardWallet: AddressLike,
+      _companyWallet: AddressLike,
+      _performanceWallet: AddressLike
+    ],
+    [void],
+    "nonpayable"
+  >;
   getFunction(
     nameOrSignature: "setupComplete"
   ): TypedContractMethod<[], [boolean], "view">;

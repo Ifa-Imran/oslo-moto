@@ -83,8 +83,8 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\libraries\\OSLOConstants.sol": {
-      "lastModificationDate": 1779610203821,
-      "contentHash": "54f176260dd878e23461308b56b87190",
+      "lastModificationDate": 1779727928083,
+      "contentHash": "854c9c4e86c086eeccb49fbf0670b2b2",
       "sourceName": "contracts/libraries/OSLOConstants.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -792,8 +792,8 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLOReferral.sol": {
-      "lastModificationDate": 1779631695439,
-      "contentHash": "c26386457d5d4c76b457c35ecb670748",
+      "lastModificationDate": 1779713364823,
+      "contentHash": "8c3ffcc5c90651636bce449a1fc74fe3",
       "sourceName": "contracts/OSLOReferral.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -908,8 +908,8 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLOInvestmentEngine.sol": {
-      "lastModificationDate": 1779651580806,
-      "contentHash": "f44178f52a218f23c7ab0db162017b2d",
+      "lastModificationDate": 1779813766979,
+      "contentHash": "da38a5de817241fa1487397c0f448e57",
       "sourceName": "contracts/OSLOInvestmentEngine.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -1198,8 +1198,8 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\interfaces\\IOSLODEX.sol": {
-      "lastModificationDate": 1779639956899,
-      "contentHash": "b20a7b97f02d5ccba02c6873f5d6610d",
+      "lastModificationDate": 1779683291394,
+      "contentHash": "b0ebd478d393c4f943c0bd2c5ec58753",
       "sourceName": "contracts/interfaces/IOSLODEX.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -1234,8 +1234,8 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLODEX.sol": {
-      "lastModificationDate": 1779651841194,
-      "contentHash": "bf1b47a0fd445075796f33e0210d9d6c",
+      "lastModificationDate": 1779783893613,
+      "contentHash": "30731269711aca93f8a4893e10972bd1",
       "sourceName": "contracts/OSLODEX.sol",
       "solcConfig": {
         "version": "0.8.24",

@@ -114,7 +114,11 @@ async function main() {
   // DEX.configure(timelock, lm, ie)
   tx = await dex.configure(admin, LM_ADDR, IE_ADDR);
   await tx.wait();
-  console.log("  ✓ DEX → LM + IE");
+
+  // DEX.forceSetReferralContract(ref) — allows referral to call swapUSDTForOSLO
+  tx = await dex.forceSetReferralContract(REF_ADDR);
+  await tx.wait();
+  console.log("  ✓ DEX → LM + IE + Referral");
 
   // IE.configure(treasury, referral, rank, dex, timelock)
   tx = await ie.configure(TREASURY_ADDR, REF_ADDR, RANK_ADDR, DEX_ADDR, admin);

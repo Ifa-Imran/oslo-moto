@@ -15,9 +15,8 @@ import { AddressChip } from "@/components/ui/AddressChip";
 import { RealTimeYield } from "@/components/dashboard/RealTimeYield";
 import { AllocationBreakdown } from "@/components/dashboard/AllocationBreakdown";
 import { useInvestmentEngineReads } from "@/hooks/useInvestmentEngine";
-import investmentEngineArtifact from "@/abis/OSLOInvestmentEngine.json";
-const investmentEngineAbi = investmentEngineArtifact.abi;
-import { useTokenReads, useUSDTReads, useMintUSDT } from "@/hooks/useToken";
+import investmentEngineAbi from "@/abis/OSLOInvestmentEngine.json";
+import { useTokenReads, useUSDTReads } from "@/hooks/useToken";
 import { useLiquidityManagerReads } from "@/hooks/useLiquidityManager";
 import { useOSLODEX } from "@/hooks/useOSLODEX";
 import { useReferralReads, useReferralWrites } from "@/hooks/useReferral";
@@ -86,7 +85,6 @@ function LandingPage() {
     useInvestmentEngineReads(address);
   const { totalBurned, osloBalance, totalSupply } = useTokenReads(address);
   const { usdtBalance } = useUSDTReads(address);
-  const { mint, isLoading: isMinting, mintAmount } = useMintUSDT();
 
   // Liquidity pool data
   const { totalLiquidityAdded } = useLiquidityManagerReads();
@@ -187,21 +185,6 @@ function LandingPage() {
       setFlowStep("idle");
       addToast({
         title: "Registration Failed",
-        description: err?.message?.slice(0, 100) || "Transaction rejected",
-        status: "error",
-      });
-    }
-  };
-
-  const handleMint = async () => {
-    if (!address) return;
-    try {
-      addToast({ title: "Minting USDT...", status: "pending" });
-      const tx = await mint(address);
-      addToast({ title: `${mintAmount} USDT minted!`, status: "success", txHash: tx });
-    } catch (err: any) {
-      addToast({
-        title: "Mint Failed",
         description: err?.message?.slice(0, 100) || "Transaction rejected",
         status: "error",
       });
@@ -335,13 +318,13 @@ function LandingPage() {
             </p>
 
             {/* Registration info */}
-            <div className="mb-4 p-3 rounded-lg bg-oslo-warning/5 border border-oslo-warning/10">
+            <div className="mb-4 p-3 rounded-lg bg-oslo-ice/5 border border-oslo-ice/10">
               <p className="text-xs text-oslo-text-muted uppercase tracking-wider mb-1">
                 Registration Fee
               </p>
-              <p className="text-sm font-mono text-oslo-warning">$1.00 USDT — Goes to LP</p>
+              <p className="text-sm font-mono text-oslo-ice">$1.00 USDT — 100% to LP</p>
               <p className="text-[10px] text-oslo-text-muted mt-1">
-                $1 USDT is swapped for OSLO and burned, adding value to the pool
+                $1 USDT injected directly into liquidity — no tokens issued
               </p>
             </div>
 
@@ -440,50 +423,13 @@ function LandingPage() {
             )}
           </GlassCard>
 
-          {/* Test Token Mint + Info */}
+          {/* Quick guide */}
           <div className="space-y-4">
-            <GlassCard>
-              <div className="flex items-center gap-2 mb-4">
-                <Coins className="w-5 h-5 text-oslo-warning" />
-                <h2 className="text-lg font-medium">Test Tokens</h2>
-              </div>
-
-              <p className="text-sm text-oslo-text-secondary mb-4">
-                Mint {mintAmount} test USDT to try out deposits, referrals, and
-                all OSLO Protocol features on BSC Testnet.
-              </p>
-
-              <div className="mb-4 p-3 rounded-lg bg-white/[0.03] border border-white/5">
-                <p className="text-xs text-oslo-text-muted uppercase tracking-wider mb-1">
-                  Your USDT Balance
-                </p>
-                <p className="text-2xl font-mono font-light text-oslo-text-primary">
-                  ${usdtBal != null ? formatToken(usdtBal, 2) : "0.00"}
-                </p>
-              </div>
-
-              <IceButton
-                onClick={handleMint}
-                disabled={isMinting}
-                loading={isMinting}
-                variant="secondary"
-                className="w-full"
-              >
-                <Coins className="w-4 h-4 mr-2" />
-                Mint {mintAmount} Test USDT
-              </IceButton>
-
-              <p className="text-[10px] text-oslo-text-muted mt-3 text-center">
-                No real value — BSC Testnet only. You can mint multiple times.
-              </p>
-            </GlassCard>
-
-            {/* Quick guide */}
             <GlassCard>
               <h3 className="text-sm font-medium mb-3">Getting Started</h3>
               <div className="space-y-2">
                 {[
-                  "1. Mint test USDT tokens",
+                  "1. Get USDT (BEP-20) in your wallet",
                   "2. Register ($1 USDT fee)",
                   "3. Go to Invest to deposit",
                   "4. Earn daily yields + referral commissions",

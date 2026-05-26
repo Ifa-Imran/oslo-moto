@@ -14,12 +14,12 @@ export function RegistrationGuard({ children }: { children: ReactNode }) {
 
   const registered = isRegistered.data as boolean | undefined;
 
-  // Landing page is always accessible — no redirect needed
-  const isLanding = pathname === "/";
+  // Pages accessible without registration
+  const isPublicPage = pathname === "/";
 
   useEffect(() => {
-    // Only guard non-landing pages
-    if (isLanding) return;
+    // Public pages don't need guard
+    if (isPublicPage) return;
 
     // If not connected, redirect to landing
     if (!isConnected) {
@@ -31,10 +31,10 @@ export function RegistrationGuard({ children }: { children: ReactNode }) {
     if (registered === false) {
       router.replace("/");
     }
-  }, [isLanding, isConnected, registered, router]);
+  }, [isPublicPage, isConnected, registered, router]);
 
-  // Landing page always renders freely
-  if (isLanding) return <>{children}</>;
+  // Public pages always render freely
+  if (isPublicPage) return <>{children}</>;
 
   // Still loading registration status — show skeleton
   if (!isConnected || registered === undefined) {

@@ -22,6 +22,7 @@ contract OSLODEX is IOSLODEX, ReentrancyGuard {
     address public timelock;
     address public liquidityManager;
     address public investmentEngine;   // Authorized to call processDeposit/processWithdrawal
+    address public referralContract;    // Authorized to call swapUSDTForOSLO (registration fees)
     bool public setupComplete;
 
     // Reserves
@@ -51,6 +52,7 @@ contract OSLODEX is IOSLODEX, ReentrancyGuard {
     error OnlyTimelock();
     error OnlyLiquidityManager();
     error OnlyInvestmentEngine();
+    error OnlyReferralOrIE();
     error SetupAlreadyComplete();
     error ZeroAmount();
     error ZeroAddress();
@@ -114,6 +116,20 @@ contract OSLODEX is IOSLODEX, ReentrancyGuard {
         investmentEngine = _investmentEngine;
     }
 
+    /// @notice Set the Referral contract address. Only callable by Timelock after setup.
+    /// @param _referralContract New Referral contract address
+    function setReferralContract(address _referralContract) external onlyTimelock {
+        if (_referralContract == address(0)) revert ZeroAddress();
+        referralContract = _referralContract;
+    }
+
+    /// @notice Force-set Referral contract address. Only callable by Admin (pre-setup).
+    /// @dev Used during initial deployment wiring.
+    function forceSetReferralContract(address _referralContract) external onlyAdmin {
+        if (_referralContract == address(0)) revert ZeroAddress();
+        referralContract = _referralContract;
+    }
+
     // ─── Liquidity Management (Protocol-Controlled Only) ────────────────
 
     /// @notice Add initial liquidity to the DEX (called once during deployment)
@@ -145,6 +161,22 @@ contract OSLODEX is IOSLODEX, ReentrancyGuard {
         usdtReserve += usdtAmount;
 
         uint256 newPrice = (usdtReserve * 1e18) / osloToken.totalSupply();
+        emit LiquidityDeposited(usdtAmount, 0);
+        emit PriceUpdated(newPrice);
+    }
+
+    /// @notice Inject USDT directly into DEX liquidity without removing OSLO.
+    /// @dev Called by Referral contract for $1 registration fees.
+    ///      USDT goes straight to reserves — no OSLO is taken out.
+    /// @param usdtAmount Amount of USDT to inject as pure liquidity
+    function injectUSDTLiquidity(uint256 usdtAmount) external {
+        if (msg.sender != referralContract) revert OnlyReferralOrIE();
+        if (usdtAmount == 0) revert ZeroAmount();
+
+        usdt.safeTransferFrom(msg.sender, address(this), usdtAmount);
+        usdtReserve += usdtAmount;
+
+        uint256 newPrice = osloReserve > 0 ? (usdtReserve * 1e18) / osloReserve : 0;
         emit LiquidityDeposited(usdtAmount, 0);
         emit PriceUpdated(newPrice);
     }
@@ -269,14 +301,16 @@ contract OSLODEX is IOSLODEX, ReentrancyGuard {
 
     // ─── Public Swap Functions ─────────────────────────────────────────
 
-    /// @notice Swap USDT for OSLO — restricted to InvestmentEngine only.
-    /// @dev Regular users cannot swap USDT→OSLO. Only the InvestmentEngine
-    ///      may use this for protocol operations (yield auto-buy uses swapYieldForOSLO).
+    /// @notice Swap USDT for OSLO — restricted to InvestmentEngine & Referral.
+    /// @dev Called by InvestmentEngine for protocol ops and by Referral for
+    ///      registration fee → liquidity routing (OSLO burned, USDT becomes LP).
+    ///      Regular users cannot swap USDT→OSLO.
     /// @param usdtAmount Amount of USDT to swap
     /// @param minOsloAmount Minimum OSLO to receive (slippage protection)
     /// @return osloAmount Amount of OSLO received
     function swapUSDTForOSLO(uint256 usdtAmount, uint256 minOsloAmount)
-        external onlyInvestmentEngine nonReentrant returns (uint256 osloAmount) {
+        external nonReentrant returns (uint256 osloAmount) {
+        if (msg.sender != investmentEngine && msg.sender != referralContract) revert OnlyReferralOrIE();
         if (usdtAmount == 0) revert ZeroAmount();
         if (usdtReserve == 0 || osloReserve == 0) revert InsufficientReserve();
 
@@ -299,10 +333,13 @@ contract OSLODEX is IOSLODEX, ReentrancyGuard {
     }
 
     /// @notice Swap OSLO for USDT
-    /// @dev V3: 10% sell tax applied in OSLOToken._update → OSLO burned.
-    ///      DEX receives 90% of OSLO but pays USDT for 100% of the declared amount.
-    ///      This means the 10% fee USDT stays in DEX as additional LP.
-    ///      No additional DEX-level fee deduction from user's USDT.
+    /// @dev V6: 10% sell tax burned via OSLOToken._update.
+    ///      Of the remaining 90% received by DEX:
+    ///        20% → additionally burned (deflationary)
+    ///        70% → InvestmentEngine (contract reserve, recycled for rewards)
+    ///        10% → stays in DEX as LP
+    ///      Total burn = 30% of declared OSLO.
+    ///      USDT output calculated on full osloReceived (90%) for fair user price.
     /// @param osloAmount Amount of OSLO to swap
     /// @param minUSDTAmount Minimum USDT to receive (slippage protection)
     /// @return usdtAmount Amount of USDT received
@@ -316,22 +353,39 @@ contract OSLODEX is IOSLODEX, ReentrancyGuard {
         osloToken.safeTransferFrom(msg.sender, address(this), osloAmount);
         uint256 osloReceived = osloToken.balanceOf(address(this)) - osloBefore;
 
-        // Calculate USDT output using the DECLARED osloAmount (before tax).
-        // This ensures fair pricing and the fee's USDT value stays in DEX as LP.
-        usdtAmount = (osloAmount * usdtReserve) / (osloReserve + osloAmount);
+        // Calculate USDT output using the full osloReceived (90%).
+        // The user gets USDT for the full 90% — distribution happens after.
+        usdtAmount = (osloReceived * usdtReserve) / (osloReserve + osloReceived);
 
         if (usdtAmount == 0 || usdtAmount < minUSDTAmount) revert SlippageExceeded();
         if (usdtAmount > usdtReserve) revert InsufficientReserve();
 
-        // Update reserves:
-        // - USDT: full usdtAmount leaves DEX (10% fee USDT effectively stays as LP
-        //   because DEX receives only 90% OSLO but pays 100% USDT)
-        // - OSLO: only add tokens actually received (~90%)
+        // Send USDT to user
         usdtReserve -= usdtAmount;
-        osloReserve += osloReceived;
-
-        // Transfer USDT to user — no additional fee deduction (10% already paid via token burn)
         usdt.safeTransfer(msg.sender, usdtAmount);
+
+        // ── Distribute received OSLO ──────────────────────────────────
+        // Uses OSLOConstants pre-defined basis points:
+        //   SELL_TAX_TO_BURN_BP (2000) = 20% of osloReceived → burned
+        //   SELL_TAX_TO_CONTRACT_BP (7000) = 70% of osloReceived → InvestmentEngine
+        //   Remaining (1000) = 10% of osloReceived → DEX LP
+        uint256 additionalBurn = (osloReceived * OSLOConstants.SELL_TAX_TO_BURN_BP) / OSLOConstants.BASIS_POINTS;
+        uint256 toIE = (osloReceived * OSLOConstants.SELL_TAX_TO_CONTRACT_BP) / OSLOConstants.BASIS_POINTS;
+        uint256 toLP = osloReceived - additionalBurn - toIE;
+
+        // Burn 20% of received OSLO (deflationary)
+        if (additionalBurn > 0) {
+            osloToken.safeTransfer(OSLOConstants.DEAD_ADDRESS, additionalBurn);
+        }
+
+        // Send 70% to InvestmentEngine (recycled for future rewards)
+        if (toIE > 0) {
+            if (investmentEngine == address(0)) revert ZeroAddress();
+            osloToken.safeTransfer(investmentEngine, toIE);
+        }
+
+        // Keep 10% in DEX as LP
+        osloReserve += toLP;
 
         totalVolumeUSDT += usdtAmount;
         totalSwaps++;
@@ -355,15 +409,18 @@ contract OSLODEX is IOSLODEX, ReentrancyGuard {
     /// @return Expected OSLO output
     function getUSDTForOSLOOutput(uint256 usdtAmount) external view returns (uint256) {
         if (usdtAmount == 0 || usdtReserve == 0 || osloReserve == 0) return 0;
-        return (usdtAmount * osloReserve) / (usdtReserve + usdtAmount);
+        if (usdtAmount >= usdtReserve) return osloReserve; // cap: can't withdraw more than reserve
+        return (usdtAmount * osloReserve) / (usdtReserve - usdtAmount);
     }
 
-    /// @notice Calculate USDT output for a given OSLO input at current price
-    /// @param osloAmount Input OSLO amount
-    /// @return Expected USDT output
+    /// @notice Calculate USDT output for a given OSLO input (after 10% sell tax)
+    /// @param osloAmount Input OSLO amount (declared by user)
+    /// @return Expected USDT output after 10% tax is applied
     function getOSLOForUSDTOutput(uint256 osloAmount) external view returns (uint256) {
         if (osloAmount == 0 || usdtReserve == 0 || osloReserve == 0) return 0;
-        uint256 usdtAmount = (osloAmount * usdtReserve) / (osloReserve + osloAmount);
+        // Account for 10% sell tax: only 90% of OSLO reaches the DEX
+        uint256 netOslo = osloAmount - (osloAmount * OSLOConstants.SELL_TAX_BP) / OSLOConstants.BASIS_POINTS;
+        uint256 usdtAmount = (netOslo * usdtReserve) / (osloReserve + netOslo);
         if (usdtAmount > usdtReserve) return 0;
         return usdtAmount;
     }

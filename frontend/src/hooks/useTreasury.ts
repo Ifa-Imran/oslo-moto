@@ -1,6 +1,5 @@
 import { CONTRACTS } from "@/lib/contracts";
-import treasuryArtifact from "@/abis/OSLOTreasury.json";
-const treasuryAbi = treasuryArtifact.abi;
+import treasuryAbi from "@/abis/OSLOTreasury.json";
 import { useReadContract, useWriteContract, useWatchContractEvent } from "wagmi";
 
 export function useTreasuryReads() {

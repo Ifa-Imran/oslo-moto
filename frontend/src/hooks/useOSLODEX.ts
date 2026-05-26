@@ -8,8 +8,7 @@
  */
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { CONTRACTS } from "@/lib/contracts";
-import osloDEXArtifact from "@/abis/OSLODEX.json";
-const osloDEXABI = osloDEXArtifact.abi;
+import osloDEXABI from "@/abis/OSLODEX.json";
 import { parseEther, formatEther } from "viem";
 import { useState } from "react";
 
@@ -43,14 +42,15 @@ export function useOSLODEX() {
     hash: swapData,
   });
 
-  // Calculate USDT output for OSLO input (sell direction)
+  // Calculate USDT output for OSLO input (sell direction, after 10% tax)
   const getEstimatedOutput = (inputAmount: string) => {
     const input = parseFloat(inputAmount);
     if (!input || !reserves) return 0;
     const usdtRes = parseFloat(usdtReserve);
     const osloRes = parseFloat(osloReserve);
-    // OSLO → USDT: output = (input * usdtReserve) / (osloReserve + input)
-    return (input * usdtRes) / (osloRes + input);
+    // 10% sell tax: only 90% of OSLO reaches the DEX
+    const netOslo = input * 0.9;
+    return (netOslo * usdtRes) / (osloRes + netOslo);
   };
 
   // Helper: convert USDT amount to estimated OSLO output (for display only)

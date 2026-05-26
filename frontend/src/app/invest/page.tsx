@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAccount, usePublicClient, useWriteContract, useReadContract } from "wagmi";
-import { parseEther, erc20Abi, type Address } from "viem";
+import { parseEther, erc20Abi, maxUint256, type Address } from "viem";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { IceButton } from "@/components/ui/IceButton";
 import { TierBadge } from "@/components/ui/TierBadge";
@@ -12,8 +12,7 @@ import { useInvestmentEngineReads, useDepositRead, useInvestmentEngineWrites } f
 import { useTokenReads } from "@/hooks/useToken";
 import { useAppStore } from "@/store/useAppStore";
 import { CONTRACTS } from "@/lib/contracts";
-import osloDEXArtifact from "@/abis/OSLODEX.json";
-const osloDEXAbi = osloDEXArtifact.abi;
+import osloDEXAbi from "@/abis/OSLODEX.json";
 import { formatToken, formatNumber } from "@/lib/utils";
 import {
   TIER_BOUNDARIES,
@@ -99,7 +98,7 @@ export default function InvestPage() {
     const currentAllowance = (usdtAllowance as bigint) || 0n;
 
     try {
-      // ── Step 1: Approve USDT if needed ──────────────────────────
+      // ── Step 1: Approve USDT if needed (MaxUint256 = one-time infinite approval) ──
       if (currentAllowance < depositAmount) {
         setFlowStep("approving");
         addToast({ title: "Approving USDT...", status: "pending" });
@@ -108,7 +107,7 @@ export default function InvestPage() {
           address: CONTRACTS.usdt,
           abi: erc20Abi,
           functionName: "approve",
-          args: [CONTRACTS.investmentEngine, depositAmount],
+          args: [CONTRACTS.investmentEngine, maxUint256],
         });
 
         addToast({
@@ -119,6 +118,8 @@ export default function InvestPage() {
         });
 
         await publicClient.waitForTransactionReceipt({ hash: approveTx });
+        // Wait for RPC node propagation to prevent simulation failure
+        await new Promise(resolve => setTimeout(resolve, 3000));
         addToast({ title: "USDT Approved", status: "success", txHash: approveTx });
       }
 
@@ -448,6 +449,7 @@ function DepositCard({
   onEarlyExit: (i: number) => void;
 }) {
   const { address } = useAccount();
+  const publicClient = usePublicClient();
   const { addToast } = useAppStore();
   const { writeContractAsync } = useWriteContract();
   const { depositData, pendingRewards, isInEarlyExit, earlyExitAmount } = useDepositRead(
@@ -462,6 +464,15 @@ function DepositCard({
     abi: osloDEXAbi,
     functionName: "getReserves",
     query: { refetchInterval: 10000 },
+  });
+
+  // OSLO allowance check for DEX
+  const { data: osloAllowance } = useReadContract({
+    address: CONTRACTS.osloToken,
+    abi: erc20Abi,
+    functionName: "allowance",
+    args: address ? [address, CONTRACTS.osloDEX] : undefined,
+    query: { enabled: !!address },
   });
 
   const deposit = depositData.data as [bigint, bigint, bigint, bigint, bigint, bigint, bigint, boolean] | undefined;
@@ -507,9 +518,24 @@ function DepositCard({
   const exitHoursLeft = Math.max(0, Math.ceil((exitDeadline - Date.now() / 1000) / 3600));
 
   const handleConvertOsloToUSDT = async () => {
-    if (!osloBal || osloBal === 0n) return;
+    if (!osloBal || osloBal === 0n || !address || !publicClient) return;
     setConvertingOslo(true);
     try {
+      // ── Step 1: Approve OSLO if needed ──────────────────────────
+      const currentAllowance = (osloAllowance as bigint) || 0n;
+      if (currentAllowance < osloBal) {
+        addToast({ title: "Approving OSLO for DEX...", status: "pending" });
+        const approveTx = await writeContractAsync({
+          address: CONTRACTS.osloToken,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [CONTRACTS.osloDEX, osloBal],
+        });
+        await publicClient.waitForTransactionReceipt({ hash: approveTx });
+        addToast({ title: "OSLO Approved", status: "success", txHash: approveTx });
+      }
+
+      // ── Step 2: Swap ───────────────────────────────────────────
       addToast({ title: "Converting OSLO to USDT...", status: "pending" });
       const tx = await writeContractAsync({
         address: CONTRACTS.osloDEX,
@@ -519,6 +545,7 @@ function DepositCard({
       });
       addToast({ title: "Converted to USDT!", status: "success", txHash: tx });
     } catch (err: any) {
+      if (err?.message?.includes("rejected") || err?.message?.includes("denied")) return;
       addToast({
         title: "Conversion Failed",
         description: err?.message?.slice(0, 100) || "Transaction rejected",
@@ -598,7 +625,7 @@ function DepositCard({
         </div>
       </div>
 
-      {/* V3: Early Exit — 10-day window with 10% fee + yield deduction, paid in USDT */}
+      {/* Early Exit — 10-day window with flat 10% fee, paid in USDT */}
       {active && inEarlyExit && exitNetReturn > 0 && (
         <div className="mb-4 p-3 rounded-lg bg-oslo-aurora/5 border border-oslo-aurora/10 space-y-2">
           <div className="flex items-center gap-1.5">
@@ -610,8 +637,6 @@ function DepositCard({
           <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
             <span className="text-oslo-text-muted">Principal</span>
             <span className="font-mono text-oslo-text-primary text-right">${formatNumber(exitPrincipal)}</span>
-            <span className="text-oslo-text-muted">Accrued Yield</span>
-            <span className="font-mono text-oslo-success text-right">-${formatNumber(exitAccruedYield, 4)}</span>
             <span className="text-oslo-text-muted">{EARLY_EXIT_FEE_PCT}% Exit Fee</span>
             <span className="font-mono text-oslo-danger text-right">-${formatNumber(exitFee)}</span>
             <span className="text-oslo-text-muted pt-1 border-t border-white/5">You Receive (USDT)</span>
@@ -644,6 +669,22 @@ function DepositCard({
           <p className="text-[10px] text-oslo-text-muted">
             Sell OSLO for USDT — <span className="text-oslo-aurora">10% fee</span> (to LP + burn)
           </p>
+          {/* Allowance indicator */}
+          {(() => {
+            const allowance = (osloAllowance as bigint) || 0n;
+            if (allowance >= (osloBal || 0n)) {
+              return (
+                <p className="text-[10px] text-oslo-success flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" /> OSLO approved
+                </p>
+              );
+            }
+            return (
+              <p className="text-[10px] text-oslo-warning flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" /> Approval required
+              </p>
+            );
+          })()}
           <IceButton
             size="sm"
             variant="primary"
@@ -652,7 +693,11 @@ function DepositCard({
             loading={convertingOslo}
             disabled={convertingOslo}
           >
-            Sell {formatNumber(osloBalNum)} OSLO → USDT
+            {(() => {
+              const allowance = (osloAllowance as bigint) || 0n;
+              if (allowance < (osloBal || 0n)) return `Approve & Sell ${formatNumber(osloBalNum)} OSLO`;
+              return `Sell ${formatNumber(osloBalNum)} OSLO → USDT`;
+            })()}
           </IceButton>
         </div>
       )}

@@ -1,10 +1,7 @@
 import { CONTRACTS } from "@/lib/contracts";
-import tokenArtifact from "@/abis/OSLOToken.json";
-const tokenAbi = tokenArtifact.abi;
-import mockUSDTArtifact from "@/abis/MockUSDT.json";
-const mockUSDTAbi = mockUSDTArtifact.abi;
-import { useReadContract, useWriteContract, useWatchContractEvent } from "wagmi";
-import { type Address, erc20Abi as standardErc20Abi, parseEther } from "viem";
+import tokenAbi from "@/abis/OSLOToken.json";
+import { useReadContract, useWatchContractEvent } from "wagmi";
+import { type Address, erc20Abi as standardErc20Abi } from "viem";
 
 export function useTokenReads(userAddress?: Address) {
   const totalBurned = useReadContract({
@@ -50,22 +47,4 @@ export function useTokenEvents(onEvent?: (event: any) => void) {
     eventName: "SellTaxApplied",
     onLogs: (logs) => logs.forEach((log) => onEvent?.(log)),
   });
-}
-
-// ─── MockUSDT Mint (Testnet only) ───────────────────────────────────
-const MINT_AMOUNT = parseEther("10000"); // 10,000 USDT
-
-export function useMintUSDT() {
-  const { writeContractAsync, isPending } = useWriteContract();
-
-  const mint = async (to: Address) => {
-    return writeContractAsync({
-      address: CONTRACTS.usdt,
-      abi: mockUSDTAbi,
-      functionName: "mint",
-      args: [to, MINT_AMOUNT],
-    });
-  };
-
-  return { mint, isLoading: isPending, mintAmount: "10,000" };
 }

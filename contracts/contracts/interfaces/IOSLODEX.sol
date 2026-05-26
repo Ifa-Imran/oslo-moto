@@ -57,6 +57,11 @@ interface IOSLODEX {
     /// @return Expected USDT output
     function getOSLOForUSDTOutput(uint256 osloAmount) external view returns (uint256);
 
+    /// @notice Inject USDT directly into DEX liquidity without removing OSLO.
+    /// @dev Called by Referral contract for registration fees — 100% goes to LP.
+    /// @param usdtAmount Amount of USDT to inject as liquidity
+    function injectUSDTLiquidity(uint256 usdtAmount) external;
+
     /// @notice Receive OSLO from InvestmentEngine to replenish DEX reserves
     /// @param osloAmount Amount of OSLO to add to reserves
     function replenishOsloReserve(uint256 osloAmount) external;

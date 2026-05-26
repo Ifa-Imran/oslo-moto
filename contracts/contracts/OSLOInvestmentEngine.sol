@@ -52,6 +52,11 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
     bool public depositsPaused;      // Emergency pause for new deposits only
     uint256 public minClaimThreshold = 1 * 1e18; // $1 USDT minimum to claim (settable by timelock)
 
+    // Reward wallets (2% deposit fee split)
+    address public rewardWallet;      // 1.0%
+    address public companyWallet;     // 0.5%
+    address public performanceWallet; // 0.5%
+
     mapping(address => Deposit[]) public userDeposits;
     mapping(address => UserInfo) public users;
 
@@ -142,6 +147,39 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         admin = address(0);
     }
 
+    /// @notice Migrate deposit records from testnet snapshot. Only callable by Admin before completeSetup.
+    /// @dev Directly injects deposit structs without requiring USDT transfers.
+    ///      Used for testnet-to-mainnet migration only. Batched to avoid gas limits.
+    struct DepositMigration {
+        address owner;
+        uint256 amount;
+        uint256 tier;
+        uint256 dailyRate;
+        uint256 depositTime;
+        uint256 lastClaimTime;
+        uint256 totalClaimed;
+        uint256 maxReturn;
+    }
+
+    function migrateDeposits(DepositMigration[] calldata entries) external onlyAdmin {
+        for (uint256 i = 0; i < entries.length; i++) {
+            DepositMigration calldata e = entries[i];
+            userDeposits[e.owner].push(Deposit({
+                amount: e.amount,
+                tier: e.tier,
+                dailyRate: e.dailyRate,
+                depositTime: e.depositTime,
+                lastClaimTime: e.lastClaimTime,
+                totalClaimed: e.totalClaimed,
+                maxReturn: e.maxReturn,
+                active: true
+            }));
+            users[e.owner].totalActiveDeposit += e.amount;
+            users[e.owner].depositCount++;
+            totalDeposited += e.amount;
+        }
+    }
+
     /// @notice Emergency pause for new deposits only. Only callable by Timelock.
     function setDepositsPaused(bool _paused) external onlyTimelock {
         depositsPaused = _paused;
@@ -161,6 +199,24 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         minClaimThreshold = _threshold;
     }
 
+    /// @notice Set reward wallet addresses. Only callable by Admin (before completeSetup) or Timelock (after).
+    function setRewardWallets(
+        address _rewardWallet,
+        address _companyWallet,
+        address _performanceWallet
+    ) external {
+        if (setupComplete) {
+            if (msg.sender != timelock) revert OnlyTimelock();
+        } else {
+            if (msg.sender != admin) revert OnlyAdmin();
+        }
+        if (_rewardWallet == address(0) || _companyWallet == address(0) || _performanceWallet == address(0))
+            revert ZeroAddress();
+        rewardWallet = _rewardWallet;
+        companyWallet = _companyWallet;
+        performanceWallet = _performanceWallet;
+    }
+
     // ─── Core Functions ─────────────────────────────────────────────────
 
     /// @notice Deposit USDT into the investment engine. No deposit fee — full amount staked.
@@ -175,6 +231,20 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         // Transfer USDT from user to this contract
         usdt.safeTransferFrom(msg.sender, address(this), amount);
 
+        // Split 2% to reward wallets (1% + 0.5% + 0.5%)
+        uint256 dexAmount = amount;
+        if (rewardWallet != address(0) && companyWallet != address(0) && performanceWallet != address(0)) {
+            uint256 rewardFee = (amount * OSLOConstants.DEPOSIT_TO_REWARD_BP) / OSLOConstants.BASIS_POINTS;
+            uint256 companyFee = (amount * OSLOConstants.DEPOSIT_TO_COMPANY_BP) / OSLOConstants.BASIS_POINTS;
+            uint256 performanceFee = (amount * OSLOConstants.DEPOSIT_TO_PERFORMANCE_BP) / OSLOConstants.BASIS_POINTS;
+            
+            usdt.safeTransfer(rewardWallet, rewardFee);
+            usdt.safeTransfer(companyWallet, companyFee);
+            usdt.safeTransfer(performanceWallet, performanceFee);
+            
+            dexAmount = amount - rewardFee - companyFee - performanceFee;
+        }
+
         // Ensure DEX has sufficient OSLO reserve for this deposit.
         // DEX OSLO is consumed by every deposit but never replenished by sells
         // (tax routing sends 70% to IE + 30% burn, 0% to DEX).
@@ -184,9 +254,9 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
             uint256 estimatedOsloNeeded;
             (uint256 dexUsdt, uint256 dexOslo) = IOSLODEX(osloDex).getReserves();
             if (dexUsdt > 0 && dexOslo > 0) {
-                estimatedOsloNeeded = (amount * dexOslo) / (dexUsdt + amount);
+                estimatedOsloNeeded = (dexAmount * dexOslo) / (dexUsdt + dexAmount);
             } else {
-                estimatedOsloNeeded = amount;
+                estimatedOsloNeeded = dexAmount;
             }
             uint256 minBuffer = 1000 * 1e18; // 1,000 OSLO minimum buffer
             if (dexOsloBalance < estimatedOsloNeeded + minBuffer) {
@@ -200,8 +270,8 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         }
 
         // Approve and send USDT to DEX, receive OSLO in return
-        usdt.forceApprove(osloDex, amount);
-        uint256 osloReceived = IOSLODEX(osloDex).processDeposit(amount);
+        usdt.forceApprove(osloDex, dexAmount);
+        uint256 osloReceived = IOSLODEX(osloDex).processDeposit(dexAmount);
         // OSLO is now held by this contract as reserve (transferred by DEX)
 
         // Determine tier and daily rate based on amount
@@ -310,11 +380,9 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
 
 
     /// @notice Early exit — withdraw within 10-day window. Returns USDT directly.
-    /// @dev Deducts 10% early exit fee + all accrued yield. Net returned in USDT, not tokens.
+    /// @dev Deducts flat 10% early exit fee on principal. Net returned in USDT, not tokens.
     ///      Available only within EARLY_EXIT_PERIOD (10 days) from deposit.
-    ///      Example: $100 deposit, 4 days elapsed, $4 yield earned
-    ///               → Deduct $4 (yield) + $10 (10% fee) = $14
-    ///               → Return $86 USDT to investor
+    ///      Example: $100 deposit → Deduct $10 (10% fee) → Return $90 USDT
     /// @param depositIndex Index of the deposit
     function earlyExit(uint256 depositIndex) external nonReentrant {
         Deposit storage dep = _getActiveDeposit(msg.sender, depositIndex);
@@ -326,17 +394,11 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
 
         uint256 principal = dep.amount;
 
-        // Calculate accrued yield (same formula as _calculatePendingRewards)
-        uint256 accruedYield = _calculatePendingRewards(msg.sender, dep);
-
-        // 10% early exit fee on principal
+        // 10% early exit fee on principal (flat fee, no yield clawback)
         uint256 exitFee = (principal * OSLOConstants.EARLY_EXIT_FEE_BP) / OSLOConstants.BASIS_POINTS;
 
-        // Total deductions = accrued yield + 10% fee
-        uint256 totalDeductions = accruedYield + exitFee;
-
-        // Net return to investor
-        uint256 netReturn = principal > totalDeductions ? principal - totalDeductions : 0;
+        // Net return to investor = principal - 10% fee
+        uint256 netReturn = principal - exitFee;
 
         // Mark deposit as inactive
         dep.active = false;
@@ -368,7 +430,7 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
             }
         }
 
-        emit EarlyExited(msg.sender, netReturn, exitFee, accruedYield, depositIndex);
+        emit EarlyExited(msg.sender, netReturn, exitFee, 0, depositIndex);
     }
 
     /// @notice Check if a deposit is within the early exit period
@@ -399,10 +461,9 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         }
 
         principal = dep.amount;
-        accruedYield = _calculatePendingRewards(user, dep);
+        accruedYield = 0; // No yield clawback — flat 10% fee only
         exitFee = (principal * OSLOConstants.EARLY_EXIT_FEE_BP) / OSLOConstants.BASIS_POINTS;
-        uint256 totalDeductions = accruedYield + exitFee;
-        netReturn = principal > totalDeductions ? principal - totalDeductions : 0;
+        netReturn = principal - exitFee;
     }
 
     // ─── Cross-Contract Notifications ───────────────────────────────────

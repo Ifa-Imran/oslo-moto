@@ -1,6 +1,5 @@
 import { CONTRACTS } from "@/lib/contracts";
-import liquidityManagerArtifact from "@/abis/OSLOLiquidityManager.json";
-const liquidityManagerAbi = liquidityManagerArtifact.abi;
+import liquidityManagerAbi from "@/abis/OSLOLiquidityManager.json";
 import { useReadContract, useWatchContractEvent } from "wagmi";
 
 export function useLiquidityManagerReads() {
