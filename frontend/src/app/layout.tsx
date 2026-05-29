@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { MaintenanceOverlay } from "@/components/MaintenanceOverlay";
+import { MaintenanceOverlay } from "../components/MaintenanceOverlay";
 import "./globals.css";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://oslo.finance";
