@@ -225,8 +225,8 @@ export default function ReferralsPage() {
         <StatCard label="Team Size" value={team.toString()} mono={false} />
         <StatCard label="Total Registered" value={totalReg.toLocaleString()} mono={false} />
         <StatCard
-          label="Total Commissions"
-          value={`$${totalComm != null ? formatToken(totalComm, 0) : "0"}`}
+          label="My Total Earned"
+          value={`$${totalEarned != null ? formatToken(totalEarned, 2) : "0.00"}`}
           mono
         />
       </div>
@@ -336,13 +336,18 @@ export default function ReferralsPage() {
           </div>
           <IceButton
             onClick={handleClaim}
-            disabled={!rewards || rewards === 0n || isLoading}
+            disabled={!rewards || rewards < BigInt("1000000000000000000") || isLoading}
             loading={isLoading}
             className="w-full"
           >
             <Gift className="w-4 h-4 mr-2" />
             Claim All Rewards
           </IceButton>
+          {rewards != null && rewards > 0n && rewards < BigInt("1000000000000000000") && (
+            <p className="text-[10px] text-oslo-text-muted text-center mt-2">
+              Minimum $1.00 required to claim
+            </p>
+          )}
         </GlassCard>
       </div>
 

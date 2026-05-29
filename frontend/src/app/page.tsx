@@ -14,7 +14,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { AddressChip } from "@/components/ui/AddressChip";
 import { RealTimeYield } from "@/components/dashboard/RealTimeYield";
 import { AllocationBreakdown } from "@/components/dashboard/AllocationBreakdown";
-import { useInvestmentEngineReads } from "@/hooks/useInvestmentEngine";
+import { useInvestmentEngineReads, useInvestmentEngineWrites } from "@/hooks/useInvestmentEngine";
 import investmentEngineAbi from "@/abis/OSLOInvestmentEngine.json";
 import { useTokenReads, useUSDTReads } from "@/hooks/useToken";
 import { useLiquidityManagerReads } from "@/hooks/useLiquidityManager";
@@ -78,7 +78,8 @@ function LandingPage() {
 
   // Registration check
   const { isRegistered, referrer, totalRegistered, userInfoData, directReferrals, referralRewards, allLevelIncome, unlockedLevels } = useReferralReads(address);
-  const { register, isLoading: isRegistering } = useReferralWrites();
+  const { register, claimReferralRewards, isLoading: isRegistering } = useReferralWrites();
+  const { claimRewards: claimYieldRewards, isLoading: isClaimingYield } = useInvestmentEngineWrites();
 
   // Dashboard data (when registered)
   const { totalActiveDeposit, userTier, depositCount, totalDeposited, totalRewardsPaid, totalWithdrawn, launchTimestamp, completedCycles } =
@@ -515,7 +516,7 @@ function LandingPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatCard
           label="Total Value Locked"
-          value={`$${formatToken(totalLiquidityAdded?.data as bigint || 0n, 2)}`}
+          value={`$${formatNumber(Number(usdtReserve), 2)}`}
           subValue={totalRegistered.data != null ? `${String(totalRegistered.data)} users registered` : undefined}
           icon={<TrendingUp className="w-4 h-4" />}
         />
@@ -539,7 +540,7 @@ function LandingPage() {
         />
         <StatCard
           label="Liquidity Pool"
-          value={`$${formatToken(totalLiquidityAdded?.data as bigint || 0n, 2)}`}
+          value={`$${formatNumber(Number(usdtReserve), 2)}`}
           subValue={`OSLO Price: $${parseFloat(osloPrice).toFixed(6)}`}
           icon={<Droplets className="w-4 h-4" />}
         />
@@ -563,6 +564,137 @@ function LandingPage() {
           osloPrice={osloPriceNum}
         />
       )}
+
+      {/* ─── Unified Leader Earnings Panel ─── */}
+      {isConnected && registered && (() => {
+        const rewards = referralRewards.data as bigint | undefined;
+        const rewardsNum = rewards ? Number(rewards) / 1e18 : 0;
+        const rewardsOslo = osloPriceNum > 0 ? rewardsNum / osloPriceNum : 0;
+        const totalEarnings = pendingTotalNum + rewardsNum;
+        const totalEarningsOslo = osloPriceNum > 0 ? totalEarnings / osloPriceNum : 0;
+
+        const handleClaimYield = async () => {
+          try {
+            addToast({ title: "Claiming Investment Yield...", status: "pending" });
+            const tx = await claimYieldRewards(0);
+            addToast({ title: "Yield Claimed!", status: "success", txHash: tx });
+            refetchPending?.();
+          } catch (err: any) {
+            addToast({ title: "Claim Failed", description: err?.message?.slice(0, 100), status: "error" });
+          }
+        };
+
+        const handleClaimCommissions = async () => {
+          try {
+            addToast({ title: "Claiming Level Commissions...", status: "pending" });
+            const tx = await claimReferralRewards();
+            addToast({ title: "Commissions Claimed!", status: "success", txHash: tx });
+          } catch (err: any) {
+            addToast({ title: "Claim Failed", description: err?.message?.slice(0, 100), status: "error" });
+          }
+        };
+
+        return (
+          <GlassCard>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <Gift className="w-5 h-5 text-oslo-ice" />
+                <h2 className="text-lg font-medium text-oslo-text-primary">
+                  My Earnings
+                </h2>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-mono text-oslo-success">
+                  ${formatNumber(totalEarnings, 4)} USDT
+                </p>
+                {osloPriceNum > 0 && (
+                  <p className="text-[10px] text-oslo-text-muted">
+                    ≈ {formatNumber(totalEarningsOslo, 2)} OSLO
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Pending Investment Yield */}
+              <div className="p-4 rounded-xl bg-oslo-ice/5 border border-oslo-ice/10">
+                <div className="flex items-center gap-2 mb-2">
+                  <Coins className="w-4 h-4 text-oslo-ice" />
+                  <span className="text-xs text-oslo-text-muted uppercase tracking-wider">
+                    Investment Yield
+                  </span>
+                </div>
+                <p className="text-2xl font-mono font-light text-oslo-ice">
+                  ${formatNumber(pendingTotalNum, 4)}
+                </p>
+                {osloPriceNum > 0 && (
+                  <p className="text-xs text-oslo-text-muted mt-0.5">
+                    ≈ {formatNumber(pendingOsloAmt, 2)} OSLO
+                  </p>
+                )}
+                <p className="text-[10px] text-oslo-text-muted mt-2 mb-3">
+                  Accrued from your active deposits — paid in OSLO
+                </p>
+                <IceButton
+                  onClick={handleClaimYield}
+                  disabled={pendingTotalNum <= 0 || isClaimingYield}
+                  loading={isClaimingYield}
+                  size="sm"
+                  className="w-full"
+                >
+                  <TrendingUp className="w-3.5 h-3.5 mr-1.5" />
+                  Claim Yield
+                </IceButton>
+              </div>
+
+              {/* Pending Level Commissions */}
+              <div className="p-4 rounded-xl bg-oslo-success/5 border border-oslo-success/10">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="w-4 h-4 text-oslo-success" />
+                  <span className="text-xs text-oslo-text-muted uppercase tracking-wider">
+                    Level Commissions
+                  </span>
+                </div>
+                <p className="text-2xl font-mono font-light text-oslo-success">
+                  ${formatNumber(rewardsNum, 4)}
+                </p>
+                {osloPriceNum > 0 && (
+                  <p className="text-xs text-oslo-text-muted mt-0.5">
+                    ≈ {formatNumber(rewardsOslo, 2)} OSLO
+                  </p>
+                )}
+                <p className="text-[10px] text-oslo-text-muted mt-2 mb-3">
+                  Earned from your team&apos;s yield claims — paid in USDT
+                </p>
+                <IceButton
+                  onClick={handleClaimCommissions}
+                  disabled={rewardsNum < 1 || isRegistering}
+                  loading={isRegistering}
+                  size="sm"
+                  variant="ghost"
+                  className="w-full border border-oslo-success/30 hover:bg-oslo-success/10"
+                >
+                  <Gift className="w-3.5 h-3.5 mr-1.5" />
+                  Claim Commissions
+                </IceButton>
+                {rewardsNum > 0 && rewardsNum < 1 && (
+                  <p className="text-[10px] text-oslo-text-muted text-center mt-2">
+                    Minimum $1.00 required to claim
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 p-3 rounded-lg bg-white/[0.02] border border-white/5">
+              <p className="text-[10px] text-oslo-text-secondary">
+                <strong className="text-oslo-text-primary">Combined Earnings:</strong>{" "}
+                Investment yield is paid in OSLO tokens at current DEX price. Level commissions from your referral tree are paid in USDT.
+                Both can be claimed independently at any time.
+              </p>
+            </div>
+          </GlassCard>
+        );
+      })()}
 
       {/* Allocation Breakdown */}
       <AllocationBreakdown depositAmount={isConnected && registered ? activeDepositNum : 0} />
