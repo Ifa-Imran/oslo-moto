@@ -467,10 +467,8 @@ function LandingPage() {
   const totalReg = Number((totalRegistered.data as bigint) || 0n);
 
   // Pending ROI calculation
-  const pendingTuple = pendingRewardsData as [bigint, bigint] | undefined;
-  const pendingInv = pendingTuple?.[0] || 0n;
-  const pendingProfit = pendingTuple?.[1] || 0n;
-  const pendingTotal = pendingInv + pendingProfit;
+  const pendingBigint = pendingRewardsData as bigint | undefined;
+  const pendingTotal = pendingBigint || 0n;
   const pendingTotalNum = Number(pendingTotal) / 1e18;
   const usdtBal = usdtBalance.data as bigint | undefined;
   const osloBal = osloBalance.data as bigint | undefined;
@@ -637,7 +635,7 @@ function LandingPage() {
                 </p>
                 <IceButton
                   onClick={handleClaimYield}
-                  disabled={pendingTotalNum <= 0 || isClaimingYield}
+                  disabled={pendingTotalNum < 1 || isClaimingYield}
                   loading={isClaimingYield}
                   size="sm"
                   className="w-full"
@@ -645,6 +643,11 @@ function LandingPage() {
                   <TrendingUp className="w-3.5 h-3.5 mr-1.5" />
                   Claim Yield
                 </IceButton>
+                {pendingTotalNum > 0 && pendingTotalNum < 1 && (
+                  <p className="text-[10px] text-oslo-text-muted text-center mt-2">
+                    Minimum $1.00 required to claim
+                  </p>
+                )}
               </div>
 
               {/* Pending Level Commissions */}
