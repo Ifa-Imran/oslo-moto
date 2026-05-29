@@ -476,7 +476,7 @@ function DepositCard({
   });
 
   const deposit = depositData.data as [bigint, bigint, bigint, bigint, bigint, bigint, bigint, boolean] | undefined;
-  const rewards = pendingRewards.data as [bigint, bigint] | undefined;
+  const pendingUSDT = pendingRewards.data as bigint | undefined;
 
   const [convertingOslo, setConvertingOslo] = useState(false);
   const [earlyExiting, setEarlyExiting] = useState(false);
@@ -488,15 +488,14 @@ function DepositCard({
   const tierNum = Number(tier);
   const claimedNum = Number(totalClaimed) / 1e18;
   const capProgress = (claimedNum / (amountNum * RETURN_CAP_MULTIPLIER)) * 100;
-  const invReturn = rewards ? Number(rewards[0]) / 1e18 : 0;
-  const profReturn = rewards ? Number(rewards[1]) / 1e18 : 0;
+  const pendingUsdtNum = pendingUSDT != null ? Number(pendingUSDT) / 1e18 : 0;
 
   // Calculate OSLO equivalent of pending USDT yield using DEX rate
   const dexRes = dexReserves as [bigint, bigint] | undefined;
   const dexUsdtNum = dexRes ? Number(dexRes[0]) / 1e18 : 0;
   const dexOsloNum = dexRes ? Number(dexRes[1]) / 1e18 : 0;
-  const osloYield = dexUsdtNum > 0 && dexOsloNum > 0 && invReturn > 0
-    ? (invReturn * dexOsloNum) / (dexUsdtNum + invReturn)
+  const osloYield = dexUsdtNum > 0 && dexOsloNum > 0 && pendingUsdtNum > 0
+    ? (pendingUsdtNum * dexOsloNum) / (dexUsdtNum + pendingUsdtNum)
     : 0;
   // Total claimed converted to OSLO at current DEX rate
   const claimedOslo = dexUsdtNum > 0 && dexOsloNum > 0 && claimedNum > 0
@@ -657,11 +656,11 @@ function DepositCard({
             variant="secondary"
             className="w-full"
             onClick={() => onClaim(index)}
-            disabled={invReturn + profReturn < 1}
+            disabled={pendingUsdtNum < 1}
           >
             Claim OSLO
           </IceButton>
-          {invReturn + profReturn > 0 && invReturn + profReturn < 1 && (
+          {pendingUsdtNum > 0 && pendingUsdtNum < 1 && (
             <p className="text-[10px] text-oslo-text-muted text-center">
               Minimum $1.00 yield required to claim
             </p>
