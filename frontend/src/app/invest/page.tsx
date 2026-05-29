@@ -657,10 +657,15 @@ function DepositCard({
             variant="secondary"
             className="w-full"
             onClick={() => onClaim(index)}
-            disabled={invReturn + profReturn <= 0}
+            disabled={invReturn + profReturn < 1}
           >
             Claim OSLO
           </IceButton>
+          {invReturn + profReturn > 0 && invReturn + profReturn < 1 && (
+            <p className="text-[10px] text-oslo-text-muted text-center">
+              Minimum $1.00 yield required to claim
+            </p>
+          )}
         </div>
       )}
       {/* Convert OSLO to USDT — V3: 10% fee (USDT→LP, OSLO→burn) */}
