@@ -43,7 +43,13 @@ const _abi = [
       },
     ],
     name: "distributeReferralCommission",
-    outputs: [],
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "totalDistributed",
+        type: "uint256",
+      },
+    ],
     stateMutability: "nonpayable",
     type: "function",
   },

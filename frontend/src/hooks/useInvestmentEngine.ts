@@ -129,6 +129,7 @@ export function useInvestmentEngineWrites() {
   const { writeContractAsync, ...depositWrite } = useWriteContract();
   const { writeContractAsync: claimAsync, ...claimWrite } = useWriteContract();
   const { writeContractAsync: earlyExitAsync, ...earlyExitWrite } = useWriteContract();
+  const { writeContractAsync: partialExitAsync, ...partialExitWrite } = useWriteContract();
 
   const deposit = async (amount: bigint) => {
     return writeContractAsync({
@@ -157,14 +158,25 @@ export function useInvestmentEngineWrites() {
     });
   };
 
+  const partialEarlyExit = async (depositIndex: number, percentageBp: number) => {
+    return partialExitAsync({
+      address: CONTRACTS.investmentEngine,
+      abi: investmentEngineAbi,
+      functionName: "partialEarlyExit",
+      args: [BigInt(depositIndex), BigInt(percentageBp)],
+    });
+  };
+
   return {
     deposit,
     claimRewards,
     earlyExit,
+    partialEarlyExit,
     isLoading:
       depositWrite.isPending ||
       claimWrite.isPending ||
-      earlyExitWrite.isPending,
+      earlyExitWrite.isPending ||
+      partialExitWrite.isPending,
   };
 }
 

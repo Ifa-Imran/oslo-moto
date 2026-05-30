@@ -422,7 +422,7 @@ export interface OSLOReferral extends BaseContract {
 
   distributeReferralCommission: TypedContractMethod<
     [user: AddressLike, profitAmount: BigNumberish],
-    [void],
+    [bigint],
     "nonpayable"
   >;
 
@@ -553,7 +553,7 @@ export interface OSLOReferral extends BaseContract {
     nameOrSignature: "distributeReferralCommission"
   ): TypedContractMethod<
     [user: AddressLike, profitAmount: BigNumberish],
-    [void],
+    [bigint],
     "nonpayable"
   >;
   getFunction(

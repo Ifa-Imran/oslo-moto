@@ -1,5 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { MaintenanceOverlay } from "../components/MaintenanceOverlay";
+import { Providers } from "./providers";
+import { Navbar } from "@/components/layout/Navbar";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { BottomNav } from "@/components/layout/BottomNav";
+import { Background } from "@/components/layout/Background";
+import { RegistrationGuard } from "@/components/RegistrationGuard";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import "@rainbow-me/rainbowkit/styles.css";
 import "./globals.css";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://oslo.finance";
@@ -66,7 +73,21 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="min-h-screen bg-oslo-void text-oslo-text-primary antialiased overflow-x-hidden">
-        <MaintenanceOverlay />
+        <Providers>
+          <ErrorBoundary>
+            <Background />
+            <Navbar />
+            <Sidebar />
+            <main className="pt-16 pb-20 lg:pb-0 lg:pl-[240px] min-h-screen">
+              <div className="p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto">
+                <RegistrationGuard>
+                  {children}
+                </RegistrationGuard>
+              </div>
+            </main>
+            <BottomNav />
+          </ErrorBoundary>
+        </Providers>
       </body>
     </html>
   );

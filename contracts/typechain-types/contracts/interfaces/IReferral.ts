@@ -169,7 +169,7 @@ export interface IReferral extends BaseContract {
 
   distributeReferralCommission: TypedContractMethod<
     [user: AddressLike, profitAmount: BigNumberish],
-    [void],
+    [bigint],
     "nonpayable"
   >;
 
@@ -213,7 +213,7 @@ export interface IReferral extends BaseContract {
     nameOrSignature: "distributeReferralCommission"
   ): TypedContractMethod<
     [user: AddressLike, profitAmount: BigNumberish],
-    [void],
+    [bigint],
     "nonpayable"
   >;
   getFunction(

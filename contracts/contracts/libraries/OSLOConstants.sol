@@ -47,7 +47,7 @@ library OSLOConstants {
 
     // ─── Referral Commissions (basis points on profit portion) ──────────
     uint256 public constant MAX_REFERRAL_LEVELS = 20;
-    uint256 public constant QUALIFIED_DIRECT_MIN_DEPOSIT = 100 * 1e18; // $100 USDT
+    uint256 public constant QUALIFIED_DIRECT_MIN_DEPOSIT = 10 * 1e18; // $10 USDT
 
     // ─── DAO ────────────────────────────────────────────────────────────
     uint256 public constant MAX_DAO_MEMBERS = 200;

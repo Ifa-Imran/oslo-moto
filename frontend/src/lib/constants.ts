@@ -81,6 +81,24 @@ export const TIER_RATE_RANGES: Record<number, { min: number; max: number }> = {
   4: { min: 100, max: 175 },  // 1.00% – 1.75%
 };
 
+// ─── 7-Day Rotational Yield Schedule (% per day) ────────────────────────
+export const YIELD_SCHEDULE: Record<number, { days: number[]; weeklyTotal: number; label: string; range: string }> = {
+  1: {
+    days: [1.00, 0.75, 0.95, 0.65, 1.00, 0.85, 0.55],
+    weeklyTotal: 5.75,
+    label: "Tier 1",
+    range: "$10 – $2,499",
+  },
+  2: {
+    days: [1.15, 1.00, 1.15, 1.10, 1.05, 1.00, 1.25],
+    weeklyTotal: 7.70,
+    label: "Tier 2",
+    range: "$2,500 – $5,000+",
+  },
+};
+
+export const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
 // ─── Rate Helpers ───────────────────────────────────────────────────────
 
 /** Get tier (1-4) for a given USDT amount (in whole units) */
@@ -157,13 +175,12 @@ export const LEVEL_UNLOCK_THRESHOLDS = [
   { maxLevel: 20, required: 7 },
 ] as const;
 
-// Commission rates by level (% as displayed, BP for calculation)
+// Commission rates by level (% of ROI/yield distributed as level income)
 export const REFERRAL_COMMISSION_RATES: Record<string, { pct: number; bp: number }> = {
   "1": { pct: 30, bp: 3000 },
   "2": { pct: 20, bp: 2000 },
-  "3-10": { pct: 1, bp: 100 },
-  "11-15": { pct: 0.5, bp: 50 },
-  "16-20": { pct: 0.25, bp: 25 },
+  "3-10": { pct: 10, bp: 1000 },
+  "11-20": { pct: 5, bp: 500 },
 };
 
 // ─── Ranks ───────────────────────────────────────────────────────────────

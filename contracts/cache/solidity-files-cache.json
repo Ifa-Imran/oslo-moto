@@ -83,8 +83,8 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\libraries\\OSLOConstants.sol": {
-      "lastModificationDate": 1779727928083,
-      "contentHash": "854c9c4e86c086eeccb49fbf0670b2b2",
+      "lastModificationDate": 1780164748781,
+      "contentHash": "49261b16ceb499bf29ca87cf0e74c09d",
       "sourceName": "contracts/libraries/OSLOConstants.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -792,8 +792,8 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLOReferral.sol": {
-      "lastModificationDate": 1779713364823,
-      "contentHash": "8c3ffcc5c90651636bce449a1fc74fe3",
+      "lastModificationDate": 1780165749748,
+      "contentHash": "efdb12dd7f0baa557fac2b55ad3b6491",
       "sourceName": "contracts/OSLOReferral.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -836,8 +836,8 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\interfaces\\IReferral.sol": {
-      "lastModificationDate": 1779596948937,
-      "contentHash": "b6929c805dbe69cc0b4cc844fd4b7afa",
+      "lastModificationDate": 1780164762963,
+      "contentHash": "67a8c5f5a42756bae8ffb55c645d52db",
       "sourceName": "contracts/interfaces/IReferral.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -908,8 +908,8 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLOInvestmentEngine.sol": {
-      "lastModificationDate": 1779813766979,
-      "contentHash": "da38a5de817241fa1487397c0f448e57",
+      "lastModificationDate": 1780165776204,
+      "contentHash": "4c3091999795b4ff86185b15dd4053c6",
       "sourceName": "contracts/OSLOInvestmentEngine.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -1234,7 +1234,7 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLODEX.sol": {
-      "lastModificationDate": 1779783893613,
+      "lastModificationDate": 1779784089002,
       "contentHash": "30731269711aca93f8a4893e10972bd1",
       "sourceName": "contracts/OSLODEX.sol",
       "solcConfig": {

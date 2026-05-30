@@ -8,7 +8,7 @@ interface IReferral {
     function getDirectReferrals(address user) external view returns (address[] memory);
     function getQualifiedDirectsCount(address user) external view returns (uint256);
     function getUnlockedLevels(address user) external view returns (uint256);
-    function distributeReferralCommission(address user, uint256 profitAmount) external;
+    function distributeReferralCommission(address user, uint256 profitAmount) external returns (uint256 totalDistributed);
     function checkAndUnlockLevels(address user) external;
     function getTeamSize(address user) external view returns (uint256);
     function claimReferralRewards() external;

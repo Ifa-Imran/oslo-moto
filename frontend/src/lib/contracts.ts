@@ -1,15 +1,15 @@
 // OSLO Protocol Contract Addresses
-// Deployed on BSC Mainnet (chainId: 56)
-// Deployed: 2026-05-26 | Includes DEX formula fix
+// Deployed on BSC Testnet (chainId: 97)
+// Deployed: 2026-05-22 | Includes yield-on-yield fix + $10 qualified direct threshold
 
 export const CONTRACTS = {
-  osloToken:        "0xD22fA2a8AC7F97aFaB46e580FbbF59696D3F942c" as `0x${string}`,
-  investmentEngine: "0xe0625F7D8482617A2E05cf1dFdab6b75C5b9ACCa" as `0x${string}`,
-  referral:         "0xe152a63A8f0587Af9C0bAe1acfccA5345642358e" as `0x${string}`,
-  rankSystem:       "0xf0C3bFCf6a90269b40Cbda15374EF9b4A1a9F67C" as `0x${string}`,
-  dao:              "0x708C360721baabb9FA982b37c79Fd3E21e374FEF" as `0x${string}`,
-  treasury:         "0x2c781d6c9F78Dd09f51BC56e12c57e9c9d3200aF" as `0x${string}`,
-  liquidityManager: "0x993556946C2AbFDE75dEEAA2Dc393d5ac1e0038E" as `0x${string}`,
-  osloDEX:          "0xCBa239e2aE0b7d84A156399ea1791C1Dd70b5e52" as `0x${string}`,
-  usdt:             "0x55d398326f99059fF775485246999027B3197955" as `0x${string}`,
+  osloToken:        "0x8dCEF69fa6EEE38f9Da96c476522cA23c9C81521" as `0x${string}`,
+  investmentEngine: "0x6A659C970C4323E438b4c1eDd66B9933BE904e5B" as `0x${string}`,
+  referral:         "0x1fdF55cDDaB9189F61cCDAe07C7d45Ac73C45241" as `0x${string}`,
+  rankSystem:       "0xEA37db05d1fB3D304852eF2053fFF40aD77BCF70" as `0x${string}`,
+  dao:              "0x15e0d2EE107F7877731393C09BAA0899EB009035" as `0x${string}`,
+  treasury:         "0x4fF4541Bf992c74dA8869AADFb969aB28dc8E4cb" as `0x${string}`,
+  liquidityManager: "0x5533C918b46DD60b8A068aDAE2838Da3053A072c" as `0x${string}`,
+  osloDEX:          "0x1d3b1442deE7072E414997bAa799CD6E9B10ddF5" as `0x${string}`,
+  usdt:             "0x09d872c3573F134bc66F1FE4c38023ff6cf77D56" as `0x${string}`,
 } as const;

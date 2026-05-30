@@ -71,6 +71,7 @@ export interface OSLOInvestmentEngineInterface extends Interface {
       | "getCombinedEarnings"
       | "getDepositCount"
       | "getEarlyExitAmount"
+      | "getPartialEarlyExitAmount"
       | "getPendingRewards"
       | "getUserTier"
       | "isInEarlyExitPeriod"
@@ -81,6 +82,7 @@ export interface OSLOInvestmentEngineInterface extends Interface {
       | "notifyRankBonus"
       | "osloDex"
       | "osloToken"
+      | "partialEarlyExit"
       | "performanceWallet"
       | "rankSystem"
       | "referral"
@@ -158,6 +160,10 @@ export interface OSLOInvestmentEngineInterface extends Interface {
     values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "getPartialEarlyExitAmount",
+    values: [AddressLike, BigNumberish, BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "getPendingRewards",
     values: [AddressLike, BigNumberish]
   ): string;
@@ -191,6 +197,10 @@ export interface OSLOInvestmentEngineInterface extends Interface {
   ): string;
   encodeFunctionData(functionFragment: "osloDex", values?: undefined): string;
   encodeFunctionData(functionFragment: "osloToken", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "partialEarlyExit",
+    values: [BigNumberish, BigNumberish]
+  ): string;
   encodeFunctionData(
     functionFragment: "performanceWallet",
     values?: undefined
@@ -282,6 +292,10 @@ export interface OSLOInvestmentEngineInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "getPartialEarlyExitAmount",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "getPendingRewards",
     data: BytesLike
   ): Result;
@@ -315,6 +329,10 @@ export interface OSLOInvestmentEngineInterface extends Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "osloDex", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "osloToken", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "partialEarlyExit",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "performanceWallet",
     data: BytesLike
@@ -620,6 +638,19 @@ export interface OSLOInvestmentEngine extends BaseContract {
     "view"
   >;
 
+  getPartialEarlyExitAmount: TypedContractMethod<
+    [user: AddressLike, depositIndex: BigNumberish, percentageBp: BigNumberish],
+    [
+      [bigint, bigint, bigint, bigint] & {
+        exitAmount: bigint;
+        exitFee: bigint;
+        netReturn: bigint;
+        remainingBalance: bigint;
+      }
+    ],
+    "view"
+  >;
+
   getPendingRewards: TypedContractMethod<
     [user: AddressLike, depositIndex: BigNumberish],
     [bigint],
@@ -659,6 +690,12 @@ export interface OSLOInvestmentEngine extends BaseContract {
   osloDex: TypedContractMethod<[], [string], "view">;
 
   osloToken: TypedContractMethod<[], [string], "view">;
+
+  partialEarlyExit: TypedContractMethod<
+    [depositIndex: BigNumberish, percentageBp: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
 
   performanceWallet: TypedContractMethod<[], [string], "view">;
 
@@ -801,6 +838,20 @@ export interface OSLOInvestmentEngine extends BaseContract {
     "view"
   >;
   getFunction(
+    nameOrSignature: "getPartialEarlyExitAmount"
+  ): TypedContractMethod<
+    [user: AddressLike, depositIndex: BigNumberish, percentageBp: BigNumberish],
+    [
+      [bigint, bigint, bigint, bigint] & {
+        exitAmount: bigint;
+        exitFee: bigint;
+        netReturn: bigint;
+        remainingBalance: bigint;
+      }
+    ],
+    "view"
+  >;
+  getFunction(
     nameOrSignature: "getPendingRewards"
   ): TypedContractMethod<
     [user: AddressLike, depositIndex: BigNumberish],
@@ -850,6 +901,13 @@ export interface OSLOInvestmentEngine extends BaseContract {
   getFunction(
     nameOrSignature: "osloToken"
   ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "partialEarlyExit"
+  ): TypedContractMethod<
+    [depositIndex: BigNumberish, percentageBp: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
   getFunction(
     nameOrSignature: "performanceWallet"
   ): TypedContractMethod<[], [string], "view">;

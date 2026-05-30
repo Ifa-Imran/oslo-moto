@@ -194,10 +194,12 @@ contract OSLOReferral is IReferral, ReentrancyGuard {
 
     /// @notice Distribute referral commissions on the profit portion of downline earnings.
     /// @dev Called by InvestmentEngine on each claim. Commissions accrue in USDT.
+    ///      Returns total commission distributed so IE can fund this contract.
     /// @param user The user whose earnings generated the commission
     /// @param profitAmount The profit portion of the user's claim (USDT-denominated)
-    function distributeReferralCommission(address user, uint256 profitAmount) external override {
-        if (profitAmount == 0) return;
+    /// @return totalDistributed Total USDT commission accrued across all upline levels
+    function distributeReferralCommission(address user, uint256 profitAmount) external override onlyInvestmentEngine returns (uint256 totalDistributed) {
+        if (profitAmount == 0) return 0;
 
         address current = user;
         for (uint256 level = 1; level <= OSLOConstants.MAX_REFERRAL_LEVELS; level++) {
@@ -214,6 +216,7 @@ contract OSLOReferral is IReferral, ReentrancyGuard {
                     levelIncome[upline][level] += commission;
                     userInfo[upline].totalEarned += commission;
                     totalCommissionsPaid += commission;
+                    totalDistributed += commission;
 
                     // Notify InvestmentEngine for combined 3X cap tracking
                     if (investmentEngine != address(0)) {
@@ -228,15 +231,20 @@ contract OSLOReferral is IReferral, ReentrancyGuard {
         }
     }
 
-    /// @notice Claim accumulated referral rewards. Paid in USDT from contract balance.
+    /// @notice Claim accumulated referral rewards. Income tracked in USDT, paid in equivalent OSLO.
+    /// @dev Converts USDT-denominated commission to OSLO at current DEX rate.
     function claimReferralRewards() external override nonReentrant {
         uint256 amount = referralRewards[msg.sender];
         if (amount == 0) revert NothingToClaim();
 
         referralRewards[msg.sender] = 0;
 
-        // Pay commission in USDT
-        usdt.safeTransfer(msg.sender, amount);
+        // Convert USDT-denominated commission to OSLO at current DEX rate
+        uint256 osloAmount = IOSLODEX(osloDex).getUSDTForOSLOOutput(amount);
+        if (osloAmount == 0) revert NothingToClaim();
+
+        // Pay commission in OSLO from contract's OSLO reserve
+        osloToken.safeTransfer(msg.sender, osloAmount);
 
         emit ReferralRewardsClaimed(msg.sender, amount);
     }
