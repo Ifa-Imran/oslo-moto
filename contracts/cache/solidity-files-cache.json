@@ -908,8 +908,8 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLOInvestmentEngine.sol": {
-      "lastModificationDate": 1780165776204,
-      "contentHash": "4c3091999795b4ff86185b15dd4053c6",
+      "lastModificationDate": 1780213756182,
+      "contentHash": "aa9377a678fa1b0c466bf6adea780df1",
       "sourceName": "contracts/OSLOInvestmentEngine.sol",
       "solcConfig": {
         "version": "0.8.24",

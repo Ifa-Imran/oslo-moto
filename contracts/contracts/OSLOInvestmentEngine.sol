@@ -296,9 +296,14 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         users[msg.sender].depositCount++;
         totalDeposited += amount;
 
-        // Update referral levels
+        // Update referral levels — check depositor AND their referrer
+        // (this deposit may qualify msg.sender as a "qualified direct" for their upline)
         if (referral != address(0)) {
             IReferral(referral).checkAndUnlockLevels(msg.sender);
+            address depositorReferrer = IReferral(referral).getReferrer(msg.sender);
+            if (depositorReferrer != address(0)) {
+                IReferral(referral).checkAndUnlockLevels(depositorReferrer);
+            }
         }
 
         // Record turnover for rank system (for all uplines)
