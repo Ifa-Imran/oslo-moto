@@ -9,7 +9,7 @@ import { TierBadge } from "@/components/ui/TierBadge";
 import { ProgressRing } from "@/components/ui/ProgressRing";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useInvestmentEngineReads, useDepositRead, useInvestmentEngineWrites } from "@/hooks/useInvestmentEngine";
-import { useTokenReads } from "@/hooks/useToken";
+import { useTokenReads, useUSDTReads } from "@/hooks/useToken";
 import { useAppStore } from "@/store/useAppStore";
 import { CONTRACTS } from "@/lib/contracts";
 import osloDEXAbi from "@/abis/OSLODEX.json";
@@ -64,6 +64,9 @@ export default function InvestPage() {
     useInvestmentEngineReads(address);
   const { deposit, claimRewards, earlyExit, partialEarlyExit, isLoading } =
     useInvestmentEngineWrites();
+  const { usdtBalance } = useUSDTReads(address);
+  const userUsdtBalance = usdtBalance?.data as bigint | undefined;
+  const userUsdtNum = userUsdtBalance ? Number(userUsdtBalance) / 1e18 : 0;
 
   const [amount, setAmount] = useState("");
   const [selectedDeposit, setSelectedDeposit] = useState(0);
@@ -319,6 +322,24 @@ export default function InvestPage() {
               </div>
             )}
 
+            {/* USDT Balance display */}
+            {isConnected && userUsdtBalance !== undefined && (
+              <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-white/[0.03] border border-white/5">
+                <span className="text-oslo-text-muted">Your USDT Balance</span>
+                <span className={`font-mono ${amountNum > 0 && amountNum > userUsdtNum ? 'text-oslo-danger' : 'text-oslo-text-primary'}`}>
+                  ${formatNumber(userUsdtNum)} USDT
+                </span>
+              </div>
+            )}
+
+            {/* Insufficient balance warning */}
+            {amountNum > 0 && amountNum > userUsdtNum && userUsdtBalance !== undefined && (
+              <div className="flex items-center gap-2 text-xs p-2 rounded-lg bg-oslo-danger/5 border border-oslo-danger/10">
+                <AlertTriangle className="w-3.5 h-3.5 text-oslo-danger" />
+                <span className="text-oslo-danger">Insufficient USDT balance. You need ${formatNumber(amountNum - userUsdtNum)} more USDT.</span>
+              </div>
+            )}
+
             {/* Over-max warning */}
             {amountNum > MAX_DEPOSIT_PER_TX && (
               <div className="flex items-center gap-2 text-xs p-2 rounded-lg bg-oslo-danger/5 border border-oslo-danger/10">
@@ -334,6 +355,7 @@ export default function InvestPage() {
                 !amountNum ||
                 amountNum < 10 ||
                 amountNum > MAX_DEPOSIT_PER_TX ||
+                (userUsdtBalance !== undefined && amountNum > userUsdtNum) ||
                 flowStep !== "idle"
               }
               loading={flowStep !== "idle"}
@@ -345,6 +367,7 @@ export default function InvestPage() {
                 if (flowStep === "depositing") return "Depositing...";
                 if (!amountNum || amountNum < 10) return "Enter Amount";
                 if (amountNum > MAX_DEPOSIT_PER_TX) return `Max $${MAX_DEPOSIT_PER_TX.toLocaleString()}`;
+                if (userUsdtBalance !== undefined && amountNum > userUsdtNum) return "Insufficient USDT";
                 const allowance = (usdtAllowance as bigint) || 0n;
                 if (allowance < parseEther(amount)) return "Approve & Deposit";
                 return "Deposit USDT";
