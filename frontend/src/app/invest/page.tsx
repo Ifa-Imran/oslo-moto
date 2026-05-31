@@ -15,8 +15,8 @@ import { CONTRACTS } from "@/lib/contracts";
 import osloDEXAbi from "@/abis/OSLODEX.json";
 import { formatToken, formatNumber } from "@/lib/utils";
 import {
-  TIER_BOUNDARIES,
-  TIER_RATE_RANGES,
+  PKG1_MIN,
+  PKG2_MIN,
   RETURN_CAP_MULTIPLIER,
   WITHDRAWAL_FEE_PCT,
   MAX_DEPOSIT_PER_TX,
@@ -132,7 +132,7 @@ export default function InvestPage() {
       setFlowStep("depositing");
       addToast({
         title: "Depositing USDT...",
-        description: `${amountNum} USDT → Tier ${predictedTier}`,
+        description: `${amountNum} USDT → Package ${predictedTier}`,
         status: "pending",
       });
 
@@ -140,7 +140,7 @@ export default function InvestPage() {
 
       addToast({
         title: "Deposit Submitted!",
-        description: `${formatNumber(amountNum)} USDT at Tier ${predictedTier}`,
+        description: `${formatNumber(amountNum)} USDT at Package ${predictedTier}`,
         status: "success",
         txHash: tx,
       });
@@ -376,18 +376,17 @@ export default function InvestPage() {
           </div>
         </GlassCard>
 
-        {/* Tier Visualizer */}
+        {/* Package Visualizer */}
         <GlassCard>
-          <h2 className="text-lg font-medium mb-4">Tier Calculator</h2>
+          <h2 className="text-lg font-medium mb-4">Package Calculator</h2>
           <div className="space-y-3">
-            {[1, 2, 3, 4].map((t) => {
-              const boundary = TIER_BOUNDARIES[t as keyof typeof TIER_BOUNDARIES];
-              const range = TIER_RATE_RANGES[t];
-              const isActive = predictedTier === t && amountNum >= 10;
-              const isUserTier = tier === t;
+            {[1, 2].map((pkg) => {
+              const schedule = YIELD_SCHEDULE[pkg];
+              const isActive = predictedTier === pkg && amountNum >= 10;
+              const isUserTier = tier === pkg;
               return (
                 <div
-                  key={t}
+                  key={pkg}
                   className={`flex items-center gap-4 p-3 rounded-btn border transition-all ${
                     isActive
                       ? "border-oslo-ice/50 bg-oslo-ice-dim shadow-[0_0_12px_rgba(0,229,255,0.08)]"
@@ -396,15 +395,15 @@ export default function InvestPage() {
                       : "border-white/5 bg-white/[0.02]"
                   }`}
                 >
-                  <TierBadge tier={t} />
+                  <TierBadge tier={pkg} />
                   <div className="flex-1">
                     <p className="text-xs font-medium">
-                      ${boundary.min.toLocaleString()}+
+                      {schedule.range}
                     </p>
                     <p className="text-[10px] text-oslo-text-muted mt-0.5">
                       {lifetimeActive
                         ? `Lifetime ${formatRate(LIFETIME_RATE_BP)}`
-                        : `${(range.min / 100).toFixed(2)}% – ${(range.max / 100).toFixed(2)}% daily`
+                        : `${schedule.weeklyTotal}% weekly (dynamic daily)`
                       }
                     </p>
                   </div>
@@ -489,7 +488,7 @@ export default function InvestPage() {
           <GlassCard className="mb-4">
             <h2 className="text-lg font-medium mb-1">Dynamic Yield Schedule</h2>
             <p className="text-xs text-oslo-text-muted mb-4">
-              Yield earnings are generated daily according to your package tier.
+              Yield earnings are generated daily according to your package.
             </p>
             <div className="space-y-4">
               {Object.entries(YIELD_SCHEDULE).map(([tierKey, schedule]) => (
@@ -516,6 +515,13 @@ export default function InvestPage() {
                 </div>
               ))}
             </div>
+            {lifetimeActive && (
+              <div className="mt-3 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <p className="text-xs text-amber-400 font-medium">
+                  Lifetime rate active: 0.45% daily for all new deposits
+                </p>
+              </div>
+            )}
             <p className="text-[10px] text-oslo-text-muted mt-3 italic">
               After 3X earnings, reinvestment will follow the same yield process.
             </p>
@@ -939,12 +945,10 @@ function EarlyExitOptions({
   );
 }
 
-// ─── Tier Helper ─────────────────────────────────────────────────────────
+// ─── Package Helper ─────────────────────────────────────────────────────────
 
 function getTier(amount: number): number {
-  if (amount >= 5000) return 4;
-  if (amount >= 2500) return 3;
-  if (amount >= 500) return 2;
+  if (amount >= 2500) return 2;
   if (amount >= 10) return 1;
   return 0;
 }

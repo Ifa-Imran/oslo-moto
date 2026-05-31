@@ -61,38 +61,22 @@ export const PERFORMANCE_WALLET = "0x3a39B26AFa950E13469854A836C1D033C39CeBF9";
 // ─── Deposit Limits ────────────────────────────────────────────────────
 export const MAX_DEPOSIT_PER_TX = 5_000; // $5,000 max per single deposit
 
-// ─── Tier Boundaries (USDT, 4 tiers with ranged rates) ───────────────────
-export const TIER_BOUNDARIES = {
-  1: { min: 10, max: 499, minWei: BigInt("10000000000000000000"), maxWei: BigInt("499000000000000000000") },
-  2: { min: 500, max: 2499, minWei: BigInt("500000000000000000000"), maxWei: BigInt("2499000000000000000000000") },
-  3: { min: 2500, max: 4999, minWei: BigInt("2500000000000000000000"), maxWei: BigInt("4999000000000000000000000") },
-  4: { min: 5000, minWei: BigInt("5000000000000000000000") }, // $5,000+ (no upper bound for entry)
-} as const;
-
-// ─── Tier 4 Implicit Max (for rate interpolation cap) ────────────────────
-export const TIER4_IMPLICIT_MAX = 50_000;
-export const TIER4_IMPLICIT_MAX_WEI = BigInt("50000000000000000000000");
-
-// ─── Daily Rate Ranges (basis points) per Tier ──────────────────────────
-export const TIER_RATE_RANGES: Record<number, { min: number; max: number }> = {
-  1: { min: 50, max: 100 },   // 0.50% – 1.00%
-  2: { min: 75, max: 115 },   // 0.75% – 1.15%
-  3: { min: 100, max: 150 },  // 1.00% – 1.50%
-  4: { min: 100, max: 175 },  // 1.00% – 1.75%
-};
+// ─── Package Boundaries (2-package system) ───────────────────────────────
+export const PKG1_MIN = 10;
+export const PKG2_MIN = 2_500;
 
 // ─── 7-Day Rotational Yield Schedule (% per day) ────────────────────────
 export const YIELD_SCHEDULE: Record<number, { days: number[]; weeklyTotal: number; label: string; range: string }> = {
   1: {
     days: [1.00, 0.75, 0.95, 0.65, 1.00, 0.85, 0.55],
     weeklyTotal: 5.75,
-    label: "Tier 1",
+    label: "Package 1",
     range: "$10 – $2,499",
   },
   2: {
     days: [1.15, 1.00, 1.15, 1.10, 1.05, 1.00, 1.25],
     weeklyTotal: 7.70,
-    label: "Tier 2",
+    label: "Package 2",
     range: "$2,500 – $5,000+",
   },
 };
@@ -101,29 +85,13 @@ export const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 // ─── Rate Helpers ───────────────────────────────────────────────────────
 
-/** Get tier (1-4) for a given USDT amount (in whole units) */
+/** Get package (1 or 2) for a given USDT amount (in whole units) */
 export function getTier(amount: number): number {
-  if (amount >= 5000) return 4;
-  if (amount >= 2500) return 3;
-  if (amount >= 500) return 2;
+  if (amount >= PKG2_MIN) return 2;
   return 1;
 }
 
-/** Linear interpolation within a tier's rate range */
-function interpolateRate(
-  amount: number,
-  minAmt: number,
-  maxAmt: number,
-  minRate: number,
-  maxRate: number
-): number {
-  if (maxAmt <= minAmt) return minRate;
-  const rateRange = maxRate - minRate;
-  const amtRange = maxAmt - minAmt;
-  return minRate + ((amount - minAmt) * rateRange) / amtRange;
-}
-
-/** Get the V2 daily rate (bp) for a given deposit amount (in whole USDT units) */
+/** Get today's daily rate in basis points using 7-day rotational schedule */
 export function getDailyRate(amount: number, nowTs = Math.floor(Date.now() / 1000)): number {
   const elapsed = nowTs - LAUNCH_TIMESTAMP;
 
@@ -132,23 +100,13 @@ export function getDailyRate(amount: number, nowTs = Math.floor(Date.now() / 100
     return LIFETIME_RATE_BP;
   }
 
-  const tier = getTier(amount);
-  const range = TIER_RATE_RANGES[tier];
+  // Day of week: 0=Monday, 6=Sunday (matches contract logic)
+  const dayOfWeek = Math.floor(nowTs / 86400 + 3) % 7;
+  const pkg = amount >= PKG2_MIN ? 2 : 1;
+  const schedule = YIELD_SCHEDULE[pkg];
 
-  switch (tier) {
-    case 1:
-      return interpolateRate(amount, 10, 499, range.min, range.max);
-    case 2:
-      return interpolateRate(amount, 500, 2499, range.min, range.max);
-    case 3:
-      return interpolateRate(amount, 2500, 4999, range.min, range.max);
-    case 4: {
-      const capped = Math.min(amount, TIER4_IMPLICIT_MAX);
-      return interpolateRate(capped, 5000, TIER4_IMPLICIT_MAX, range.min, range.max);
-    }
-    default:
-      return range.min;
-  }
+  // Convert percentage to bp (e.g. 1.00% → 100 bp)
+  return Math.round(schedule.days[dayOfWeek] * 100);
 }
 
 /** Format a daily rate in bp to a human-readable percentage string */
@@ -209,20 +167,20 @@ export const RANK_OTHER_LEGS_MIN_PCT = 60; // Other legs min 60% of total
 // ─── Dynamic Yield Schedule Helper ──────────────────────────────────────
 /**
  * Get today's yield rate (%) from the YIELD_SCHEDULE based on day-of-week and deposit amount.
+ * Uses the same day-of-week logic as the contract (Unix timestamp / 86400 + 3) % 7.
  * Returns the percentage value directly (e.g. 1.00 for 1%).
  */
 export function getTodayScheduleRate(amount: number): number {
-  // JavaScript getDay(): 0=Sun, 1=Mon, ..., 6=Sat
-  // YIELD_SCHEDULE index: 0=Mon, 1=Tue, ..., 6=Sun
-  const jsDay = new Date().getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-  const scheduleIndex = jsDay === 0 ? 6 : jsDay - 1; // Convert to Mon=0, Sun=6
+  const nowTs = Math.floor(Date.now() / 1000);
+  // Day of week: 0=Monday, 6=Sunday (matches contract)
+  const dayOfWeek = Math.floor(nowTs / 86400 + 3) % 7;
 
-  // Determine schedule tier: Tier 1 ($10–$2,499) vs Tier 2 ($2,500+)
-  const scheduleTier = amount >= 2500 ? 2 : 1;
-  const schedule = YIELD_SCHEDULE[scheduleTier];
+  // Determine package: Package 1 ($10–$2,499) vs Package 2 ($2,500+)
+  const pkg = amount >= PKG2_MIN ? 2 : 1;
+  const schedule = YIELD_SCHEDULE[pkg];
 
   if (!schedule) return 0;
-  return schedule.days[scheduleIndex] ?? 0;
+  return schedule.days[dayOfWeek] ?? 0;
 }
 
 // ─── Week Duration ──────────────────────────────────────────────────────

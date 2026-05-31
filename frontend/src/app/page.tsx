@@ -24,7 +24,7 @@ import { useReferralReads, useReferralWrites } from "@/hooks/useReferral";
 import { useAppStore } from "@/store/useAppStore";
 import { CONTRACTS } from "@/lib/contracts";
 import { formatToken, formatNumber, formatCompact, truncateAddress } from "@/lib/utils";
-import { TIER_RATE_RANGES, RETURN_CAP_MULTIPLIER, getDailyRate, formatRate, isLifetimeRateActive, LIFETIME_RATE_BP, LIFETIME_RATE_START, LAUNCH_TIMESTAMP, LEVEL_UNLOCK_THRESHOLDS, REFERRAL_COMMISSION_RATES, getTodayScheduleRate } from "@/lib/constants";
+import { RETURN_CAP_MULTIPLIER, getDailyRate, formatRate, isLifetimeRateActive, LIFETIME_RATE_BP, LIFETIME_RATE_START, LAUNCH_TIMESTAMP, LEVEL_UNLOCK_THRESHOLDS, REFERRAL_COMMISSION_RATES, getTodayScheduleRate } from "@/lib/constants";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {

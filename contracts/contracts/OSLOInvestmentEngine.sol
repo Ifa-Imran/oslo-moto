@@ -225,7 +225,7 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
     /// @param amount Amount of USDT to deposit
     function deposit(uint256 amount) external nonReentrant {
         if (depositsPaused) revert DepositsPausedError();
-        if (amount < OSLOConstants.TIER1_MIN) revert DepositTooLow();
+        if (amount < OSLOConstants.PKG1_MIN) revert DepositTooLow();
         if (amount > OSLOConstants.MAX_DEPOSIT_PER_TX) revert DepositTooHigh();
         if (osloDex == address(0)) revert NotConfigured();
 
@@ -275,9 +275,9 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         uint256 osloReceived = IOSLODEX(osloDex).processDeposit(dexAmount);
         // OSLO is now held by this contract as reserve (transferred by DEX)
 
-        // Determine tier and daily rate based on amount
-        uint256 tier = _getTier(amount);
-        uint256 dailyRate = _getDailyRate(amount);
+        // Determine package and today's daily rate
+        uint256 tier = _getPackage(amount);
+        uint256 dailyRate = _getDailyRate(amount, block.timestamp);
 
         // Create deposit record
         uint256 maxReturn = amount * OSLOConstants.RETURN_CAP_MULTIPLIER;
@@ -552,7 +552,7 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
 
     function getUserTier(address user) external view override returns (uint256) {
         if (users[user].totalActiveDeposit == 0) return 0;
-        return _getTier(users[user].totalActiveDeposit);
+        return _getPackage(users[user].totalActiveDeposit);
     }
 
     function getDepositCount(address user) external view returns (uint256) {
@@ -579,76 +579,95 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         return dep;
     }
 
-    /// @dev Determine tier (1-4) based on USDT amount
-    function _getTier(uint256 amount) internal pure returns (uint256) {
-        if (amount >= OSLOConstants.TIER4_MIN) return 4;
-        if (amount >= OSLOConstants.TIER3_MIN) return 3;
-        if (amount >= OSLOConstants.TIER2_MIN) return 2;
+    /// @dev Determine package (1 or 2) based on USDT amount
+    function _getPackage(uint256 amount) internal pure returns (uint256) {
+        if (amount >= OSLOConstants.PKG2_MIN) return 2;
         return 1;
     }
 
-    /// @notice Get the daily rate (in bp) for a given USDT amount.
-    /// @dev Before 3 months: tier-based ranged rate (linear interpolation within tier).
+    /// @notice Get the daily rate (in bp) for a given USDT amount on a specific day.
+    /// @dev Before 3 months: 7-day rotational schedule per package.
     ///      After 3 months: flat 0.45% lifetime rate for all stakes.
-    function _getDailyRate(uint256 amount) internal view returns (uint256) {
-        uint256 elapsed = block.timestamp - launchTimestamp;
+    function _getDailyRate(uint256 amount, uint256 timestamp) internal view returns (uint256) {
+        uint256 elapsed = timestamp - launchTimestamp;
 
-        // After 3 months: lifetime 0.45% rate applies to ALL stakes (new and re-stakes)
+        // After 3 months: lifetime 0.45% rate applies to ALL stakes
         if (elapsed >= OSLOConstants.LIFETIME_RATE_START) {
             return OSLOConstants.LIFETIME_RATE;
         }
 
-        uint256 tier = _getTier(amount);
+        // Day of week: 0=Monday, 6=Sunday
+        // Unix epoch (Jan 1, 1970) was Thursday, so +3 shifts to Monday=0
+        uint256 dayOfWeek = (timestamp / 86400 + 3) % 7;
 
-        // Linear interpolation within tier's min/max rate range
-        if (tier == 1) {
-            return _interpolate(amount, OSLOConstants.TIER1_MIN, OSLOConstants.TIER1_MAX,
-                OSLOConstants.TIER1_RATE_MIN, OSLOConstants.TIER1_RATE_MAX);
+        if (amount >= OSLOConstants.PKG2_MIN) {
+            return _pkg2Rate(dayOfWeek);
         }
-        if (tier == 2) {
-            return _interpolate(amount, OSLOConstants.TIER2_MIN, OSLOConstants.TIER2_MAX,
-                OSLOConstants.TIER2_RATE_MIN, OSLOConstants.TIER2_RATE_MAX);
-        }
-        if (tier == 3) {
-            return _interpolate(amount, OSLOConstants.TIER3_MIN, OSLOConstants.TIER3_MAX,
-                OSLOConstants.TIER3_RATE_MIN, OSLOConstants.TIER3_RATE_MAX);
-        }
-        // Tier 4: $5,000+ — interpolate up to implicit max ($50,000)
-        uint256 cappedAmount = amount > OSLOConstants.TIER4_IMPLICIT_MAX
-            ? OSLOConstants.TIER4_IMPLICIT_MAX : amount;
-        return _interpolate(cappedAmount, OSLOConstants.TIER4_MIN, OSLOConstants.TIER4_IMPLICIT_MAX,
-            OSLOConstants.TIER4_RATE_MIN, OSLOConstants.TIER4_RATE_MAX);
+        return _pkg1Rate(dayOfWeek);
     }
 
-    /// @dev Linear interpolation: rate = minRate + (amount - minAmt) * (maxRate - minRate) / (maxAmt - minAmt)
-    function _interpolate(
-        uint256 amount,
-        uint256 minAmt,
-        uint256 maxAmt,
-        uint256 minRate,
-        uint256 maxRate
-    ) internal pure returns (uint256) {
-        if (maxAmt <= minAmt) return minRate;
-        uint256 rateRange = maxRate - minRate;
-        uint256 amtRange = maxAmt - minAmt;
-        return minRate + ((amount - minAmt) * rateRange) / amtRange;
+    /// @dev Package 1 daily rates (Mon-Sun)
+    function _pkg1Rate(uint256 day) internal pure returns (uint256) {
+        if (day == 0) return OSLOConstants.PKG1_MON;  // 1.00%
+        if (day == 1) return OSLOConstants.PKG1_TUE;  // 0.75%
+        if (day == 2) return OSLOConstants.PKG1_WED;  // 0.95%
+        if (day == 3) return OSLOConstants.PKG1_THU;  // 0.65%
+        if (day == 4) return OSLOConstants.PKG1_FRI;  // 1.00%
+        if (day == 5) return OSLOConstants.PKG1_SAT;  // 0.85%
+        return OSLOConstants.PKG1_SUN;                // 0.55%
+    }
+
+    /// @dev Package 2 daily rates (Mon-Sun)
+    function _pkg2Rate(uint256 day) internal pure returns (uint256) {
+        if (day == 0) return OSLOConstants.PKG2_MON;  // 1.15%
+        if (day == 1) return OSLOConstants.PKG2_TUE;  // 1.00%
+        if (day == 2) return OSLOConstants.PKG2_WED;  // 1.15%
+        if (day == 3) return OSLOConstants.PKG2_THU;  // 1.10%
+        if (day == 4) return OSLOConstants.PKG2_FRI;  // 1.05%
+        if (day == 5) return OSLOConstants.PKG2_SAT;  // 1.00%
+        return OSLOConstants.PKG2_SUN;                // 1.25%
     }
 
     function _calculatePendingRewards(address user, Deposit storage dep) internal view returns (uint256 pendingUSDT) {
         if (!dep.active) return 0;
 
-        uint256 timeElapsed = block.timestamp - dep.lastClaimTime;
-        if (timeElapsed == 0) return 0;
+        uint256 lastClaim = dep.lastClaimTime;
+        uint256 nowTs = block.timestamp;
+        if (nowTs <= lastClaim) return 0;
 
-        // Re-compute daily rate (may have changed to lifetime rate if 3 months passed)
-        uint256 effectiveRate = _getDailyRate(dep.amount);
-        // Use the better of the cached rate or current rate (lifetime rate may be lower)
-        if (block.timestamp - launchTimestamp >= OSLOConstants.LIFETIME_RATE_START) {
-            effectiveRate = OSLOConstants.LIFETIME_RATE;
+        uint256 elapsed = nowTs - lastClaim;
+        uint256 amount = dep.amount;
+
+        // After 3 months: flat lifetime rate (simple calculation)
+        if (nowTs - launchTimestamp >= OSLOConstants.LIFETIME_RATE_START) {
+            pendingUSDT = (amount * OSLOConstants.LIFETIME_RATE * elapsed) / (1 days * OSLOConstants.BASIS_POINTS);
+        } else {
+            // 7-day rotational schedule
+            bool isPkg2 = amount >= OSLOConstants.PKG2_MIN;
+            uint256 weeklyBp = isPkg2 ? OSLOConstants.PKG2_WEEKLY_TOTAL : OSLOConstants.PKG1_WEEKLY_TOTAL;
+
+            // Full weeks optimization: any 7 consecutive days sum to weeklyBp
+            uint256 fullWeeks = elapsed / 7 days;
+            pendingUSDT = (amount * weeklyBp * fullWeeks) / OSLOConstants.BASIS_POINTS;
+
+            // Partial remaining days (max ~7 loop iterations)
+            uint256 remainingStart = lastClaim + (fullWeeks * 7 days);
+            uint256 partialBpSeconds = 0;
+
+            while (remainingStart < nowTs) {
+                uint256 dayOfWeek = (remainingStart / 86400 + 3) % 7;
+                uint256 rate = isPkg2 ? _pkg2Rate(dayOfWeek) : _pkg1Rate(dayOfWeek);
+
+                uint256 dayEnd = ((remainingStart / 86400) + 1) * 86400;
+                uint256 periodEnd = nowTs < dayEnd ? nowTs : dayEnd;
+                uint256 periodSeconds = periodEnd - remainingStart;
+
+                partialBpSeconds += rate * periodSeconds;
+                remainingStart = dayEnd;
+            }
+
+            pendingUSDT += (amount * partialBpSeconds) / (1 days * OSLOConstants.BASIS_POINTS);
         }
-
-        // pending = (depositAmount * rate * timeElapsed) / (1 day * BASIS_POINTS)
-        pendingUSDT = (dep.amount * effectiveRate * timeElapsed) / (1 days * OSLOConstants.BASIS_POINTS);
 
         // 3X per-deposit cap check
         uint256 remaining = dep.maxReturn > dep.totalClaimed ? dep.maxReturn - dep.totalClaimed : 0;

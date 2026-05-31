@@ -73,30 +73,31 @@ library OSLOConstants {
     uint256 public constant EARLY_EXIT_PERIOD = 10 days;           // 10-day early exit window
     uint256 public constant EARLY_EXIT_FEE_BP = 1_000;             // 10% early exit fee
 
-    // ─── Investment Tier Boundaries (in USDT, 18 decimals) ──────────────
+    // ─── Investment Package Boundaries (in USDT, 18 decimals) ──────────────
     uint256 public constant MAX_DEPOSIT_PER_TX = 5_000 * 1e18; // $5,000 max per single deposit
-    uint256 public constant TIER1_MIN = 10 * 1e18;
-    uint256 public constant TIER1_MAX = 499 * 1e18;
-    uint256 public constant TIER2_MIN = 500 * 1e18;
-    uint256 public constant TIER2_MAX = 2_499 * 1e18;
-    uint256 public constant TIER3_MIN = 2_500 * 1e18;
-    uint256 public constant TIER3_MAX = 4_999 * 1e18;
-    uint256 public constant TIER4_MIN = 5_000 * 1e18;
-    uint256 public constant TIER4_IMPLICIT_MAX = 50_000 * 1e18; // For rate interpolation cap
+    uint256 public constant PKG1_MIN = 10 * 1e18;       // Package 1 minimum ($10)
+    uint256 public constant PKG2_MIN = 2_500 * 1e18;    // Package 2 minimum ($2,500)
 
-    // ─── Daily Return Rates (basis points, ranged per tier) ─────────────
-    // Tier 1: $10–$499  →  0.50%–1.00% daily
-    uint256 public constant TIER1_RATE_MIN = 50;   // 0.50%
-    uint256 public constant TIER1_RATE_MAX = 100;  // 1.00%
-    // Tier 2: $500–$2,499 → 0.75%–1.15% daily
-    uint256 public constant TIER2_RATE_MIN = 75;   // 0.75%
-    uint256 public constant TIER2_RATE_MAX = 115;  // 1.15%
-    // Tier 3: $2,500–$4,999 → 1.00%–1.50% daily
-    uint256 public constant TIER3_RATE_MIN = 100;  // 1.00%
-    uint256 public constant TIER3_RATE_MAX = 150;  // 1.50%
-    // Tier 4: $5,000+       → 1.00%–1.75% daily
-    uint256 public constant TIER4_RATE_MIN = 100;  // 1.00%
-    uint256 public constant TIER4_RATE_MAX = 175;  // 1.75%
+    // ─── 7-Day Rotational Yield Rates (basis points) ──────────────────────
+    // Package 1: $10 – $2,499 (Mon-Sun)
+    uint256 public constant PKG1_MON = 100;  // 1.00%
+    uint256 public constant PKG1_TUE = 75;   // 0.75%
+    uint256 public constant PKG1_WED = 95;   // 0.95%
+    uint256 public constant PKG1_THU = 65;   // 0.65%
+    uint256 public constant PKG1_FRI = 100;  // 1.00%
+    uint256 public constant PKG1_SAT = 85;   // 0.85%
+    uint256 public constant PKG1_SUN = 55;   // 0.55%
+    uint256 public constant PKG1_WEEKLY_TOTAL = 575; // 5.75% weekly
+
+    // Package 2: $2,500 – $5,000+ (Mon-Sun)
+    uint256 public constant PKG2_MON = 115;  // 1.15%
+    uint256 public constant PKG2_TUE = 100;  // 1.00%
+    uint256 public constant PKG2_WED = 115;  // 1.15%
+    uint256 public constant PKG2_THU = 110;  // 1.10%
+    uint256 public constant PKG2_FRI = 105;  // 1.05%
+    uint256 public constant PKG2_SAT = 100;  // 1.00%
+    uint256 public constant PKG2_SUN = 125;  // 1.25%
+    uint256 public constant PKG2_WEEKLY_TOTAL = 770; // 7.70% weekly
 
     // ─── Lifetime Rate (after 3 months, applies to ALL stakes) ───────────
     uint256 public constant LIFETIME_RATE = 45;           // 0.45% daily

@@ -43,6 +43,24 @@ export interface OSLOConstantsInterface extends Interface {
       | "MAX_REFERRAL_LEVELS"
       | "MIN_REMAINING_SUPPLY"
       | "MIN_WITHDRAWAL_THRESHOLD"
+      | "PKG1_FRI"
+      | "PKG1_MIN"
+      | "PKG1_MON"
+      | "PKG1_SAT"
+      | "PKG1_SUN"
+      | "PKG1_THU"
+      | "PKG1_TUE"
+      | "PKG1_WED"
+      | "PKG1_WEEKLY_TOTAL"
+      | "PKG2_FRI"
+      | "PKG2_MIN"
+      | "PKG2_MON"
+      | "PKG2_SAT"
+      | "PKG2_SUN"
+      | "PKG2_THU"
+      | "PKG2_TUE"
+      | "PKG2_WED"
+      | "PKG2_WEEKLY_TOTAL"
       | "PROPOSAL_THRESHOLD_BP"
       | "QUALIFIED_DIRECT_MIN_DEPOSIT"
       | "RANK1_BONUS_BP"
@@ -71,22 +89,6 @@ export interface OSLOConstantsInterface extends Interface {
       | "SELL_TAX_FEE_BURN_BP"
       | "SELL_TAX_TO_BURN_BP"
       | "SELL_TAX_TO_CONTRACT_BP"
-      | "TIER1_MAX"
-      | "TIER1_MIN"
-      | "TIER1_RATE_MAX"
-      | "TIER1_RATE_MIN"
-      | "TIER2_MAX"
-      | "TIER2_MIN"
-      | "TIER2_RATE_MAX"
-      | "TIER2_RATE_MIN"
-      | "TIER3_MAX"
-      | "TIER3_MIN"
-      | "TIER3_RATE_MAX"
-      | "TIER3_RATE_MIN"
-      | "TIER4_IMPLICIT_MAX"
-      | "TIER4_MIN"
-      | "TIER4_RATE_MAX"
-      | "TIER4_RATE_MIN"
       | "TIMELOCK_DELAY"
       | "TOTAL_SUPPLY"
       | "TREASURY_TO_DAO_BP"
@@ -179,6 +181,30 @@ export interface OSLOConstantsInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "MIN_WITHDRAWAL_THRESHOLD",
+    values?: undefined
+  ): string;
+  encodeFunctionData(functionFragment: "PKG1_FRI", values?: undefined): string;
+  encodeFunctionData(functionFragment: "PKG1_MIN", values?: undefined): string;
+  encodeFunctionData(functionFragment: "PKG1_MON", values?: undefined): string;
+  encodeFunctionData(functionFragment: "PKG1_SAT", values?: undefined): string;
+  encodeFunctionData(functionFragment: "PKG1_SUN", values?: undefined): string;
+  encodeFunctionData(functionFragment: "PKG1_THU", values?: undefined): string;
+  encodeFunctionData(functionFragment: "PKG1_TUE", values?: undefined): string;
+  encodeFunctionData(functionFragment: "PKG1_WED", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "PKG1_WEEKLY_TOTAL",
+    values?: undefined
+  ): string;
+  encodeFunctionData(functionFragment: "PKG2_FRI", values?: undefined): string;
+  encodeFunctionData(functionFragment: "PKG2_MIN", values?: undefined): string;
+  encodeFunctionData(functionFragment: "PKG2_MON", values?: undefined): string;
+  encodeFunctionData(functionFragment: "PKG2_SAT", values?: undefined): string;
+  encodeFunctionData(functionFragment: "PKG2_SUN", values?: undefined): string;
+  encodeFunctionData(functionFragment: "PKG2_THU", values?: undefined): string;
+  encodeFunctionData(functionFragment: "PKG2_TUE", values?: undefined): string;
+  encodeFunctionData(functionFragment: "PKG2_WED", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "PKG2_WEEKLY_TOTAL",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -291,49 +317,6 @@ export interface OSLOConstantsInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "SELL_TAX_TO_CONTRACT_BP",
-    values?: undefined
-  ): string;
-  encodeFunctionData(functionFragment: "TIER1_MAX", values?: undefined): string;
-  encodeFunctionData(functionFragment: "TIER1_MIN", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "TIER1_RATE_MAX",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "TIER1_RATE_MIN",
-    values?: undefined
-  ): string;
-  encodeFunctionData(functionFragment: "TIER2_MAX", values?: undefined): string;
-  encodeFunctionData(functionFragment: "TIER2_MIN", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "TIER2_RATE_MAX",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "TIER2_RATE_MIN",
-    values?: undefined
-  ): string;
-  encodeFunctionData(functionFragment: "TIER3_MAX", values?: undefined): string;
-  encodeFunctionData(functionFragment: "TIER3_MIN", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "TIER3_RATE_MAX",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "TIER3_RATE_MIN",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "TIER4_IMPLICIT_MAX",
-    values?: undefined
-  ): string;
-  encodeFunctionData(functionFragment: "TIER4_MIN", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "TIER4_RATE_MAX",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "TIER4_RATE_MIN",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -453,6 +436,30 @@ export interface OSLOConstantsInterface extends Interface {
     functionFragment: "MIN_WITHDRAWAL_THRESHOLD",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "PKG1_FRI", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "PKG1_MIN", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "PKG1_MON", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "PKG1_SAT", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "PKG1_SUN", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "PKG1_THU", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "PKG1_TUE", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "PKG1_WED", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "PKG1_WEEKLY_TOTAL",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "PKG2_FRI", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "PKG2_MIN", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "PKG2_MON", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "PKG2_SAT", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "PKG2_SUN", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "PKG2_THU", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "PKG2_TUE", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "PKG2_WED", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "PKG2_WEEKLY_TOTAL",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "PROPOSAL_THRESHOLD_BP",
     data: BytesLike
@@ -563,49 +570,6 @@ export interface OSLOConstantsInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "SELL_TAX_TO_CONTRACT_BP",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "TIER1_MAX", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "TIER1_MIN", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "TIER1_RATE_MAX",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "TIER1_RATE_MIN",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "TIER2_MAX", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "TIER2_MIN", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "TIER2_RATE_MAX",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "TIER2_RATE_MIN",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "TIER3_MAX", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "TIER3_MIN", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "TIER3_RATE_MAX",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "TIER3_RATE_MIN",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "TIER4_IMPLICIT_MAX",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "TIER4_MIN", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "TIER4_RATE_MAX",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "TIER4_RATE_MIN",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -727,6 +691,42 @@ export interface OSLOConstants extends BaseContract {
 
   MIN_WITHDRAWAL_THRESHOLD: TypedContractMethod<[], [bigint], "view">;
 
+  PKG1_FRI: TypedContractMethod<[], [bigint], "view">;
+
+  PKG1_MIN: TypedContractMethod<[], [bigint], "view">;
+
+  PKG1_MON: TypedContractMethod<[], [bigint], "view">;
+
+  PKG1_SAT: TypedContractMethod<[], [bigint], "view">;
+
+  PKG1_SUN: TypedContractMethod<[], [bigint], "view">;
+
+  PKG1_THU: TypedContractMethod<[], [bigint], "view">;
+
+  PKG1_TUE: TypedContractMethod<[], [bigint], "view">;
+
+  PKG1_WED: TypedContractMethod<[], [bigint], "view">;
+
+  PKG1_WEEKLY_TOTAL: TypedContractMethod<[], [bigint], "view">;
+
+  PKG2_FRI: TypedContractMethod<[], [bigint], "view">;
+
+  PKG2_MIN: TypedContractMethod<[], [bigint], "view">;
+
+  PKG2_MON: TypedContractMethod<[], [bigint], "view">;
+
+  PKG2_SAT: TypedContractMethod<[], [bigint], "view">;
+
+  PKG2_SUN: TypedContractMethod<[], [bigint], "view">;
+
+  PKG2_THU: TypedContractMethod<[], [bigint], "view">;
+
+  PKG2_TUE: TypedContractMethod<[], [bigint], "view">;
+
+  PKG2_WED: TypedContractMethod<[], [bigint], "view">;
+
+  PKG2_WEEKLY_TOTAL: TypedContractMethod<[], [bigint], "view">;
+
   PROPOSAL_THRESHOLD_BP: TypedContractMethod<[], [bigint], "view">;
 
   QUALIFIED_DIRECT_MIN_DEPOSIT: TypedContractMethod<[], [bigint], "view">;
@@ -782,38 +782,6 @@ export interface OSLOConstants extends BaseContract {
   SELL_TAX_TO_BURN_BP: TypedContractMethod<[], [bigint], "view">;
 
   SELL_TAX_TO_CONTRACT_BP: TypedContractMethod<[], [bigint], "view">;
-
-  TIER1_MAX: TypedContractMethod<[], [bigint], "view">;
-
-  TIER1_MIN: TypedContractMethod<[], [bigint], "view">;
-
-  TIER1_RATE_MAX: TypedContractMethod<[], [bigint], "view">;
-
-  TIER1_RATE_MIN: TypedContractMethod<[], [bigint], "view">;
-
-  TIER2_MAX: TypedContractMethod<[], [bigint], "view">;
-
-  TIER2_MIN: TypedContractMethod<[], [bigint], "view">;
-
-  TIER2_RATE_MAX: TypedContractMethod<[], [bigint], "view">;
-
-  TIER2_RATE_MIN: TypedContractMethod<[], [bigint], "view">;
-
-  TIER3_MAX: TypedContractMethod<[], [bigint], "view">;
-
-  TIER3_MIN: TypedContractMethod<[], [bigint], "view">;
-
-  TIER3_RATE_MAX: TypedContractMethod<[], [bigint], "view">;
-
-  TIER3_RATE_MIN: TypedContractMethod<[], [bigint], "view">;
-
-  TIER4_IMPLICIT_MAX: TypedContractMethod<[], [bigint], "view">;
-
-  TIER4_MIN: TypedContractMethod<[], [bigint], "view">;
-
-  TIER4_RATE_MAX: TypedContractMethod<[], [bigint], "view">;
-
-  TIER4_RATE_MIN: TypedContractMethod<[], [bigint], "view">;
 
   TIMELOCK_DELAY: TypedContractMethod<[], [bigint], "view">;
 
@@ -899,6 +867,60 @@ export interface OSLOConstants extends BaseContract {
     nameOrSignature: "MIN_WITHDRAWAL_THRESHOLD"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
+    nameOrSignature: "PKG1_FRI"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "PKG1_MIN"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "PKG1_MON"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "PKG1_SAT"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "PKG1_SUN"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "PKG1_THU"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "PKG1_TUE"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "PKG1_WED"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "PKG1_WEEKLY_TOTAL"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "PKG2_FRI"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "PKG2_MIN"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "PKG2_MON"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "PKG2_SAT"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "PKG2_SUN"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "PKG2_THU"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "PKG2_TUE"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "PKG2_WED"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "PKG2_WEEKLY_TOTAL"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
     nameOrSignature: "PROPOSAL_THRESHOLD_BP"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
@@ -981,54 +1003,6 @@ export interface OSLOConstants extends BaseContract {
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "SELL_TAX_TO_CONTRACT_BP"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "TIER1_MAX"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "TIER1_MIN"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "TIER1_RATE_MAX"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "TIER1_RATE_MIN"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "TIER2_MAX"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "TIER2_MIN"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "TIER2_RATE_MAX"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "TIER2_RATE_MIN"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "TIER3_MAX"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "TIER3_MIN"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "TIER3_RATE_MAX"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "TIER3_RATE_MIN"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "TIER4_IMPLICIT_MAX"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "TIER4_MIN"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "TIER4_RATE_MAX"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "TIER4_RATE_MIN"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "TIMELOCK_DELAY"

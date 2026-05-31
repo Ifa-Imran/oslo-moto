@@ -83,8 +83,8 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\libraries\\OSLOConstants.sol": {
-      "lastModificationDate": 1780164748781,
-      "contentHash": "49261b16ceb499bf29ca87cf0e74c09d",
+      "lastModificationDate": 1780232392168,
+      "contentHash": "772b18021a9d99ed3ceb71f6cb01c773",
       "sourceName": "contracts/libraries/OSLOConstants.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -792,7 +792,7 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLOReferral.sol": {
-      "lastModificationDate": 1780165749748,
+      "lastModificationDate": 1780165810357,
       "contentHash": "efdb12dd7f0baa557fac2b55ad3b6491",
       "sourceName": "contracts/OSLOReferral.sol",
       "solcConfig": {
@@ -908,8 +908,8 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLOInvestmentEngine.sol": {
-      "lastModificationDate": 1780213756182,
-      "contentHash": "aa9377a678fa1b0c466bf6adea780df1",
+      "lastModificationDate": 1780232450078,
+      "contentHash": "64dabce03c8aae122286c692d2c5d35b",
       "sourceName": "contracts/OSLOInvestmentEngine.sol",
       "solcConfig": {
         "version": "0.8.24",
