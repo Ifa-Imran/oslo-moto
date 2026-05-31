@@ -188,7 +188,7 @@ export function RealTimeYield({
         </div>
         <div className="flex items-center justify-between mt-1.5">
           <p className="text-[9px] text-oslo-text-muted">
-            Yields arrive continuously — claim anytime once above $10
+            Yields arrive continuously — claim anytime once above $1
           </p>
           <p className="text-[9px] text-oslo-text-muted font-mono">
             {Math.floor(elapsed % 60)}s / 60s

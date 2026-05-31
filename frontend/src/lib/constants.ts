@@ -12,7 +12,7 @@ export const DEX_ALLOCATION = 100_000;
 // ─── Fees ───────────────────────────────────────────────────────────────
 // V3: No withdrawal fee on yield claims — full yield auto-buys OSLO at DEX rate.
 export const WITHDRAWAL_FEE_PCT = 0; // 0% — removed in V3 (tax-free yield auto-buy)
-export const MIN_WITHDRAWAL_THRESHOLD = 10; // $10 USDT minimum
+export const MIN_WITHDRAWAL_THRESHOLD = 1; // $1 USDT minimum
 
 // ─── Sell Tax / Swap Fee Distribution (V3) ───────────────────────────────
 // V3: 10% fee on sells → OSLO burned. USDT fee stays in DEX as LP.
@@ -205,6 +205,25 @@ export const DAO_MONTHLY_ROYALTY_PCT = 0.5; // 0.5%
 // ─── Rank Leg Ratio Qualification ───────────────────────────────────────
 export const RANK_MAIN_LEG_MAX_PCT = 40; // Main leg max 40% of total
 export const RANK_OTHER_LEGS_MIN_PCT = 60; // Other legs min 60% of total
+
+// ─── Dynamic Yield Schedule Helper ──────────────────────────────────────
+/**
+ * Get today's yield rate (%) from the YIELD_SCHEDULE based on day-of-week and deposit amount.
+ * Returns the percentage value directly (e.g. 1.00 for 1%).
+ */
+export function getTodayScheduleRate(amount: number): number {
+  // JavaScript getDay(): 0=Sun, 1=Mon, ..., 6=Sat
+  // YIELD_SCHEDULE index: 0=Mon, 1=Tue, ..., 6=Sun
+  const jsDay = new Date().getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  const scheduleIndex = jsDay === 0 ? 6 : jsDay - 1; // Convert to Mon=0, Sun=6
+
+  // Determine schedule tier: Tier 1 ($10–$2,499) vs Tier 2 ($2,500+)
+  const scheduleTier = amount >= 2500 ? 2 : 1;
+  const schedule = YIELD_SCHEDULE[scheduleTier];
+
+  if (!schedule) return 0;
+  return schedule.days[scheduleIndex] ?? 0;
+}
 
 // ─── Week Duration ──────────────────────────────────────────────────────
 export const WEEK_DURATION = 7 * 86400; // 7 days in seconds

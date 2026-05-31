@@ -24,7 +24,7 @@ import { useReferralReads, useReferralWrites } from "@/hooks/useReferral";
 import { useAppStore } from "@/store/useAppStore";
 import { CONTRACTS } from "@/lib/contracts";
 import { formatToken, formatNumber, formatCompact, truncateAddress } from "@/lib/utils";
-import { TIER_RATE_RANGES, RETURN_CAP_MULTIPLIER, getDailyRate, formatRate, isLifetimeRateActive, LIFETIME_RATE_BP, LIFETIME_RATE_START, LAUNCH_TIMESTAMP, LEVEL_UNLOCK_THRESHOLDS, REFERRAL_COMMISSION_RATES } from "@/lib/constants";
+import { TIER_RATE_RANGES, RETURN_CAP_MULTIPLIER, getDailyRate, formatRate, isLifetimeRateActive, LIFETIME_RATE_BP, LIFETIME_RATE_START, LAUNCH_TIMESTAMP, LEVEL_UNLOCK_THRESHOLDS, REFERRAL_COMMISSION_RATES, getTodayScheduleRate } from "@/lib/constants";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -570,17 +570,20 @@ function LandingPage() {
       </div>
 
       {/* Live Yield Dashboard */}
-      {isConnected && registered && activeDeposit && activeDeposit > 0n && (
-        <RealTimeYield
-          deposits={[{
-            amount: activeDepositNum,
-            dailyRate: dailyRate / 100,
-            pendingUSDT: pendingTotalNum,
-            active: true,
-          }]}
-          osloPrice={osloPriceNum}
-        />
-      )}
+      {isConnected && registered && activeDeposit && activeDeposit > 0n && (() => {
+        const todayRate = getTodayScheduleRate(activeDepositNum);
+        return (
+          <RealTimeYield
+            deposits={[{
+              amount: activeDepositNum,
+              dailyRate: todayRate,
+              pendingUSDT: pendingTotalNum,
+              active: true,
+            }]}
+            osloPrice={osloPriceNum}
+          />
+        );
+      })()}
 
       {/* ─── Unified Leader Earnings Panel ─── */}
       {isConnected && registered && (() => {
