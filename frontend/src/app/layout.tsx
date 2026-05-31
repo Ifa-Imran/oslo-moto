@@ -6,6 +6,7 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { Background } from "@/components/layout/Background";
 import { RegistrationGuard } from "@/components/RegistrationGuard";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { LaunchCountdownPopup } from "@/components/ui/LaunchCountdownPopup";
 import "@rainbow-me/rainbowkit/styles.css";
 import "./globals.css";
 
@@ -86,6 +87,7 @@ export default function RootLayout({
               </div>
             </main>
             <BottomNav />
+            <LaunchCountdownPopup />
           </ErrorBoundary>
         </Providers>
       </body>
