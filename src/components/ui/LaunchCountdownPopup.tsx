@@ -1,18 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Rocket, X, Clock } from "lucide-react";
+import { Rocket, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const LAUNCH_HOURS = 60;
+const LAUNCH_HOURS = 12;
 const LAUNCH_DURATION_MS = LAUNCH_HOURS * 60 * 60 * 1000;
-const STORAGE_KEY = "oslo_launch_target_ts";
-const DISMISS_KEY = "oslo_launch_popup_dismissed";
+const STORAGE_KEY = "oslo_launch_target_ts_v3";
 
 /**
  * Returns the launch target timestamp (ms).
- * On first visit, anchors a target 60 hours from now and stores it in localStorage
- * so the countdown is consistent across reloads/devices for the same browser.
+ * On first visit, anchors a target 12 hours from now and stores it in localStorage
+ * so the countdown is consistent across reloads for the same browser.
  */
 function getLaunchTarget(): number {
   if (typeof window === "undefined") return Date.now() + LAUNCH_DURATION_MS;
@@ -47,12 +46,11 @@ export function LaunchCountdownPopup() {
     setMounted(true);
     const t = getLaunchTarget();
     setTarget(t);
-    setTimeLeft(calculateTimeLeft(t));
-
-    // Show automatically unless permanently dismissed AND not expired
-    const dismissed = window.localStorage.getItem(DISMISS_KEY) === "1";
     const tl = calculateTimeLeft(t);
-    if (!dismissed && !tl.expired) {
+    setTimeLeft(tl);
+
+    // Always show if not expired — undismissable
+    if (!tl.expired) {
       setOpen(true);
     }
   }, []);
@@ -60,21 +58,15 @@ export function LaunchCountdownPopup() {
   useEffect(() => {
     if (!target) return;
     const id = setInterval(() => {
-      setTimeLeft(calculateTimeLeft(target));
+      const tl = calculateTimeLeft(target);
+      setTimeLeft(tl);
+      // Auto-dismiss when expired
+      if (tl.expired) {
+        setOpen(false);
+      }
     }, 1000);
     return () => clearInterval(id);
   }, [target]);
-
-  const handleClose = () => {
-    setOpen(false);
-  };
-
-  const handleDismissForever = () => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(DISMISS_KEY, "1");
-    }
-    setOpen(false);
-  };
 
   if (!mounted) return null;
 
@@ -88,26 +80,15 @@ export function LaunchCountdownPopup() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-          onClick={handleClose}
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.92, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            onClick={(e) => e.stopPropagation()}
             className="relative w-full max-w-md rounded-2xl bg-gradient-to-br from-oslo-ice/10 via-oslo-void to-oslo-void border border-oslo-ice/30 shadow-[0_0_40px_rgba(127,196,255,0.25)] p-6 md:p-8"
           >
-            {/* Close button */}
-            <button
-              onClick={handleClose}
-              aria-label="Close"
-              className="absolute top-3 right-3 p-1.5 rounded-full text-oslo-text-muted hover:text-oslo-text-primary hover:bg-white/5 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
             {/* Hero icon */}
             <div className="flex justify-center mb-4">
               <div className="relative">
@@ -134,35 +115,25 @@ export function LaunchCountdownPopup() {
             </p>
 
             {/* Countdown */}
-            {timeLeft.expired ? (
-              <div className="rounded-xl bg-oslo-success/10 border border-oslo-success/30 p-5 text-center">
-                <Rocket className="w-6 h-6 text-oslo-success mx-auto mb-2" />
-                <p className="text-sm font-medium text-oslo-success">We&apos;re Live!</p>
-                <p className="text-xs text-oslo-text-secondary mt-1">
-                  OSLO Protocol has officially launched.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-2 md:gap-3 mb-6">
-                {[
-                  { label: "Hours", value: pad(timeLeft.h) },
-                  { label: "Minutes", value: pad(timeLeft.m) },
-                  { label: "Seconds", value: pad(timeLeft.s) },
-                ].map((unit) => (
-                  <div
-                    key={unit.label}
-                    className="rounded-xl bg-white/[0.03] border border-white/10 p-3 md:p-4 text-center"
-                  >
-                    <div className="text-3xl md:text-4xl font-mono font-light text-oslo-ice tabular-nums">
-                      {unit.value}
-                    </div>
-                    <div className="text-[10px] uppercase tracking-wider text-oslo-text-muted mt-1">
-                      {unit.label}
-                    </div>
+            <div className="grid grid-cols-3 gap-2 md:gap-3 mb-6">
+              {[
+                { label: "Hours", value: pad(timeLeft.h) },
+                { label: "Minutes", value: pad(timeLeft.m) },
+                { label: "Seconds", value: pad(timeLeft.s) },
+              ].map((unit) => (
+                <div
+                  key={unit.label}
+                  className="rounded-xl bg-white/[0.03] border border-white/10 p-3 md:p-4 text-center"
+                >
+                  <div className="text-3xl md:text-4xl font-mono font-light text-oslo-ice tabular-nums">
+                    {unit.value}
                   </div>
-                ))}
-              </div>
-            )}
+                  <div className="text-[10px] uppercase tracking-wider text-oslo-text-muted mt-1">
+                    {unit.label}
+                  </div>
+                </div>
+              ))}
+            </div>
 
             {/* Footer note */}
             <div className="flex items-start gap-2 p-3 rounded-lg bg-white/[0.02] border border-white/5">
@@ -171,22 +142,6 @@ export function LaunchCountdownPopup() {
                 Mark your calendar! Connect your wallet now to be among the first to register
                 and unlock early adopter rewards on launch day.
               </p>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-2 mt-5">
-              <button
-                onClick={handleClose}
-                className="flex-1 px-4 py-2.5 rounded-btn bg-oslo-ice/10 hover:bg-oslo-ice/20 border border-oslo-ice/30 text-sm text-oslo-ice transition-colors"
-              >
-                Got it
-              </button>
-              <button
-                onClick={handleDismissForever}
-                className="px-4 py-2.5 rounded-btn text-xs text-oslo-text-muted hover:text-oslo-text-secondary transition-colors"
-              >
-                Don&apos;t show again
-              </button>
             </div>
           </motion.div>
         </motion.div>
