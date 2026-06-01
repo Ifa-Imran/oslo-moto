@@ -29,7 +29,11 @@ const ADDRESSES = {
 };
 
 const DEPLOYER = addrData.deployer;
-const KNOWN_ROOTS = [DEPLOYER];
+// Include all known root users (referrer = 0x000...)
+const KNOWN_ROOTS = [
+  DEPLOYER,
+  "0x1d8896b5A50F720e7ab811dCbfc68b6fE5FcF2b4", // mainnet second root
+];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const fmt = (v: bigint) => ethers.formatEther(v);

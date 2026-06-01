@@ -181,6 +181,16 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         }
     }
 
+    /// @notice Migrate combined earnings from old contracts — admin only.
+    /// @param _users Array of user addresses
+    /// @param _amounts Array of totalCombinedEarnings values (18 decimals)
+    function migrateCombinedEarnings(address[] calldata _users, uint256[] calldata _amounts) external onlyAdmin {
+        require(_users.length == _amounts.length, "Length mismatch");
+        for (uint256 i = 0; i < _users.length; i++) {
+            users[_users[i]].totalCombinedEarnings = _amounts[i];
+        }
+    }
+
     /// @notice Emergency pause for new deposits only. Only callable by Timelock.
     function setDepositsPaused(bool _paused) external onlyTimelock {
         depositsPaused = _paused;

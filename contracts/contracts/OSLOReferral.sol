@@ -134,6 +134,23 @@ contract OSLOReferral is IReferral, ReentrancyGuard {
         }
     }
 
+    /// @notice Migrate referral earnings from old contracts — admin only, before completeSetup.
+    /// @param _users Array of user addresses
+    /// @param _totalEarned Array of totalEarned values (18 decimals)
+    /// @param _referralRewards Array of pending referralRewards (18 decimals)
+    function migrateEarnings(
+        address[] calldata _users,
+        uint256[] calldata _totalEarned,
+        uint256[] calldata _referralRewards
+    ) external onlyAdmin {
+        if (setupComplete) revert SetupAlreadyComplete();
+        require(_users.length == _totalEarned.length && _users.length == _referralRewards.length, "Length mismatch");
+        for (uint256 i = 0; i < _users.length; i++) {
+            userInfo[_users[i]].totalEarned = _totalEarned[i];
+            referralRewards[_users[i]] = _referralRewards[i];
+        }
+    }
+
     // ─── Registration ($1 USDT Fee) ─────────────────────────────────────
 
     /// @notice Register a new user with a referrer. $1 USDT fee → injected directly into DEX liquidity.

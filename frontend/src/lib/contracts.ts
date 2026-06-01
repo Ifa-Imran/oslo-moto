@@ -3,13 +3,13 @@
 // Deployed: 2026-06-01 | Fresh redeploy with all contracts
 
 export const CONTRACTS = {
-  osloToken:        "0x6c7285bDaA4B7591FB365727a441c5c29813b649" as `0x${string}`,
-  investmentEngine: "0x76410DA41ec355946b11869d33fECD00E3FCeBe5" as `0x${string}`,
-  referral:         "0x8db4141828041d45a54609d1098d7882dE859D69" as `0x${string}`,
-  rankSystem:       "0x4701B877F38d87991202aD12Ab707CC6dd9e5E1C" as `0x${string}`,
-  dao:              "0x536094Ca6010088391C28026C310e950a11363Ce" as `0x${string}`,
-  treasury:         "0x772455E0158E46e03832F0Cc6Bb4E21D6b39eBDB" as `0x${string}`,
-  liquidityManager: "0x9667212C6a987e7C4A165b65255771BdD0c133fA" as `0x${string}`,
-  osloDEX:          "0x87d483F1658Ab5439612154A0603A06f7Fa15793" as `0x${string}`,
-  usdt:             "0xDFFbc2408507BC5A3FeE67aD22018c61a5C258ea" as `0x${string}`,
+  osloToken:        "0x8E771d9D24fd9E6F4298Aae077B0Dff2b3dEd673" as `0x${string}`,
+  investmentEngine: "0xe44eb2Dd7129571AC514E646302e829B8738528d" as `0x${string}`,
+  referral:         "0x5F79EDebcd005e34B3CafA997c2eC83132977CFf" as `0x${string}`,
+  rankSystem:       "0x48DEEDdF789f7ce656ce045B6a308F73D3f5C537" as `0x${string}`,
+  dao:              "0x4e70523C0F7f714318bBB7De4dFB48d75F9eE477" as `0x${string}`,
+  treasury:         "0x30CE769377f9B66949e2B2f55f234214d52963EB" as `0x${string}`,
+  liquidityManager: "0x444513eEd158C9327a57e594D50c9741b7766C97" as `0x${string}`,
+  osloDEX:          "0xf2023E02030700ed8ce6ed5230B09E1edC3F5418" as `0x${string}`,
+  usdt:             "0xEbe8cABE6452135e21ede21F648f6d3965a0c915" as `0x${string}`,
 } as const;
