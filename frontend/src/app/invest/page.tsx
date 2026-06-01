@@ -554,7 +554,7 @@ function DepositCard({
 }: {
   index: number;
   onClaim: (i: number) => void;
-  onEarlyExit: (i: number, percentageBp: number) => void;
+  onEarlyExit: (i: number, percentageBp: number) => Promise<void>;
 }) {
   const { address } = useAccount();
   const publicClient = usePublicClient();
@@ -928,7 +928,10 @@ function DepositCard({
             principal={exitPrincipal}
             fee={exitFee}
             netReturn={exitNetReturn}
-            onExit={(pctBp) => { setEarlyExiting(true); onEarlyExit(index, pctBp); }}
+            onExit={async (pctBp) => {
+              setEarlyExiting(true);
+              try { await onEarlyExit(index, pctBp); } finally { setEarlyExiting(false); }
+            }}
             loading={earlyExiting}
           />
         </div>
@@ -949,7 +952,7 @@ function EarlyExitOptions({
   principal: number;
   fee: number;
   netReturn: number;
-  onExit: (percentageBp: number) => void;
+  onExit: (percentageBp: number) => void | Promise<void>;
   loading: boolean;
 }) {
   const [selectedPct, setSelectedPct] = useState(100);
