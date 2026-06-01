@@ -1,15 +1,15 @@
 import { ethers } from "hardhat";
 
-// Existing contract addresses from testnet
+// Existing contract addresses from testnet (latest deployment)
 const EXISTING = {
-  usdt: "0x11E7d876139DC0dfdCE08Bd5cB199D5b25c0b434",
-  osloToken: "0x9847624e20B19fF06f58F58fC1bCc8979C529b54",
-  oldInvestmentEngine: "0x93D9F1a0184228D0dd89Cefb904F92271f5E6564",
-  osloDEX: "0x7C7fA3587e3E46A5c3Bb8878bb8c184435Ad4c18",
-  treasury: "0x7544986914cb495D087231Fee47BD0D32AfB294F",
-  referral: "0x7AaaF78F2d4d7BEc41fAd0fF1C4A470df1bC871c",
-  rankSystem: "0x6F4FF3aD987A1418c9FF36efEf606ac7587c2768",
-  liquidityManager: "0xFF2A02673DE0B64E2e1b2F1A90Dab7A9721B292E",
+  usdt: "0x887524926554F1e1A8Eeb3F99a0d9F6Bc9cd53dd",
+  osloToken: "0x69E35319980F133612f39DD56616a46b5d7b8010",
+  oldInvestmentEngine: "0x09c56236B863FA39c2F68BD8a97f5217f89571EF",
+  osloDEX: "0x6e068cfd2D2878250c576aa70e1aCa64e58bEe1b",
+  treasury: "0x244DbB6C084de7834e64c9e989550140580a5140",
+  referral: "0xa2a5DCe18c64Ba420F824d6aE27bEFFB2B579EAa",
+  rankSystem: "0x6B0863DD17D506a1BD2ac8e6BC113bAF632aa371",
+  liquidityManager: "0xd80f3fa96A41f1f81c224167b83E00C06a422Caa",
 };
 
 // Launch: May 10, 2026 00:00:00 UTC
@@ -43,6 +43,14 @@ async function main() {
   await tx.wait();
   console.log("Configured: treasury, referral, rankSystem, osloDEX, timelock");
 
+  // Set reward wallets (2% deposit split)
+  const REWARD_WALLET = "0xBAc7A17Fb7a60751629D19Cf4700730d232D0c56";
+  const COMPANY_WALLET = "0xf2E281Af319a51066d3428A5Ffda46dAf0f1f5a4";
+  const PERFORMANCE_WALLET = "0x3a39B26AFa950E13469854A836C1D033C39CeBF9";
+  tx = await newIE.setRewardWallets(REWARD_WALLET, COMPANY_WALLET, PERFORMANCE_WALLET);
+  await tx.wait();
+  console.log("Reward wallets set:", REWARD_WALLET, COMPANY_WALLET, PERFORMANCE_WALLET);
+
   // ─── Update external contracts to point to new IE ────────────────
   console.log("\n--- Updating external contract references ---");
 
@@ -74,29 +82,31 @@ async function main() {
     console.log("OSLOToken whitelist skipped:", e.message?.slice(0, 80));
   }
 
-  // ─── Transfer OSLO reserve from old IE to new IE ──────────────────
-  console.log("\n--- Transferring OSLO reserve ---");
-  const oldIE = await ethers.getContractAt("OSLOInvestmentEngine", EXISTING.oldInvestmentEngine);
-  const osloBal = await osloToken.balanceOf(EXISTING.oldInvestmentEngine);
-  console.log("Old IE OSLO balance:", ethers.formatEther(osloBal));
-
-  if (osloBal > 0n) {
-    // Need to call a function on old IE to transfer OSLO to new IE
-    // Since old IE doesn't have a direct transfer function, we need another approach:
-    // Use the deployer's authority to pull from old IE
-    
-    // Actually, the OSLO is just held by the old IE as a holder.
-    // There's no built-in function to transfer it. 
-    // We'll need to use recoverERC20 or similar.
-    // For now, let's check if there's a rescue/recover function.
-    
-    console.log("Old IE lockup detected — will need manual recovery or re-mint");
-    console.log("OSLO stuck in old IE:", ethers.formatEther(osloBal));
+  // Route sell tax OSLO to new IE
+  try {
+    tx = await osloToken.setInvestmentEngine(newIEAddress);
+    await tx.wait();
+    console.log("OSLOToken.setInvestmentEngine → new IE (sell tax routing)");
+  } catch (e: any) {
+    console.log("OSLOToken.setInvestmentEngine skipped:", e.message?.slice(0, 80));
   }
 
-  // Transfer deployer's OSLO to new IE instead (deployer holds the minted tokens)
+  // ─── Transfer OSLO reserve to new IE ──────────────────────────
+  console.log("\n--- OSLO Reserve Status ---");
+  const oldIEBal = await osloToken.balanceOf(EXISTING.oldInvestmentEngine);
+  console.log("Old IE OSLO balance:", ethers.formatEther(oldIEBal), "(locked — no rescue function)");
+
+  // Transfer deployer's OSLO to new IE (if deployer has any)
   const deployerOsloBal = await osloToken.balanceOf(deployer.address);
   console.log("Deployer OSLO balance:", ethers.formatEther(deployerOsloBal));
+  if (deployerOsloBal > 0n) {
+    tx = await osloToken.transfer(newIEAddress, deployerOsloBal);
+    await tx.wait();
+    console.log("Transferred", ethers.formatEther(deployerOsloBal), "OSLO from deployer to new IE");
+  }
+
+  const newIEBal = await osloToken.balanceOf(newIEAddress);
+  console.log("New IE OSLO balance:", ethers.formatEther(newIEBal));
 
   // ─── Print new addresses ──────────────────────────────────────────
   console.log("\n═══════════════════════════════════════════════════════════");

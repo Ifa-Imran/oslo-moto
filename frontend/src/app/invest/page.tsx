@@ -801,8 +801,8 @@ function DepositCard({
         </div>
       )}
 
-      {/* Early Exit — 10-day window with flat 10% fee, paid in USDT */}
-      {active && inEarlyExit && exitNetReturn > 0 && (
+      {/* Early Exit — 10-day window with 10% fee + earned yield deduction, paid in USDT */}
+      {active && inEarlyExit && exitPrincipal > 0 && (
         <div className="mb-4 p-3 rounded-lg bg-oslo-aurora/5 border border-oslo-aurora/10 space-y-2">
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="w-3 h-3 text-oslo-aurora" />
@@ -819,6 +819,12 @@ function DepositCard({
             <span className="font-mono text-oslo-text-primary text-right">${formatNumber(exitPrincipal)}</span>
             <span className="text-oslo-text-muted">{EARLY_EXIT_FEE_PCT}% Exit Fee</span>
             <span className="font-mono text-oslo-danger text-right">-${formatNumber(exitFee)}</span>
+            {exitAccruedYield > 0 && (
+              <>
+                <span className="text-oslo-text-muted">Earned Yield Deduction</span>
+                <span className="font-mono text-oslo-danger text-right">-${formatNumber(exitAccruedYield)}</span>
+              </>
+            )}
             <span className="text-oslo-text-muted pt-1 border-t border-white/5">You Receive (USDT)</span>
             <span className="font-mono text-oslo-ice text-right pt-1 border-t border-white/5">${formatNumber(exitNetReturn)}</span>
           </div>

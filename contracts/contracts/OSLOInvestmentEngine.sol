@@ -413,14 +413,20 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
 
         // 10% early exit fee on the exited portion
         uint256 exitFee = (exitAmount * OSLOConstants.EARLY_EXIT_FEE_BP) / OSLOConstants.BASIS_POINTS;
-        uint256 netReturn = exitAmount - exitFee;
+
+        // Deduct previously claimed yield (proportional to exit percentage)
+        // Policy: investor forfeits all earnings accumulated during the period
+        uint256 earnedDeduction = (dep.totalClaimed * percentageBp) / OSLOConstants.BASIS_POINTS;
+        uint256 totalDeductions = exitFee + earnedDeduction;
+        uint256 netReturn = exitAmount > totalDeductions ? exitAmount - totalDeductions : 0;
 
         if (percentageBp == 10000) {
             // Full exit — mark deposit inactive
             dep.active = false;
         } else {
-            // Partial exit — reduce deposit amount, recalculate maxReturn
+            // Partial exit — reduce deposit amount, adjust totalClaimed proportionally, recalculate maxReturn
             dep.amount -= exitAmount;
+            dep.totalClaimed -= earnedDeduction; // Remove proportional claimed so remaining deposit isn't double-penalized
             dep.maxReturn = dep.amount * OSLOConstants.RETURN_CAP_MULTIPLIER;
         }
 
@@ -450,7 +456,7 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
             }
         }
 
-        emit EarlyExited(user, netReturn, exitFee, 0, depositIndex);
+        emit EarlyExited(user, netReturn, exitFee, earnedDeduction, depositIndex);
     }
 
     /// @notice Check if a deposit is within the early exit period
@@ -468,7 +474,7 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
     /// @param user Address of the investor
     /// @param depositIndex Index of the deposit
     /// @return principal The original deposit amount
-    /// @return accruedYield Yield earned so far
+    /// @return accruedYield Yield already claimed (will be deducted)
     /// @return exitFee 10% early exit fee
     /// @return netReturn Amount investor would receive in USDT
     function getEarlyExitAmount(address user, uint256 depositIndex)
@@ -481,9 +487,10 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         }
 
         principal = dep.amount;
-        accruedYield = 0; // No yield clawback — flat 10% fee only
+        accruedYield = dep.totalClaimed; // Previously earned yield to be deducted
         exitFee = (principal * OSLOConstants.EARLY_EXIT_FEE_BP) / OSLOConstants.BASIS_POINTS;
-        netReturn = principal - exitFee;
+        uint256 totalDeductions = exitFee + accruedYield;
+        netReturn = principal > totalDeductions ? principal - totalDeductions : 0;
     }
 
     /// @notice Get partial early exit breakdown for a specific percentage
@@ -509,7 +516,10 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         uint256 principal = dep.amount;
         exitAmount = (principal * percentageBp) / OSLOConstants.BASIS_POINTS;
         exitFee = (exitAmount * OSLOConstants.EARLY_EXIT_FEE_BP) / OSLOConstants.BASIS_POINTS;
-        netReturn = exitAmount - exitFee;
+        // Deduct proportional previously earned yield
+        uint256 earnedDeduction = (dep.totalClaimed * percentageBp) / OSLOConstants.BASIS_POINTS;
+        uint256 totalDeductions = exitFee + earnedDeduction;
+        netReturn = exitAmount > totalDeductions ? exitAmount - totalDeductions : 0;
         remainingBalance = principal - exitAmount;
     }
 
