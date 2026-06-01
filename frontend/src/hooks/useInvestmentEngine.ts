@@ -95,7 +95,7 @@ export function useDepositRead(userAddress?: Address, depositIndex?: number) {
     abi: investmentEngineAbi,
     functionName: "getPendingRewards",
     args: enabled ? [userAddress!, depositIndex!] : undefined,
-    query: { enabled },
+    query: { enabled, refetchInterval: 15000 }, // refresh every 15s for live yield
   });
 
   const isInEarlyExit = useReadContract({

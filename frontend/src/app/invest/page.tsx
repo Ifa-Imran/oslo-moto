@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAccount, usePublicClient, useWriteContract, useReadContract } from "wagmi";
 import { parseEther, erc20Abi, maxUint256, type Address } from "viem";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -8,6 +8,7 @@ import { IceButton } from "@/components/ui/IceButton";
 import { TierBadge } from "@/components/ui/TierBadge";
 import { ProgressRing } from "@/components/ui/ProgressRing";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { CountdownTimer } from "@/components/ui/CountdownTimer";
 import { useInvestmentEngineReads, useDepositRead, useInvestmentEngineWrites } from "@/hooks/useInvestmentEngine";
 import { useTokenReads, useUSDTReads } from "@/hooks/useToken";
 import { useAppStore } from "@/store/useAppStore";
@@ -588,14 +589,43 @@ function DepositCard({
   const [convertingOslo, setConvertingOslo] = useState(false);
   const [earlyExiting, setEarlyExiting] = useState(false);
 
+  // ─── Real-time yield interpolation ────────────────────────────────────
+  // Between contract refetches (every 15s), smoothly interpolate yield using
+  // the on-chain cached dailyRate so users see the number ticking up live.
+  const [liveElapsed, setLiveElapsed] = useState(0);
+  const lastFetchRef = useRef(Date.now());
+  const lastPendingRef = useRef<number>(0);
+
+  // Reset interpolation anchor when contract data refreshes
+  useEffect(() => {
+    if (pendingUSDT != null) {
+      lastPendingRef.current = Number(pendingUSDT) / 1e18;
+      lastFetchRef.current = Date.now();
+      setLiveElapsed(0);
+    }
+  }, [pendingUSDT]);
+
+  // Tick 4x/sec for smooth yield animation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLiveElapsed((Date.now() - lastFetchRef.current) / 1000);
+    }, 250);
+    return () => clearInterval(interval);
+  }, []);
+
   if (!deposit) return <Skeleton className="h-64" />;
 
-  const [amount, tier, _dailyRate, depositTime, lastClaimTime, totalClaimed, _maxReturn, active] = deposit;
+  const [amount, tier, cachedDailyRate, depositTime, lastClaimTime, totalClaimed, _maxReturn, active] = deposit;
   const amountNum = Number(amount) / 1e18;
   const tierNum = Number(tier);
+  const dailyRateBp = Number(cachedDailyRate); // basis points from contract
   const claimedNum = Number(totalClaimed) / 1e18;
   const capProgress = (claimedNum / (amountNum * RETURN_CAP_MULTIPLIER)) * 100;
-  const pendingUsdtNum = pendingUSDT != null ? Number(pendingUSDT) / 1e18 : 0;
+
+  // Live interpolated pending: contractPending + (perSecond * elapsed since last fetch)
+  const contractPending = lastPendingRef.current;
+  const perSecondUSDT = amountNum * (dailyRateBp / 10000) / 86400; // rate in bp → decimal / seconds
+  const pendingUsdtNum = contractPending + (active ? perSecondUSDT * liveElapsed : 0);
 
   // Calculate OSLO equivalent of pending USDT yield using DEX rate
   const dexRes = dexReserves as [bigint, bigint] | undefined;
@@ -620,8 +650,6 @@ function DepositCard({
   const exitNetReturn = exitData ? Number(exitData[3]) / 1e18 : 0;
   const depositTimestamp = Number(depositTime);
   const exitDeadline = depositTimestamp + EARLY_EXIT_PERIOD_SECONDS;
-  const exitDaysLeft = Math.max(0, Math.ceil((exitDeadline - Date.now() / 1000) / 86400));
-  const exitHoursLeft = Math.max(0, Math.ceil((exitDeadline - Date.now() / 1000) / 3600));
 
   const handleConvertOsloToUSDT = async () => {
     if (!osloBal || osloBal === 0n || !address || !publicClient) return;
@@ -703,6 +731,27 @@ function DepositCard({
         </div>
       </div>
 
+      {/* Live yield ticker */}
+      {active && perSecondUSDT > 0 && (
+        <div className="mb-3 p-2.5 rounded-lg bg-oslo-success/5 border border-oslo-success/10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-oslo-success animate-pulse" />
+              <span className="text-[10px] text-oslo-text-muted">Pending (USDT equiv.)</span>
+            </div>
+            <span className="text-xs font-mono text-oslo-success">
+              ${formatNumber(pendingUsdtNum, 6)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-[9px] text-oslo-text-muted">Earning</span>
+            <span className="text-[9px] font-mono text-oslo-text-muted">
+              +${(perSecondUSDT * 60).toFixed(6)}/min · ${formatRate(dailyRateBp)}/day
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* OSLO Balance (from yield claims) */}
       {osloBalNum > 0 && (
         <div className="mb-3 p-3 rounded-lg bg-oslo-ice/5 border border-oslo-ice/10">
@@ -755,7 +804,11 @@ function DepositCard({
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="w-3 h-3 text-oslo-aurora" />
             <span className="text-[10px] text-oslo-aurora font-medium">
-              Early Exit Available — {exitDaysLeft > 0 ? `${exitDaysLeft}d remaining` : `${exitHoursLeft}h remaining`}
+              Early Exit Available —{" "}
+              <CountdownTimer
+                targetTimestamp={exitDeadline}
+                className="text-[10px] text-oslo-aurora font-medium"
+              />
             </span>
           </div>
           <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
