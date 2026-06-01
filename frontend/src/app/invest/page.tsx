@@ -749,26 +749,7 @@ function DepositCard({
         </div>
       </div>
 
-      {/* Live yield ticker */}
-      {active && perSecondUSDT > 0 && (
-        <div className="mb-3 p-2.5 rounded-lg bg-oslo-success/5 border border-oslo-success/10">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-oslo-success animate-pulse" />
-              <span className="text-[10px] text-oslo-text-muted">Pending (USDT equiv.)</span>
-            </div>
-            <span className="text-xs font-mono text-oslo-success">
-              ${formatNumber(pendingUsdtNum, 6)}
-            </span>
-          </div>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-[9px] text-oslo-text-muted">Earning</span>
-            <span className="text-[9px] font-mono text-oslo-text-muted">
-              +${(perSecondUSDT * 60).toFixed(6)}/min · ${formatRate(todayRateBp)}/day
-            </span>
-          </div>
-        </div>
-      )}
+
 
       {/* OSLO Balance (from yield claims) */}
       {osloBalNum > 0 && (
