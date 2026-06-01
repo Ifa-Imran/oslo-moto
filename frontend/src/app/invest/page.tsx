@@ -11,6 +11,9 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { CountdownTimer } from "@/components/ui/CountdownTimer";
 import { useInvestmentEngineReads, useDepositRead, useInvestmentEngineWrites } from "@/hooks/useInvestmentEngine";
 import { useTokenReads, useUSDTReads } from "@/hooks/useToken";
+import { useReferralReads } from "@/hooks/useReferral";
+import { useRankSystemReads } from "@/hooks/useRankSystem";
+import { useDAOReads } from "@/hooks/useDAO";
 import { useAppStore } from "@/store/useAppStore";
 import { CONTRACTS } from "@/lib/contracts";
 import osloDEXAbi from "@/abis/OSLODEX.json";
@@ -61,11 +64,14 @@ export default function InvestPage() {
   const { address, isConnected } = useAccount();
   const { addToast } = useAppStore();
   const publicClient = usePublicClient();
-  const { totalActiveDeposit, userTier, depositCount, launchTimestamp, completedCycles, dAppBalance } =
+  const { totalActiveDeposit, userTier, depositCount, launchTimestamp, completedCycles, dAppBalance, combinedEarnings } =
     useInvestmentEngineReads(address);
   const { deposit, claimRewards, earlyExit, partialEarlyExit, isLoading } =
     useInvestmentEngineWrites();
   const { usdtBalance } = useUSDTReads(address);
+  const { referralRewards } = useReferralReads(address);
+  const { pendingBonus } = useRankSystemReads(address);
+  const { pendingRoyalty } = useDAOReads(address);
   const userUsdtBalance = usdtBalance?.data as bigint | undefined;
   const userUsdtNum = userUsdtBalance ? Number(userUsdtBalance) / 1e18 : 0;
 
@@ -96,6 +102,21 @@ export default function InvestPage() {
   const lifetimeActive = isLifetimeRateActive();
   const dailyYield = amountNum * (dailyRate / 100);
   const threeXCap = amountNum * RETURN_CAP_MULTIPLIER;
+
+  // ─── Consolidated Income Tracking ──────────────────────────────────────
+  const combinedEarningsWei = combinedEarnings.data as bigint | undefined;
+  const combinedEarningsNum = combinedEarningsWei ? Number(combinedEarningsWei) / 1e18 : 0;
+  const referralRewardsWei = referralRewards.data as bigint | undefined;
+  const referralRewardsNum = referralRewardsWei ? Number(referralRewardsWei) / 1e18 : 0;
+  const pendingBonusWei = pendingBonus.data as bigint | undefined;
+  const pendingBonusNum = pendingBonusWei ? Number(pendingBonusWei) / 1e18 : 0;
+  const pendingRoyaltyWei = pendingRoyalty.data as bigint | undefined;
+  const pendingRoyaltyNum = pendingRoyaltyWei ? Number(pendingRoyaltyWei) / 1e18 : 0;
+  // Yield claimed = combinedEarnings - referralRewards (since referral is tracked separately)
+  const yieldClaimedNum = Math.max(0, combinedEarningsNum - referralRewardsNum);
+  const totalCapLimit = activeDepositNum * RETURN_CAP_MULTIPLIER;
+  const capRemainingNum = Math.max(0, totalCapLimit - combinedEarningsNum);
+  const capUsedPct = totalCapLimit > 0 ? (combinedEarningsNum / totalCapLimit) * 100 : 0;
 
   const handleDeposit = async () => {
     if (!amountNum || !address || !publicClient) return;
@@ -445,30 +466,85 @@ export default function InvestPage() {
       {/* Portfolio Cards */}
       {isConnected && depositNum > 0 && (
         <div>
-          {/* Aggregated Portfolio Summary */}
+          {/* Consolidated Income & 3X Cap Panel */}
           <GlassCard className="mb-4">
-            <h2 className="text-lg font-medium mb-3">Portfolio Summary</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <h2 className="text-lg font-medium mb-4">Income & 3X Cap Tracker</h2>
+
+            {/* Row 1: Key Metrics */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
               <div>
                 <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">Total Invested</p>
                 <p className="text-lg font-mono text-oslo-text-primary">${formatNumber(activeDepositNum)}</p>
               </div>
               <div>
-                <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">Active Deposits</p>
-                <p className="text-lg font-mono text-oslo-text-primary">{depositNum}</p>
+                <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">Total Earnings</p>
+                <p className="text-lg font-mono text-oslo-success">${formatNumber(combinedEarningsNum)}</p>
               </div>
               <div>
-                <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">Current Tier</p>
-                <TierBadge tier={tier} />
+                <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">Total Claimed</p>
+                <p className="text-lg font-mono text-oslo-ice">${formatNumber(combinedEarningsNum)}</p>
               </div>
               <div>
-                <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">3X Cap Limit</p>
-                <p className="text-lg font-mono text-oslo-text-primary">${formatNumber(activeDepositNum * RETURN_CAP_MULTIPLIER)}</p>
+                <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">3X Remaining</p>
+                <p className={`text-lg font-mono ${capRemainingNum < totalCapLimit * 0.25 ? 'text-oslo-warning' : 'text-oslo-text-primary'}`}>
+                  ${formatNumber(capRemainingNum)}
+                </p>
+              </div>
+            </div>
+
+            {/* Row 2: 3X Cap Progress Bar */}
+            <div className="mb-5">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] text-oslo-text-muted uppercase tracking-wider">3X Cap Progress</span>
+                <span className="text-[10px] font-mono text-oslo-text-secondary">
+                  ${formatNumber(combinedEarningsNum)} / ${formatNumber(totalCapLimit)} ({Math.min(capUsedPct, 100).toFixed(1)}%)
+                </span>
+              </div>
+              <div className="w-full h-2.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    capUsedPct >= 90 ? 'bg-oslo-danger' :
+                    capUsedPct >= 75 ? 'bg-oslo-warning' : 'bg-oslo-ice'
+                  }`}
+                  style={{ width: `${Math.min(capUsedPct, 100)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Row 3: Income Breakdown */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/5">
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Droplets className="w-3 h-3 text-oslo-ice" />
+                  <p className="text-[9px] text-oslo-text-muted uppercase tracking-wider">Yield Income</p>
+                </div>
+                <p className="text-sm font-mono text-oslo-text-primary">${formatNumber(yieldClaimedNum)}</p>
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Gift className="w-3 h-3 text-oslo-aurora" />
+                  <p className="text-[9px] text-oslo-text-muted uppercase tracking-wider">Level Income</p>
+                </div>
+                <p className="text-sm font-mono text-oslo-text-primary">${formatNumber(referralRewardsNum)}</p>
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <BarChart3 className="w-3 h-3 text-oslo-success" />
+                  <p className="text-[9px] text-oslo-text-muted uppercase tracking-wider">Weekly Rank</p>
+                </div>
+                <p className="text-sm font-mono text-oslo-text-primary">${formatNumber(pendingBonusNum)}</p>
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Building2 className="w-3 h-3 text-purple-400" />
+                  <p className="text-[9px] text-oslo-text-muted uppercase tracking-wider">Monthly DAO</p>
+                </div>
+                <p className="text-sm font-mono text-oslo-text-primary">${formatNumber(pendingRoyaltyNum)}</p>
               </div>
             </div>
 
             {/* 3X Cap Alert */}
-            {cycleCount > 0 && (
+            {(capUsedPct >= 90 || cycleCount > 0) && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -476,9 +552,14 @@ export default function InvestPage() {
               >
                 <AlertTriangle className="w-5 h-5 text-oslo-warning flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-oslo-warning">3X Earnings Cap Reached!</p>
+                  <p className="text-sm font-medium text-oslo-warning">
+                    {capUsedPct >= 100 ? "3X Earnings Cap Reached!" : "Approaching 3X Cap!"}
+                  </p>
                   <p className="text-xs text-oslo-text-muted mt-1">
-                    Your earnings have reached the 3X limit. To continue earning, please <span className="text-oslo-ice font-medium">reinvest your package</span>.
+                    {capUsedPct >= 100
+                      ? <>Your earnings have reached the 3X limit. To continue earning, please <span className="text-oslo-ice font-medium">reinvest your package</span>.</>
+                      : <>{Math.round(capUsedPct)}% of your 3X cap used. Reinvest soon to maintain earnings.</>
+                    }
                   </p>
                 </div>
               </motion.div>
@@ -763,39 +844,22 @@ function DepositCard({
         </div>
       )}
 
-      {/* 3X Cap Progress */}
-      <div className="flex items-center gap-3 mb-4">
+      {/* 3X Cap Progress (per-deposit) */}
+      <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-white/[0.02]">
         <ProgressRing
           progress={Math.min(capProgress, 100)}
-          size={40}
-          strokeWidth={3}
+          size={32}
+          strokeWidth={2.5}
           color={capProgress >= 75 ? "warning" : "ice"}
         />
-        <div className="text-xs">
-          <p className="text-oslo-text-muted">3X Cap</p>
+        <div className="text-[10px]">
+          <p className="text-oslo-text-muted">Deposit 3X Cap</p>
           <p className="font-mono text-oslo-text-primary">
-            {formatNumber(claimedNum)} / {formatNumber(amountNum * RETURN_CAP_MULTIPLIER)}
+            ${formatNumber(claimedNum)} / ${formatNumber(amountNum * RETURN_CAP_MULTIPLIER)}
+            <span className="text-oslo-text-muted ml-1">({Math.min(capProgress, 100).toFixed(0)}%)</span>
           </p>
         </div>
       </div>
-
-      {/* 3X Cap Warning Alert */}
-      {capProgress >= 75 && active && (
-        <div className="mb-4 p-2.5 rounded-lg bg-oslo-warning/10 border border-oslo-warning/30 flex items-start gap-2">
-          <AlertTriangle className="w-4 h-4 text-oslo-warning flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-[11px] font-medium text-oslo-warning">
-              {capProgress >= 100 ? "3X Cap Reached!" : "Earnings approaching 3X cap!"}
-            </p>
-            <p className="text-[10px] text-oslo-text-muted mt-0.5">
-              {capProgress >= 100
-                ? "Reinvest your package to continue earning."
-                : `${Math.round(capProgress)}% of 3X cap used. Reinvest soon to maintain earnings.`
-              }
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Early Exit — 10-day window with 10% fee + earned yield deduction, paid in USDT */}
       {active && inEarlyExit && exitPrincipal > 0 && (

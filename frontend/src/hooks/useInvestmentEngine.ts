@@ -73,6 +73,14 @@ export function useInvestmentEngineReads(userAddress?: Address) {
     functionName: "getDAppBalance",
   });
 
+  const combinedEarnings = useReadContract({
+    address: CONTRACTS.investmentEngine,
+    abi: investmentEngineAbi,
+    functionName: "getCombinedEarnings",
+    args: userAddress ? [userAddress] : undefined,
+    query: { enabled: !!userAddress, refetchInterval: 15000 },
+  });
+
   return {
     totalActiveDeposit,
     userTier,
@@ -84,6 +92,7 @@ export function useInvestmentEngineReads(userAddress?: Address) {
     launchTimestamp,
     completedCycles,
     dAppBalance,
+    combinedEarnings,
   };
 }
 
