@@ -1,0 +1,160 @@
+{
+  "meta": {
+    "network": "bscTestnet",
+    "chainId": 97,
+    "snapshotTime": "2026-06-01T15:53:17.187Z",
+    "blockNumber": 110858093,
+    "deployer": "0x47f8160e3C854b4b4679579b99726E5E81736B7f",
+    "contracts": {
+      "USDT": "0xDFFbc2408507BC5A3FeE67aD22018c61a5C258ea",
+      "OSLOToken": "0x6c7285bDaA4B7591FB365727a441c5c29813b649",
+      "OSLODEX": "0x87d483F1658Ab5439612154A0603A06f7Fa15793",
+      "OSLOTreasury": "0x772455E0158E46e03832F0Cc6Bb4E21D6b39eBDB",
+      "OSLOLiquidityManager": "0x9667212C6a987e7C4A165b65255771BdD0c133fA",
+      "OSLODAO": "0x536094Ca6010088391C28026C310e950a11363Ce",
+      "OSLORankSystem": "0x4701B877F38d87991202aD12Ab707CC6dd9e5E1C",
+      "OSLOReferral": "0x8db4141828041d45a54609d1098d7882dE859D69",
+      "OSLOInvestmentEngine": "0x76410DA41ec355946b11869d33fECD00E3FCeBe5"
+    }
+  },
+  "protocolGlobals": {
+    "osloToken": {
+      "totalSupply": "11100000.0",
+      "totalBurned": "0.0",
+      "setupComplete": false,
+      "admin": "0x47f8160e3C854b4b4679579b99726E5E81736B7f"
+    },
+    "osloDex": {
+      "usdtReserve": "1001.0",
+      "osloReserve": "100000.0",
+      "currentPrice": "0.01001",
+      "lastPrice": "0.01",
+      "totalVolumeUSDT": "0.0",
+      "totalSwaps": 0
+    },
+    "investmentEngine": {
+      "totalDeposited": "0.0",
+      "totalWithdrawn": "0.0",
+      "totalRewardsPaid": "0.0",
+      "depositsPaused": false,
+      "minClaimThreshold": "1.0"
+    },
+    "referral": {
+      "totalRegistered": 1,
+      "totalCommissionsPaid": "0.0",
+      "totalFeesCollected": "1.0"
+    },
+    "rankSystem": {
+      "currentWeekId": 127,
+      "bonusPoolBalance": "0.0",
+      "totalBonusesDistributed": "0.0",
+      "genesisTimestamp": 1704067200
+    },
+    "dao": {
+      "memberCount": 0,
+      "members": [],
+      "royaltyPoolBalance": "0.0",
+      "totalRoyaltiesDistributed": "0.0",
+      "currentMonthId": 1,
+      "genesisTimestamp": 1780329028,
+      "monthlyTurnovers": {}
+    },
+    "treasury": {
+      "totalReceived": "0.0",
+      "totalDistributed": "0.0",
+      "pendingDistribution": "0.0"
+    },
+    "liquidityManager": {
+      "totalLiquidityAdded": "1000.0"
+    }
+  },
+  "contractBalances": {
+    "OSLODEX": {
+      "usdt": "1001.0",
+      "oslo": "100000.0"
+    },
+    "OSLOTreasury": {
+      "usdt": "0.0",
+      "oslo": "0.0"
+    },
+    "OSLOLiquidityManager": {
+      "usdt": "0.0",
+      "oslo": "0.0"
+    },
+    "OSLODAO": {
+      "usdt": "0.0",
+      "oslo": "0.0"
+    },
+    "OSLORankSystem": {
+      "usdt": "0.0",
+      "oslo": "0.0"
+    },
+    "OSLOReferral": {
+      "usdt": "0.0",
+      "oslo": "0.0"
+    },
+    "OSLOInvestmentEngine": {
+      "usdt": "0.0",
+      "oslo": "11000000.0"
+    }
+  },
+  "users": [
+    {
+      "address": "0x47f8160e3C854b4b4679579b99726E5E81736B7f",
+      "referrer": "0x0000000000000000000000000000000000000000",
+      "unlockedLevels": 1,
+      "directReferralCount": 0,
+      "totalEarned": "0.0",
+      "referralRewards": "0.0",
+      "teamSize": 0,
+      "qualifiedDirects": 0,
+      "levelIncome": [
+        "0.0",
+        "0.0",
+        "0.0",
+        "0.0",
+        "0.0",
+        "0.0",
+        "0.0",
+        "0.0",
+        "0.0",
+        "0.0",
+        "0.0",
+        "0.0",
+        "0.0",
+        "0.0",
+        "0.0",
+        "0.0",
+        "0.0",
+        "0.0",
+        "0.0",
+        "0.0",
+        "0.0"
+      ]
+    }
+  ],
+  "userInvestments": [
+    {
+      "address": "0x47f8160e3C854b4b4679579b99726E5E81736B7f",
+      "totalActiveDeposit": "0.0",
+      "depositCount": 0,
+      "totalCombinedEarnings": "0.0",
+      "tier": 0,
+      "usdtBalance": "8999.0",
+      "osloBalance": "0.0"
+    }
+  ],
+  "deposits": [],
+  "rankData": [],
+  "daoData": {
+    "members": [],
+    "monthlyTurnovers": {}
+  },
+  "summary": {
+    "totalUsers": 1,
+    "totalDeposits": 0,
+    "activeDeposits": 0,
+    "usersWithRankActivity": 0,
+    "daoMembers": 0
+  }
+}
