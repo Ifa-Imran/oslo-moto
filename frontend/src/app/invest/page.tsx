@@ -589,17 +589,26 @@ function DepositCard({
   const [convertingOslo, setConvertingOslo] = useState(false);
   const [earlyExiting, setEarlyExiting] = useState(false);
 
-  // ─── Real-time yield interpolation ────────────────────────────────────
-  // Between contract refetches (every 15s), smoothly interpolate yield using
-  // the on-chain cached dailyRate so users see the number ticking up live.
+  // ─── Real-time yield interpolation (monotonic — never visually decreases) ──
+  // Between contract refetches (every 15s), smoothly interpolate yield.
+  // Uses a "display floor" to prevent visible drops when contract value
+  // is slightly less than interpolated (due to block timing differences).
   const [liveElapsed, setLiveElapsed] = useState(0);
   const lastFetchRef = useRef(Date.now());
   const lastPendingRef = useRef<number>(0);
+  const displayFloorRef = useRef<number>(0);
+  const osloFloorRef = useRef<number>(0);
 
-  // Reset interpolation anchor when contract data refreshes
+  // Update anchor on contract refetch; detect claims (big drops) to reset floor
   useEffect(() => {
     if (pendingUSDT != null) {
-      lastPendingRef.current = Number(pendingUSDT) / 1e18;
+      const newValue = Number(pendingUSDT) / 1e18;
+      // Detect claim/exit: value dropped >50% → user claimed, reset floors
+      if (lastPendingRef.current > 0 && newValue < lastPendingRef.current * 0.5) {
+        displayFloorRef.current = 0;
+        osloFloorRef.current = 0;
+      }
+      lastPendingRef.current = newValue;
       lastFetchRef.current = Date.now();
       setLiveElapsed(0);
     }
@@ -628,15 +637,21 @@ function DepositCard({
   // Live interpolated pending: contractPending + (perSecond * elapsed since last fetch)
   const contractPending = lastPendingRef.current;
   const perSecondUSDT = amountNum * (todayRateBp / 10000) / 86400; // today's rate in bp → decimal / seconds
-  const pendingUsdtNum = contractPending + (active ? perSecondUSDT * liveElapsed : 0);
+  const rawPending = contractPending + (active ? perSecondUSDT * liveElapsed : 0);
+  // Monotonic guarantee: never show a decrease (prevents flicker on refetch)
+  const pendingUsdtNum = Math.max(rawPending, displayFloorRef.current);
+  displayFloorRef.current = pendingUsdtNum;
 
   // Calculate OSLO equivalent of pending USDT yield using DEX rate
   const dexRes = dexReserves as [bigint, bigint] | undefined;
   const dexUsdtNum = dexRes ? Number(dexRes[0]) / 1e18 : 0;
   const dexOsloNum = dexRes ? Number(dexRes[1]) / 1e18 : 0;
-  const osloYield = dexUsdtNum > 0 && dexOsloNum > 0 && pendingUsdtNum > 0
+  const rawOsloYield = dexUsdtNum > 0 && dexOsloNum > 0 && pendingUsdtNum > 0
     ? (pendingUsdtNum * dexOsloNum) / (dexUsdtNum + pendingUsdtNum)
     : 0;
+  // Monotonic OSLO yield: prevent visual decrease from DEX reserve fluctuations
+  const osloYield = Math.max(rawOsloYield, osloFloorRef.current);
+  osloFloorRef.current = osloYield;
   // Total claimed converted to OSLO at current DEX rate
   const claimedOslo = dexUsdtNum > 0 && dexOsloNum > 0 && claimedNum > 0
     ? (claimedNum * dexOsloNum) / (dexUsdtNum + claimedNum)
