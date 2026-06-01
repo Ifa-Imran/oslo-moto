@@ -161,7 +161,7 @@ contract OSLOReferral is IReferral, ReentrancyGuard {
 
         userInfo[user].registered = true;
         userInfo[user].referrer = referrer;
-        userInfo[user].unlockedLevels = 0;
+        userInfo[user].unlockedLevels = 1; // Level 1 unlocked by default so immediate upline gets commission
 
         if (referrer != address(0)) {
             userInfo[referrer].directReferrals.push(user);
@@ -321,7 +321,7 @@ contract OSLOReferral is IReferral, ReentrancyGuard {
         if (qualifiedDirects >= 3) return 12;
         if (qualifiedDirects >= 2) return 8;
         if (qualifiedDirects >= 1) return 3;
-        return 0;
+        return 1; // Level 1 always available for registered users
     }
 
     /// @dev Get commission rate for a specific level

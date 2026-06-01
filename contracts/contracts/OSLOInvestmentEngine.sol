@@ -225,7 +225,7 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
     /// @param amount Amount of USDT to deposit
     function deposit(uint256 amount) external nonReentrant {
         if (depositsPaused) revert DepositsPausedError();
-        if (amount < OSLOConstants.PKG1_MIN) revert DepositTooLow();
+        if (amount == 0) revert DepositTooLow();
         if (amount > OSLOConstants.MAX_DEPOSIT_PER_TX) revert DepositTooHigh();
         if (osloDex == address(0)) revert NotConfigured();
 
@@ -328,22 +328,9 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         // Minimum withdrawal threshold check (settable by timelock, default $1)
         if (pendingUSDT < minClaimThreshold) revert BelowWithdrawalThreshold();
 
-        // Combined 3X cap check
-        uint256 maxCombined = dep.amount * OSLOConstants.RETURN_CAP_MULTIPLIER;
+        // Per-deposit 3X cap is already enforced in _calculatePendingRewards.
+        // Track combined earnings for informational purposes only.
         UserInfo storage userInfo = users[msg.sender];
-        uint256 remainingCap = maxCombined > userInfo.totalCombinedEarnings
-            ? maxCombined - userInfo.totalCombinedEarnings
-            : 0;
-
-        if (remainingCap == 0) {
-            dep.active = false;
-            emit CombinedCapReached(msg.sender);
-            revert DepositCapped();
-        }
-
-        if (pendingUSDT > remainingCap) {
-            pendingUSDT = remainingCap;
-        }
 
         // V3: No withdrawal fee — full yield is auto-bought into OSLO.
         // Convert pending USDT yield to OSLO at DEX spot price (tax-free).
