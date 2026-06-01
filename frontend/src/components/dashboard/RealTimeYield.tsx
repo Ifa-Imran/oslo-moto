@@ -171,28 +171,13 @@ export function RealTimeYield({
         </motion.div>
       </div>
 
-      {/* Progress bar for minute */}
+      {/* Continuous yield info */}
       <div className="mt-5 p-3 rounded-lg bg-white/[0.03] border border-white/5">
-        <div className="flex items-center justify-between text-[10px] text-oslo-text-muted mb-1.5">
-          <span>Estimated earnings this minute</span>
+        <div className="flex items-center justify-between text-[10px] text-oslo-text-muted">
+          <span>Yields accrue continuously — claim anytime above $1</span>
           <span className="font-mono text-oslo-success">
-            +${formatNumber(perMinuteUSDT, 6)} USDT · +{formatNumber(perMinuteOSLO, 4)} OSLO
+            +${formatNumber(perMinuteUSDT, 6)}/min
           </span>
-        </div>
-        <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-          <motion.div
-            className="h-full rounded-full bg-gradient-to-r from-oslo-ice to-oslo-success"
-            animate={{ width: `${(elapsed % 60) / 0.6}%` }}
-            transition={{ duration: 0.25, ease: "linear" }}
-          />
-        </div>
-        <div className="flex items-center justify-between mt-1.5">
-          <p className="text-[9px] text-oslo-text-muted">
-            Yields arrive continuously — claim anytime once above $1
-          </p>
-          <p className="text-[9px] text-oslo-text-muted font-mono">
-            {Math.floor(elapsed % 60)}s / 60s
-          </p>
         </div>
       </div>
     </GlassCard>

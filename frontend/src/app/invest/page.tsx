@@ -615,16 +615,19 @@ function DepositCard({
 
   if (!deposit) return <Skeleton className="h-64" />;
 
-  const [amount, tier, cachedDailyRate, depositTime, lastClaimTime, totalClaimed, _maxReturn, active] = deposit;
+  const [amount, tier, _cachedDailyRate, depositTime, lastClaimTime, totalClaimed, _maxReturn, active] = deposit;
   const amountNum = Number(amount) / 1e18;
   const tierNum = Number(tier);
-  const dailyRateBp = Number(cachedDailyRate); // basis points from contract
   const claimedNum = Number(totalClaimed) / 1e18;
   const capProgress = (claimedNum / (amountNum * RETURN_CAP_MULTIPLIER)) * 100;
 
+  // Use TODAY's actual rate from 7-day schedule (not the cached deposit-time rate)
+  // This matches what the contract's _calculatePendingRewards actually computes
+  const todayRateBp = getDailyRate(amountNum);
+
   // Live interpolated pending: contractPending + (perSecond * elapsed since last fetch)
   const contractPending = lastPendingRef.current;
-  const perSecondUSDT = amountNum * (dailyRateBp / 10000) / 86400; // rate in bp → decimal / seconds
+  const perSecondUSDT = amountNum * (todayRateBp / 10000) / 86400; // today's rate in bp → decimal / seconds
   const pendingUsdtNum = contractPending + (active ? perSecondUSDT * liveElapsed : 0);
 
   // Calculate OSLO equivalent of pending USDT yield using DEX rate
@@ -746,7 +749,7 @@ function DepositCard({
           <div className="flex items-center justify-between mt-1">
             <span className="text-[9px] text-oslo-text-muted">Earning</span>
             <span className="text-[9px] font-mono text-oslo-text-muted">
-              +${(perSecondUSDT * 60).toFixed(6)}/min · ${formatRate(dailyRateBp)}/day
+              +${(perSecondUSDT * 60).toFixed(6)}/min · ${formatRate(todayRateBp)}/day
             </span>
           </div>
         </div>
