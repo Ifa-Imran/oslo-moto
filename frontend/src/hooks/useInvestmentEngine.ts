@@ -53,24 +53,10 @@ export function useInvestmentEngineReads(userAddress?: Address) {
     functionName: "launchTimestamp",
   });
 
-  const completedCycles = useReadContract({
-    address: CONTRACTS.investmentEngine,
-    abi: investmentEngineAbi,
-    functionName: "completedCycles",
-    args: userAddress ? [userAddress] : undefined,
-    query: { enabled: !!userAddress },
-  });
-
   const totalWithdrawn = useReadContract({
     address: CONTRACTS.investmentEngine,
     abi: investmentEngineAbi,
     functionName: "totalWithdrawn",
-  });
-
-  const dAppBalance = useReadContract({
-    address: CONTRACTS.investmentEngine,
-    abi: investmentEngineAbi,
-    functionName: "getDAppBalance",
   });
 
   const combinedEarnings = useReadContract({
@@ -90,8 +76,6 @@ export function useInvestmentEngineReads(userAddress?: Address) {
     totalWithdrawn,
     depositsPaused,
     launchTimestamp,
-    completedCycles,
-    dAppBalance,
     combinedEarnings,
   };
 }

@@ -83,7 +83,7 @@ function LandingPage() {
   const { claimRewards: claimYieldRewards, isLoading: isClaimingYield } = useInvestmentEngineWrites();
 
   // Dashboard data (when registered)
-  const { totalActiveDeposit, userTier, depositCount, totalDeposited, totalRewardsPaid, totalWithdrawn, launchTimestamp, completedCycles } =
+  const { totalActiveDeposit, userTier, depositCount, totalDeposited, totalRewardsPaid, totalWithdrawn, launchTimestamp } =
     useInvestmentEngineReads(address);
   const { totalBurned, osloBalance, totalSupply } = useTokenReads(address);
   const { usdtBalance } = useUSDTReads(address);

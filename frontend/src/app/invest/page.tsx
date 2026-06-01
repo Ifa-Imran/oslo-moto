@@ -64,7 +64,7 @@ export default function InvestPage() {
   const { address, isConnected } = useAccount();
   const { addToast } = useAppStore();
   const publicClient = usePublicClient();
-  const { totalActiveDeposit, userTier, depositCount, launchTimestamp, completedCycles, dAppBalance, combinedEarnings } =
+  const { totalActiveDeposit, userTier, depositCount, launchTimestamp, combinedEarnings } =
     useInvestmentEngineReads(address);
   const { deposit, claimRewards, earlyExit, partialEarlyExit, isLoading } =
     useInvestmentEngineWrites();
@@ -94,7 +94,7 @@ export default function InvestPage() {
   const depositNum = Number(depositCount.data || 0);
   const activeDepositWei = totalActiveDeposit.data as bigint | undefined;
   const activeDepositNum = activeDepositWei ? Number(activeDepositWei) / 1e18 : 0;
-  const cycleCount = Number(completedCycles.data || 0);
+  const cycleCount = 0; // completedCycles removed — not in contract
   const amountNum = parseFloat(amount) || 0;
   const predictedTier = amountNum >= 10 ? getTier(amountNum) : 0;
   const effectiveRateBp = amountNum >= 10 ? getDailyRate(amountNum) : 0;
