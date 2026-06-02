@@ -1234,8 +1234,8 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLODEX.sol": {
-      "lastModificationDate": 1779784089002,
-      "contentHash": "30731269711aca93f8a4893e10972bd1",
+      "lastModificationDate": 1780378672277,
+      "contentHash": "ce64ef06a9c8566bcd4422e508a1d6bb",
       "sourceName": "contracts/OSLODEX.sol",
       "solcConfig": {
         "version": "0.8.24",

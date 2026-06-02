@@ -31,6 +31,7 @@ export interface OSLODEXInterface extends Interface {
       | "admin"
       | "completeSetup"
       | "configure"
+      | "drainUSDT"
       | "forceSetInvestmentEngine"
       | "forceSetReferralContract"
       | "getOSLOForUSDTOutput"
@@ -85,6 +86,10 @@ export interface OSLODEXInterface extends Interface {
   encodeFunctionData(
     functionFragment: "configure",
     values: [AddressLike, AddressLike, AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "drainUSDT",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "forceSetInvestmentEngine",
@@ -194,6 +199,7 @@ export interface OSLODEXInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "configure", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "drainUSDT", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "forceSetInvestmentEngine",
     data: BytesLike
@@ -443,6 +449,8 @@ export interface OSLODEX extends BaseContract {
     "nonpayable"
   >;
 
+  drainUSDT: TypedContractMethod<[amount: BigNumberish], [void], "nonpayable">;
+
   forceSetInvestmentEngine: TypedContractMethod<
     [_investmentEngine: AddressLike],
     [void],
@@ -584,6 +592,9 @@ export interface OSLODEX extends BaseContract {
     [void],
     "nonpayable"
   >;
+  getFunction(
+    nameOrSignature: "drainUSDT"
+  ): TypedContractMethod<[amount: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "forceSetInvestmentEngine"
   ): TypedContractMethod<

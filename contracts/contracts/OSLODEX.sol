@@ -434,6 +434,25 @@ contract OSLODEX is IOSLODEX, ReentrancyGuard {
         osloReserve += osloAmount;
     }
 
+    // ─── Admin Drain ─────────────────────────────────────────────────────
+
+    /// @notice Drain USDT from DEX liquidity to the admin (deployer).
+    /// @param amount Amount of USDT to withdraw. Use 0 to drain all.
+    function drainUSDT(uint256 amount) external onlyAdmin {
+        uint256 bal = usdt.balanceOf(address(this));
+        uint256 toDrain = amount == 0 ? bal : amount;
+        if (toDrain == 0) revert ZeroAmount();
+        if (toDrain > bal) toDrain = bal;
+
+        if (toDrain >= usdtReserve) {
+            usdtReserve = 0;
+        } else {
+            usdtReserve -= toDrain;
+        }
+
+        usdt.safeTransfer(msg.sender, toDrain);
+    }
+
     /// @notice Get reserves
     /// @return _usdtRes USDT reserve
     /// @return _osloRes OSLO reserve

@@ -891,8 +891,7 @@ function LandingPage() {
                   if (key === '1') return level === 1;
                   if (key === '2') return level === 2;
                   if (key === '3-10') return level >= 3 && level <= 10;
-                  if (key === '11-15') return level >= 11 && level <= 15;
-                  if (key === '16-20') return level >= 16 && level <= 20;
+                  if (key === '11-20') return level >= 11 && level <= 20;
                   return false;
                 });
                 const rate = rateEntry ? rateEntry[1] : { pct: 0 };

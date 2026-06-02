@@ -1,15 +1,15 @@
 // OSLO Protocol Contract Addresses
 // Deployed on BSC Testnet (chainId: 97)
-// Deployed: 2026-06-02 | V5 redeploy with updated referral commissions
+// Deployed: 2026-06-02 | V6 optimized redeploy with drainUSDT + wallet cap
 
 export const CONTRACTS = {
-  osloToken:        "0x2Dc0e9ef353287D2D3880eF7F3Ee2386EF24F8d1" as `0x${string}`,
-  investmentEngine: "0xA6Ecd84D101630f0FaDe26D3aDfaB9364f44CD1B" as `0x${string}`,
-  referral:         "0xC9cbF61F09Fe9ae9EaB2553Aa13BE2f64C67112e" as `0x${string}`,
-  rankSystem:       "0x362f5E21426E2A1D4922A7853371761df7922188" as `0x${string}`,
-  dao:              "0x2d00EC2Cde140Ae8c7eeb8d34987aae4Ed53997E" as `0x${string}`,
-  treasury:         "0x2D7BAd0fB36A95465d7a85dF6822C2ef4b7fbE46" as `0x${string}`,
-  liquidityManager: "0x23512bbf86a47c79F3194f5aC950a6E4113f5FC1" as `0x${string}`,
-  osloDEX:          "0xC1996eeeCbEeF5aB98d8eD501d3D02ec3d928942" as `0x${string}`,
-  usdt:             "0x217565cbF9772E2A2F1FBd50aC7E673fa5980aFB" as `0x${string}`,
+  osloToken:        "0x3191BBd57A21725E4Bf1eE9EC3C9d475b43b3DE6" as `0x${string}`,
+  investmentEngine: "0x154B8211CE98B3d9B8068396b8E85DEEA8B667EC" as `0x${string}`,
+  referral:         "0x77e81eE198d93b16FFA7784540d2FEeE3cD25274" as `0x${string}`,
+  rankSystem:       "0xf2F0C4ecA5152dDE2ADbadE8F311f297370F0844" as `0x${string}`,
+  dao:              "0x09C08286af0F61C7976841235b4582cfdCe7b37F" as `0x${string}`,
+  treasury:         "0xaE99dFB0285d30Bf263fA9192A414ac818b686a1" as `0x${string}`,
+  liquidityManager: "0x60236C3CD3FAd89Bb8F125Da1bA1b5422AFCC04E" as `0x${string}`,
+  osloDEX:          "0x5a6920Bb151d7A8Df9E2d11Cb1Ec2ce6A4A0Ee5F" as `0x${string}`,
+  usdt:             "0x493769a8F24e62AEEB8aE6C2d8E24327BD41FEE3" as `0x${string}`,
 } as const;
