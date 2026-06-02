@@ -48,7 +48,6 @@ import {
   AlertTriangle,
   ExternalLink,
   BarChart3,
-  Banknote,
 } from "lucide-react";
 
 export default function Page() {
@@ -425,26 +424,8 @@ function LandingPage() {
             )}
           </GlassCard>
 
-          {/* Quick guide + Faucet */}
+          {/* Quick guide */}
           <div className="space-y-4">
-            {/* Mint Test USDT */}
-            <GlassCard>
-              <div className="flex items-center gap-2 mb-3">
-                <Banknote className="w-5 h-5 text-oslo-success" />
-                <h3 className="text-sm font-medium">Get Test USDT</h3>
-              </div>
-              <p className="text-xs text-oslo-text-muted mb-3">
-                Mint free MockUSDT on BSC Testnet to register and deposit.
-              </p>
-              <div className="mb-3 p-2 rounded-lg bg-white/[0.03] border border-white/5">
-                <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">Your USDT Balance</p>
-                <p className="text-lg font-mono text-oslo-text-primary">
-                  {usdtBal != null ? formatNumber(Number(usdtBal) / 1e18) : "0.00"} USDT
-                </p>
-              </div>
-              <MintUSDTButtons address={address!} />
-            </GlassCard>
-
             <GlassCard>
               <h3 className="text-sm font-medium mb-3">Getting Started</h3>
               <div className="space-y-2">
@@ -942,66 +923,3 @@ function LandingPage() {
   );
 }
 
-// ─── Mint USDT Buttons Component ────────────────────────────────────────────
-
-const MOCK_USDT_MINT_ABI = [
-  {
-    inputs: [
-      { name: "to", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    name: "mint",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-] as const;
-
-function MintUSDTButtons({ address }: { address: Address }) {
-  const { writeContractAsync } = useWriteContract();
-  const publicClient = usePublicClient();
-  const { addToast } = useAppStore();
-  const [minting, setMinting] = useState(false);
-
-  const handleMint = async (amount: number) => {
-    if (!address || !publicClient) return;
-    setMinting(true);
-    try {
-      addToast({ title: `Minting ${amount.toLocaleString()} USDT...`, status: "pending" });
-      const tx = await writeContractAsync({
-        address: CONTRACTS.usdt,
-        abi: MOCK_USDT_MINT_ABI,
-        functionName: "mint",
-        args: [address, parseEther(amount.toString())],
-      });
-      await publicClient.waitForTransactionReceipt({ hash: tx });
-      addToast({ title: `${amount.toLocaleString()} USDT Minted!`, status: "success", txHash: tx });
-    } catch (err: any) {
-      addToast({
-        title: "Mint Failed",
-        description: err?.message?.slice(0, 100) || "Transaction rejected",
-        status: "error",
-      });
-    } finally {
-      setMinting(false);
-    }
-  };
-
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      {[100, 1000, 5000, 10000].map((amt) => (
-        <IceButton
-          key={amt}
-          size="sm"
-          variant="secondary"
-          className="w-full"
-          onClick={() => handleMint(amt)}
-          disabled={minting}
-          loading={minting}
-        >
-          Mint ${amt.toLocaleString()}
-        </IceButton>
-      ))}
-    </div>
-  );
-}
