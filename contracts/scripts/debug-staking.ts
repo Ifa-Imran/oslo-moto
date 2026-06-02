@@ -5,53 +5,45 @@ import { ethers } from "hardhat";
  * Usage: npx hardhat run scripts/debug-staking.ts --network bscTestnet
  */
 
-const INVESTMENT_ENGINE = "0xAb4043Fc6Fb33BC75B96ABf1A0bE4871cFA57287";
-const OSLO_DEX = "0xD99A51026218Af9D29c991B4D28591f6BA7766EA";
-const OSLO_TOKEN = "0x30bcAc54a58b429802458c6b8A80046e99B16752";
-const USDT = "0x9549e7DdBb347900bcE777223255BbEAC03BAfC6";
+const INVESTMENT_ENGINE = "0x09c56236B863FA39c2F68BD8a97f5217f89571EF";
+const OSLO_DEX = "0x6e068cfd2D2878250c576aa70e1aCa64e58bEe1b";
+const OSLO_TOKEN = "0x69E35319980F133612f39DD56616a46b5d7b8010";
+const USDT = "0x887524926554F1e1A8Eeb3F99a0d9F6Bc9cd53dd";
 
-// User's private key
-const USER_PK = "60884d7626fda89b847bb084550ff8baf868545ce02fd9e386a0f6be8e96521b";
+// User's private key (user reporting incorrect yield on large investments)
+const USER_PK = "38ef9ba2a6d91dbf5c5f02f4291fed3f1763e373d946536e684babc06f9f1d30";
 
-// Contract constants (mirroring OSLOConstants.sol)
+// Contract constants (mirroring OSLOConstants.sol V3)
 const BASIS_POINTS = 10_000n;
-const TIER1_MIN = ethers.parseEther("10");
-const TIER1_MAX = ethers.parseEther("499");
-const TIER2_MIN = ethers.parseEther("500");
-const TIER2_MAX = ethers.parseEther("2499");
-const TIER3_MIN = ethers.parseEther("2500");
-const TIER3_MAX = ethers.parseEther("4999");
-const TIER4_MIN = ethers.parseEther("5000");
-const TIER4_IMPLICIT_MAX = ethers.parseEther("50000");
-const TIER1_RATE_MIN = 50n;
-const TIER1_RATE_MAX = 100n;
-const TIER2_RATE_MIN = 75n;
-const TIER2_RATE_MAX = 115n;
-const TIER3_RATE_MIN = 100n;
-const TIER3_RATE_MAX = 150n;
-const TIER4_RATE_MIN = 100n;
-const TIER4_RATE_MAX = 175n;
-const LIFETIME_RATE = 45n;
+const PKG2_MIN = ethers.parseEther("2500"); // $2500 threshold for Package 2
+const LIFETIME_RATE = 45n; // 0.45% daily
 const LIFETIME_RATE_START = 90n * 24n * 60n * 60n; // 90 days
 const RETURN_CAP_MULTIPLIER = 3n;
 const ONE_DAY = 86400n;
 
-// Dynamic Yield Schedule (frontend display) - for comparison
+// 7-day rotational schedule (bp) — Mon=0, Sun=6
+// Package 1 ($10 – $2,499)
+const PKG1_RATES = [100n, 75n, 95n, 65n, 100n, 85n, 55n]; // Mon-Sun in bp
+const PKG1_WEEKLY_TOTAL = 575n; // sum of above
+// Package 2 ($2,500+)
+const PKG2_RATES = [115n, 100n, 115n, 110n, 105n, 100n, 125n]; // Mon-Sun in bp
+const PKG2_WEEKLY_TOTAL = 770n; // sum of above
+
+// Dynamic Yield Schedule (frontend display %) - for comparison
 const YIELD_SCHEDULE_TIER1 = [1.00, 0.75, 0.95, 0.65, 1.00, 0.85, 0.55]; // Mon-Sun
 const YIELD_SCHEDULE_TIER2 = [1.15, 1.00, 1.15, 1.10, 1.05, 1.00, 1.25]; // Mon-Sun
 
-function getTier(amount: bigint): number {
-  if (amount >= TIER4_MIN) return 4;
-  if (amount >= TIER3_MIN) return 3;
-  if (amount >= TIER2_MIN) return 2;
-  return 1;
+function getPackage(amount: bigint): number {
+  return amount >= PKG2_MIN ? 2 : 1;
 }
 
-function interpolate(amount: bigint, minAmt: bigint, maxAmt: bigint, minRate: bigint, maxRate: bigint): bigint {
-  if (maxAmt <= minAmt) return minRate;
-  const rateRange = maxRate - minRate;
-  const amtRange = maxAmt - minAmt;
-  return minRate + ((amount - minAmt) * rateRange) / amtRange;
+function getDayOfWeek(timestamp: bigint): number {
+  // Matches contract: (timestamp / 86400 + 3) % 7 → 0=Mon, 6=Sun
+  return Number((timestamp / 86400n + 3n) % 7n);
+}
+
+function getDailyRateForDay(pkg: number, dayOfWeek: number): bigint {
+  return pkg === 2 ? PKG2_RATES[dayOfWeek] : PKG1_RATES[dayOfWeek];
 }
 
 function getDailyRate(amount: bigint, launchTimestamp: bigint, currentTimestamp: bigint): bigint {
@@ -59,15 +51,16 @@ function getDailyRate(amount: bigint, launchTimestamp: bigint, currentTimestamp:
   if (elapsed >= LIFETIME_RATE_START) {
     return LIFETIME_RATE;
   }
-  const tier = getTier(amount);
-  if (tier === 1) return interpolate(amount, TIER1_MIN, TIER1_MAX, TIER1_RATE_MIN, TIER1_RATE_MAX);
-  if (tier === 2) return interpolate(amount, TIER2_MIN, TIER2_MAX, TIER2_RATE_MIN, TIER2_RATE_MAX);
-  if (tier === 3) return interpolate(amount, TIER3_MIN, TIER3_MAX, TIER3_RATE_MIN, TIER3_RATE_MAX);
-  // Tier 4
-  const capped = amount > TIER4_IMPLICIT_MAX ? TIER4_IMPLICIT_MAX : amount;
-  return interpolate(capped, TIER4_MIN, TIER4_IMPLICIT_MAX, TIER4_RATE_MIN, TIER4_RATE_MAX);
+  const dayOfWeek = getDayOfWeek(currentTimestamp);
+  const pkg = getPackage(amount);
+  return getDailyRateForDay(pkg, dayOfWeek);
 }
 
+/**
+ * Replicates contract _calculatePendingRewards logic exactly:
+ * - Full weeks use weeklyBp sum
+ * - Partial days iterate per-day with second-level precision
+ */
 function calculatePendingRewards(
   amount: bigint,
   lastClaimTime: bigint,
@@ -75,25 +68,63 @@ function calculatePendingRewards(
   maxReturn: bigint,
   launchTimestamp: bigint,
   currentTimestamp: bigint
-): { pending: bigint; effectiveRate: bigint; timeElapsed: bigint } {
+): { pending: bigint; method: string; timeElapsed: bigint; breakdown: string[] } {
   const timeElapsed = currentTimestamp - lastClaimTime;
-  if (timeElapsed === 0n) return { pending: 0n, effectiveRate: 0n, timeElapsed: 0n };
+  if (timeElapsed === 0n) return { pending: 0n, method: "none", timeElapsed: 0n, breakdown: [] };
 
-  let effectiveRate = getDailyRate(amount, launchTimestamp, currentTimestamp);
-  // After 3 months, force lifetime rate
+  let pendingUSDT = 0n;
+  let method = "";
+  const breakdown: string[] = [];
+
+  // After 3 months: flat lifetime rate (simple calculation)
   if (currentTimestamp - launchTimestamp >= LIFETIME_RATE_START) {
-    effectiveRate = LIFETIME_RATE;
+    method = "lifetime_flat";
+    pendingUSDT = (amount * LIFETIME_RATE * timeElapsed) / (ONE_DAY * BASIS_POINTS);
+    breakdown.push(`Lifetime: (${ethers.formatEther(amount)} × 45bp × ${timeElapsed}s) / (86400 × 10000) = ${ethers.formatEther(pendingUSDT)}`);
+  } else {
+    method = "7day_rotational";
+    const isPkg2 = amount >= PKG2_MIN;
+    const weeklyBp = isPkg2 ? PKG2_WEEKLY_TOTAL : PKG1_WEEKLY_TOTAL;
+
+    // Full weeks optimization
+    const fullWeeks = timeElapsed / (7n * ONE_DAY);
+    const fullWeekYield = (amount * weeklyBp * fullWeeks) / BASIS_POINTS;
+    pendingUSDT = fullWeekYield;
+    if (fullWeeks > 0n) {
+      breakdown.push(`Full weeks (${fullWeeks}): (${ethers.formatEther(amount)} × ${weeklyBp}bp × ${fullWeeks}) / 10000 = ${ethers.formatEther(fullWeekYield)}`);
+    }
+
+    // Partial remaining days
+    let remainingStart = lastClaimTime + (fullWeeks * 7n * ONE_DAY);
+    let partialBpSeconds = 0n;
+    let dayCount = 0;
+
+    while (remainingStart < currentTimestamp) {
+      const dayOfWeek = getDayOfWeek(remainingStart);
+      const rate = isPkg2 ? PKG2_RATES[dayOfWeek] : PKG1_RATES[dayOfWeek];
+      const dayEnd = ((remainingStart / ONE_DAY) + 1n) * ONE_DAY;
+      const periodEnd = currentTimestamp < dayEnd ? currentTimestamp : dayEnd;
+      const periodSeconds = periodEnd - remainingStart;
+
+      partialBpSeconds += rate * periodSeconds;
+      breakdown.push(`  Day ${dayCount} (dow=${dayOfWeek}): rate=${rate}bp × ${periodSeconds}s = ${rate * periodSeconds} bp·s`);
+      remainingStart = dayEnd;
+      dayCount++;
+    }
+
+    const partialYield = (amount * partialBpSeconds) / (ONE_DAY * BASIS_POINTS);
+    pendingUSDT += partialYield;
+    breakdown.push(`Partial total: (${ethers.formatEther(amount)} × ${partialBpSeconds} bp·s) / (86400 × 10000) = ${ethers.formatEther(partialYield)}`);
   }
 
-  let pendingUSDT = (amount * effectiveRate * timeElapsed) / (ONE_DAY * BASIS_POINTS);
-
-  // 3X cap
+  // 3X per-deposit cap check
   const remaining = maxReturn > totalClaimed ? maxReturn - totalClaimed : 0n;
   if (pendingUSDT > remaining) {
+    breakdown.push(`⚠ Capped: ${ethers.formatEther(pendingUSDT)} > remaining ${ethers.formatEther(remaining)}`);
     pendingUSDT = remaining;
   }
 
-  return { pending: pendingUSDT, effectiveRate, timeElapsed };
+  return { pending: pendingUSDT, method, timeElapsed, breakdown };
 }
 
 async function main() {
@@ -112,8 +143,11 @@ async function main() {
   const block = await provider.getBlock("latest");
   const currentTimestamp = BigInt(block!.timestamp);
   const currentDate = new Date(Number(currentTimestamp) * 1000);
+  const contractDayOfWeek = getDayOfWeek(currentTimestamp);
+  const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   console.log(`Current Block Timestamp: ${currentTimestamp} (${currentDate.toUTCString()})`);
-  console.log(`Current Day: ${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][currentDate.getUTCDay()]}`);
+  console.log(`Contract Day-of-Week:    ${contractDayOfWeek} (${dayNames[contractDayOfWeek]})`);
+  console.log(`JS Date Day:             ${currentDate.getUTCDay()} (${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][currentDate.getUTCDay()]})`);
   console.log("");
 
   // InvestmentEngine ABI (minimal)
@@ -230,16 +264,18 @@ async function main() {
     console.log(`│ ── Yield Calculation ──`);
     console.log(`│ Time Since Claim: ${daysElapsed.toFixed(4)} days (${hoursElapsed.toFixed(2)} hours = ${timeElapsed}s)`);
 
-    // Calculate effective rate
-    const effectiveRate = getDailyRate(amount, launchTs, currentTimestamp);
-    const effectiveRateForced = (currentTimestamp - launchTs >= LIFETIME_RATE_START) ? LIFETIME_RATE : effectiveRate;
-    console.log(`│ Effective Rate:  ${Number(effectiveRateForced) / 100}% daily (${effectiveRateForced} bp)`);
+    // Calculate effective rate (current day)
+    const pkg = getPackage(amount);
+    const todayRate = getDailyRate(amount, launchTs, currentTimestamp);
+    const isLifetime = (currentTimestamp - launchTs >= LIFETIME_RATE_START);
+    console.log(`│ Package:         ${pkg} (${pkg === 2 ? "$2500+" : "$10-$2499"})`);
+    console.log(`│ Today’s Rate:    ${Number(todayRate) / 100}% (${todayRate} bp) [${isLifetime ? "LIFETIME" : "7-day schedule"}]`);
     console.log(`│ Cached Rate:     ${Number(dailyRate) / 100}% daily (${dailyRate} bp)`);
-    if (effectiveRateForced !== BigInt(dailyRate)) {
-      console.log(`│ ⚠ Rate mismatch! Contract cached: ${dailyRate} bp vs Current: ${effectiveRateForced} bp`);
+    if (!isLifetime && todayRate !== BigInt(dailyRate)) {
+      console.log(`│ ℹ Note: cached rate was set at deposit time — yield uses per-day lookup, not cached`);
     }
 
-    // Manual calculation
+    // Manual calculation (exact contract replication)
     const manualCalc = calculatePendingRewards(
       amount,
       BigInt(lastClaimTime),
@@ -250,38 +286,38 @@ async function main() {
     );
 
     console.log(`│`);
-    console.log(`│ ── Manual Calculation ──`);
-    console.log(`│ Formula: (amount × rate × time) / (86400 × 10000)`);
-    console.log(`│        = (${ethers.formatEther(amount)} × ${effectiveRateForced} × ${timeElapsed}) / (86400 × 10000)`);
-    console.log(`│ Raw Yield:       ${ethers.formatEther(manualCalc.pending)} USDT`);
+    console.log(`│ ── Manual Calculation (replicating contract) ──`);
+    console.log(`│ Method: ${manualCalc.method}`);
+    for (const line of manualCalc.breakdown) {
+      console.log(`│   ${line}`);
+    }
+    console.log(`│ Calculated Yield: ${ethers.formatEther(manualCalc.pending)} USDT`);
 
     // 3X cap check
     const remaining3X = maxReturn > totalClaimed ? maxReturn - totalClaimed : 0n;
     const capPct = Number(totalClaimed) / Number(maxReturn) * 100;
     console.log(`│ 3X Remaining:    ${ethers.formatEther(remaining3X)} USDT (${capPct.toFixed(2)}% used)`);
-    if (manualCalc.pending > remaining3X) {
-      console.log(`│ ⚠ Capped! Raw ${ethers.formatEther(manualCalc.pending)} > Remaining ${ethers.formatEther(remaining3X)}`);
-    }
 
     // Contract's reported pending
     const contractPending = await ie.getPendingRewards(userAddress, i);
     console.log(`│`);
-    console.log(`│ ── Comparison ──`);
+    console.log(`│ ── Contract vs Calculated ──`);
     console.log(`│ Contract Pending:   ${ethers.formatEther(contractPending)} USDT`);
     console.log(`│ Calculated Pending: ${ethers.formatEther(manualCalc.pending)} USDT`);
 
     const diff = contractPending > manualCalc.pending
       ? contractPending - manualCalc.pending
       : manualCalc.pending - contractPending;
+    const diffPct = Number(manualCalc.pending) > 0 ? (Number(diff) / Number(manualCalc.pending) * 100).toFixed(4) : "0";
     if (diff > 0n) {
-      console.log(`│ ⚠ DIFFERENCE:      ${ethers.formatEther(diff)} USDT`);
+      console.log(`│ ⚠ DIFFERENCE:      ${ethers.formatEther(diff)} USDT (${diffPct}%)`);
       if (diff > ethers.parseEther("0.01")) {
-        console.log(`│ ❌ SIGNIFICANT MISMATCH!`);
+        console.log(`│ ❌ SIGNIFICANT MISMATCH! Investigate further.`);
       } else {
-        console.log(`│ ✓ Negligible (block timing)`);
+        console.log(`│ ✓ Negligible (block timing between calls)`);
       }
     } else {
-      console.log(`│ ✓ MATCH — no discrepancy`);
+      console.log(`│ ✓ EXACT MATCH`);
     }
 
     // OSLO equivalent at current DEX rate
@@ -297,31 +333,34 @@ async function main() {
       }
     }
 
-    // Daily yield projection
-    const dailyYield = (amount * effectiveRateForced) / (BASIS_POINTS);
+    // Daily yield projection (using today's rate)
+    const dailyYield = (amount * todayRate) / (BASIS_POINTS);
+    const weeklyYield = (amount * (pkg === 2 ? PKG2_WEEKLY_TOTAL : PKG1_WEEKLY_TOTAL)) / BASIS_POINTS;
     console.log(`│`);
-    console.log(`│ ── Daily Projection ──`);
-    console.log(`│ Expected per day:  ${ethers.formatEther(dailyYield)} USDT`);
-    console.log(`│ Expected per hour: ${ethers.formatEther(dailyYield / 24n)} USDT`);
-
-    // Frontend Dynamic Yield Schedule comparison
-    const scheduleTier = Number(amount) / 1e18 >= 2500 ? 2 : 1;
-    const dayOfWeek = currentDate.getUTCDay(); // 0=Sun
-    const scheduleIdx = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Mon=0, Sun=6
-    const scheduleRate = scheduleTier === 1 ? YIELD_SCHEDULE_TIER1[scheduleIdx] : YIELD_SCHEDULE_TIER2[scheduleIdx];
-    const scheduleYield = (Number(amount) / 1e18) * (scheduleRate / 100);
-
+    console.log(`│ ── Daily/Weekly Projection ──`);
+    console.log(`│ Today’s yield:   ${ethers.formatEther(dailyYield)} USDT`);
+    console.log(`│ Per hour:        ${ethers.formatEther(dailyYield / 24n)} USDT`);
+    console.log(`│ Per minute:      ${(Number(dailyYield) / 1e18 / 1440).toFixed(8)} USDT`);
+    console.log(`│ Full week yield: ${ethers.formatEther(weeklyYield)} USDT`);
+    console.log(`│ Days to 3X cap:  ${(Number(remaining3X) / Number(weeklyYield) * 7).toFixed(1)} days (at avg weekly rate)`);
+    
+    // Frontend vs Contract comparison
+    const scheduleIdx = contractDayOfWeek; // 0=Mon, 6=Sun
+    const scheduleRate = pkg === 2 ? YIELD_SCHEDULE_TIER2[scheduleIdx] : YIELD_SCHEDULE_TIER1[scheduleIdx];
+    const frontendDailyYield = (Number(amount) / 1e18) * (scheduleRate / 100);
+    const contractDailyYield = Number(dailyYield) / 1e18;
+    
     console.log(`│`);
-    console.log(`│ ── Frontend Yield Schedule (Display Only) ──`);
-    console.log(`│ Schedule Tier: ${scheduleTier} (${scheduleTier === 1 ? "$10-$2499" : "$2500+"})`);
-    console.log(`│ Today's Rate:  ${scheduleRate}% (${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][scheduleIdx]})`);
-    console.log(`│ Schedule Yield:${scheduleYield.toFixed(4)} USDT/day`);
-    console.log(`│ Contract Rate: ${Number(effectiveRateForced) / 100}% → ${Number(dailyYield) / 1e18} USDT/day`);
-    if (Math.abs(scheduleRate - Number(effectiveRateForced) / 100) > 0.01) {
-      console.log(`│ ⚠ SCHEDULE vs CONTRACT RATE DIFFER!`);
-      console.log(`│   Frontend shows ${scheduleRate}% but contract uses ${Number(effectiveRateForced) / 100}%`);
+    console.log(`│ ── Frontend vs Contract (today: ${dayNames[scheduleIdx]}) ──`);
+    console.log(`│ Frontend rate:   ${scheduleRate}% → $${frontendDailyYield.toFixed(6)}/day`);
+    console.log(`│ Contract rate:   ${Number(todayRate) / 100}% → $${contractDailyYield.toFixed(6)}/day`);
+    if (Math.abs(frontendDailyYield - contractDailyYield) > 0.001) {
+      console.log(`│ ❌ FRONTEND/CONTRACT YIELD MISMATCH!`);
+      console.log(`│   Frontend: $${frontendDailyYield.toFixed(6)} vs Contract: $${contractDailyYield.toFixed(6)}`);
+    } else {
+      console.log(`│ ✓ Frontend matches contract`);
     }
-    console.log(`└${"─".repeat(60)}`);
+    console.log(`└${"\u2500".repeat(60)}`);
 
     totalPendingContract += contractPending;
     totalPendingCalculated += manualCalc.pending;

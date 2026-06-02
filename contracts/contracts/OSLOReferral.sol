@@ -346,8 +346,7 @@ contract OSLOReferral is IReferral, ReentrancyGuard {
         if (level == 1) return OSLOConstants.REFERRAL_L1_BP;
         if (level == 2) return OSLOConstants.REFERRAL_L2_BP;
         if (level >= 3 && level <= 10) return OSLOConstants.REFERRAL_L3_10_BP;
-        if (level >= 11 && level <= 15) return OSLOConstants.REFERRAL_L11_15_BP;
-        if (level >= 16 && level <= 20) return OSLOConstants.REFERRAL_L16_20_BP;
+        if (level >= 11 && level <= 20) return OSLOConstants.REFERRAL_L11_20_BP;
         return 0;
     }
 

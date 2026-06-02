@@ -398,69 +398,6 @@ export default function InvestPage() {
           </div>
         </GlassCard>
 
-        {/* Package Visualizer */}
-        <GlassCard>
-          <h2 className="text-lg font-medium mb-4">Package Calculator</h2>
-          <div className="space-y-3">
-            {[1, 2].map((pkg) => {
-              const schedule = YIELD_SCHEDULE[pkg];
-              const isActive = predictedTier === pkg && amountNum >= 10;
-              const isUserTier = tier === pkg;
-              return (
-                <div
-                  key={pkg}
-                  className={`flex items-center gap-4 p-3 rounded-btn border transition-all ${
-                    isActive
-                      ? "border-oslo-ice/50 bg-oslo-ice-dim shadow-[0_0_12px_rgba(0,229,255,0.08)]"
-                      : isUserTier
-                      ? "border-oslo-aurora/40 bg-oslo-aurora-dim"
-                      : "border-white/5 bg-white/[0.02]"
-                  }`}
-                >
-                  <TierBadge tier={pkg} />
-                  <div className="flex-1">
-                    <p className="text-xs font-medium">
-                      {schedule.range}
-                    </p>
-                    <p className="text-[10px] text-oslo-text-muted mt-0.5">
-                      {lifetimeActive
-                        ? `Lifetime ${formatRate(LIFETIME_RATE_BP)}`
-                        : `${schedule.weeklyTotal}% weekly (dynamic daily)`
-                      }
-                    </p>
-                  </div>
-                  {isActive && (
-                    <span className="text-[10px] text-oslo-ice font-medium">ACTIVE</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* 3X Cap Info */}
-          {amountNum >= 10 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mt-6 p-4 rounded-lg bg-white/[0.03] border border-white/5"
-            >
-              <h3 className="text-xs font-medium text-oslo-text-muted uppercase tracking-wider mb-3">
-                3X Return Cap
-              </h3>
-              <div className="flex items-center gap-3">
-                <ProgressRing progress={0} size={48} color="ice" showLabel={false} />
-                <div>
-                  <p className="text-sm font-mono text-oslo-text-primary">
-                    Up to {formatNumber(threeXCap)} USDT
-                  </p>
-                  <p className="text-xs text-oslo-text-muted mt-0.5">
-                    {RETURN_CAP_MULTIPLIER}X of your {formatNumber(amountNum)} USDT deposit
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </GlassCard>
       </div>
 
       {/* Portfolio Cards */}
@@ -566,48 +503,7 @@ export default function InvestPage() {
             )}
           </GlassCard>
 
-          {/* Dynamic Yield Schedule */}
-          <GlassCard className="mb-4">
-            <h2 className="text-lg font-medium mb-1">Dynamic Yield Schedule</h2>
-            <p className="text-xs text-oslo-text-muted mb-4">
-              Yield earnings are generated daily according to your package.
-            </p>
-            <div className="space-y-4">
-              {Object.entries(YIELD_SCHEDULE).map(([tierKey, schedule]) => (
-                <div key={tierKey} className="p-3 rounded-lg bg-white/[0.03] border border-white/5">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <TierBadge tier={Number(tierKey)} />
-                      <span className="text-xs text-oslo-text-muted">{schedule.range}</span>
-                    </div>
-                    <span className="text-xs font-mono text-oslo-ice">{schedule.weeklyTotal}% / week</span>
-                  </div>
-                  <div className="grid grid-cols-7 gap-1">
-                    {DAY_NAMES.map((day, i) => (
-                      <div key={day} className="text-center">
-                        <p className="text-[9px] text-oslo-text-muted uppercase">{day}</p>
-                        <p className={`text-xs font-mono mt-0.5 ${
-                          schedule.days[i] >= 1.0 ? "text-oslo-ice" : "text-oslo-text-primary"
-                        }`}>
-                          {schedule.days[i].toFixed(2)}%
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-            {lifetimeActive && (
-              <div className="mt-3 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                <p className="text-xs text-amber-400 font-medium">
-                  Lifetime rate active: 0.45% daily for all new deposits
-                </p>
-              </div>
-            )}
-            <p className="text-[10px] text-oslo-text-muted mt-3 italic">
-              After 3X earnings, reinvestment will follow the same yield process.
-            </p>
-          </GlassCard>
+          {/* Dynamic Yield Schedule removed */}
 
           <h2 className="text-lg font-medium mb-4">Your Deposits</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

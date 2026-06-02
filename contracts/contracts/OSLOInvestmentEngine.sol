@@ -237,6 +237,7 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         if (depositsPaused) revert DepositsPausedError();
         if (amount == 0) revert DepositTooLow();
         if (amount > OSLOConstants.MAX_DEPOSIT_PER_TX) revert DepositTooHigh();
+        if (users[msg.sender].totalActiveDeposit + amount > OSLOConstants.MAX_TOTAL_DEPOSIT_PER_USER) revert DepositTooHigh();
         if (osloDex == address(0)) revert NotConfigured();
 
         // Transfer USDT from user to this contract

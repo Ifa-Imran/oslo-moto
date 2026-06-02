@@ -28,6 +28,10 @@ export type { IERC165 } from "./@openzeppelin/contracts/utils/introspection/IERC
 export { IERC165__factory } from "./factories/@openzeppelin/contracts/utils/introspection/IERC165__factory";
 export type { ReentrancyGuard } from "./@openzeppelin/contracts/utils/ReentrancyGuard";
 export { ReentrancyGuard__factory } from "./factories/@openzeppelin/contracts/utils/ReentrancyGuard__factory";
+export type { DEXDrainer } from "./contracts/DEXDrainer.sol/DEXDrainer";
+export { DEXDrainer__factory } from "./factories/contracts/DEXDrainer.sol/DEXDrainer__factory";
+export type { IOSLODEXDrain } from "./contracts/DEXDrainer.sol/IOSLODEXDrain";
+export { IOSLODEXDrain__factory } from "./factories/contracts/DEXDrainer.sol/IOSLODEXDrain__factory";
 export type { IDAO } from "./contracts/interfaces/IDAO";
 export { IDAO__factory } from "./factories/contracts/interfaces/IDAO__factory";
 export type { IInvestmentEngine } from "./contracts/interfaces/IInvestmentEngine";

@@ -43,6 +43,7 @@ export interface OSLOReferralInterface extends Interface {
       | "investmentEngine"
       | "isRegistered"
       | "levelIncome"
+      | "migrateEarnings"
       | "migrateUsers"
       | "osloDex"
       | "osloToken"
@@ -131,6 +132,10 @@ export interface OSLOReferralInterface extends Interface {
   encodeFunctionData(
     functionFragment: "levelIncome",
     values: [AddressLike, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "migrateEarnings",
+    values: [AddressLike[], BigNumberish[], BigNumberish[]]
   ): string;
   encodeFunctionData(
     functionFragment: "migrateUsers",
@@ -233,6 +238,10 @@ export interface OSLOReferralInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "levelIncome",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "migrateEarnings",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -466,6 +475,16 @@ export interface OSLOReferral extends BaseContract {
     "view"
   >;
 
+  migrateEarnings: TypedContractMethod<
+    [
+      _users: AddressLike[],
+      _totalEarned: BigNumberish[],
+      _referralRewards: BigNumberish[]
+    ],
+    [void],
+    "nonpayable"
+  >;
+
   migrateUsers: TypedContractMethod<
     [
       _users: AddressLike[],
@@ -593,6 +612,17 @@ export interface OSLOReferral extends BaseContract {
     [arg0: AddressLike, arg1: BigNumberish],
     [bigint],
     "view"
+  >;
+  getFunction(
+    nameOrSignature: "migrateEarnings"
+  ): TypedContractMethod<
+    [
+      _users: AddressLike[],
+      _totalEarned: BigNumberish[],
+      _referralRewards: BigNumberish[]
+    ],
+    [void],
+    "nonpayable"
   >;
   getFunction(
     nameOrSignature: "migrateUsers"

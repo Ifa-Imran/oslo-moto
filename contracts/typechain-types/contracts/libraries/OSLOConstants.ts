@@ -41,6 +41,7 @@ export interface OSLOConstantsInterface extends Interface {
       | "MAX_DAO_MEMBERS"
       | "MAX_DEPOSIT_PER_TX"
       | "MAX_REFERRAL_LEVELS"
+      | "MAX_TOTAL_DEPOSIT_PER_USER"
       | "MIN_REMAINING_SUPPLY"
       | "MIN_WITHDRAWAL_THRESHOLD"
       | "PKG1_FRI"
@@ -79,8 +80,7 @@ export interface OSLOConstantsInterface extends Interface {
       | "RANK7_TURNOVER"
       | "RANK_MAIN_LEG_MAX_BP"
       | "RANK_OTHER_LEGS_MIN_BP"
-      | "REFERRAL_L11_15_BP"
-      | "REFERRAL_L16_20_BP"
+      | "REFERRAL_L11_20_BP"
       | "REFERRAL_L1_BP"
       | "REFERRAL_L2_BP"
       | "REFERRAL_L3_10_BP"
@@ -173,6 +173,10 @@ export interface OSLOConstantsInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "MAX_REFERRAL_LEVELS",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "MAX_TOTAL_DEPOSIT_PER_USER",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -280,11 +284,7 @@ export interface OSLOConstantsInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "REFERRAL_L11_15_BP",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "REFERRAL_L16_20_BP",
+    functionFragment: "REFERRAL_L11_20_BP",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -429,6 +429,10 @@ export interface OSLOConstantsInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "MAX_TOTAL_DEPOSIT_PER_USER",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "MIN_REMAINING_SUPPLY",
     data: BytesLike
   ): Result;
@@ -533,11 +537,7 @@ export interface OSLOConstantsInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "REFERRAL_L11_15_BP",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "REFERRAL_L16_20_BP",
+    functionFragment: "REFERRAL_L11_20_BP",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -687,6 +687,8 @@ export interface OSLOConstants extends BaseContract {
 
   MAX_REFERRAL_LEVELS: TypedContractMethod<[], [bigint], "view">;
 
+  MAX_TOTAL_DEPOSIT_PER_USER: TypedContractMethod<[], [bigint], "view">;
+
   MIN_REMAINING_SUPPLY: TypedContractMethod<[], [bigint], "view">;
 
   MIN_WITHDRAWAL_THRESHOLD: TypedContractMethod<[], [bigint], "view">;
@@ -763,9 +765,7 @@ export interface OSLOConstants extends BaseContract {
 
   RANK_OTHER_LEGS_MIN_BP: TypedContractMethod<[], [bigint], "view">;
 
-  REFERRAL_L11_15_BP: TypedContractMethod<[], [bigint], "view">;
-
-  REFERRAL_L16_20_BP: TypedContractMethod<[], [bigint], "view">;
+  REFERRAL_L11_20_BP: TypedContractMethod<[], [bigint], "view">;
 
   REFERRAL_L1_BP: TypedContractMethod<[], [bigint], "view">;
 
@@ -859,6 +859,9 @@ export interface OSLOConstants extends BaseContract {
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "MAX_REFERRAL_LEVELS"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "MAX_TOTAL_DEPOSIT_PER_USER"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "MIN_REMAINING_SUPPLY"
@@ -975,10 +978,7 @@ export interface OSLOConstants extends BaseContract {
     nameOrSignature: "RANK_OTHER_LEGS_MIN_BP"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
-    nameOrSignature: "REFERRAL_L11_15_BP"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "REFERRAL_L16_20_BP"
+    nameOrSignature: "REFERRAL_L11_20_BP"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "REFERRAL_L1_BP"

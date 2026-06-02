@@ -76,6 +76,7 @@ export interface OSLOInvestmentEngineInterface extends Interface {
       | "getUserTier"
       | "isInEarlyExitPeriod"
       | "launchTimestamp"
+      | "migrateCombinedEarnings"
       | "migrateDeposits"
       | "minClaimThreshold"
       | "notifyLevelIncome"
@@ -178,6 +179,10 @@ export interface OSLOInvestmentEngineInterface extends Interface {
   encodeFunctionData(
     functionFragment: "launchTimestamp",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "migrateCombinedEarnings",
+    values: [AddressLike[], BigNumberish[]]
   ): string;
   encodeFunctionData(
     functionFragment: "migrateDeposits",
@@ -309,6 +314,10 @@ export interface OSLOInvestmentEngineInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "launchTimestamp",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "migrateCombinedEarnings",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -667,6 +676,12 @@ export interface OSLOInvestmentEngine extends BaseContract {
 
   launchTimestamp: TypedContractMethod<[], [bigint], "view">;
 
+  migrateCombinedEarnings: TypedContractMethod<
+    [_users: AddressLike[], _amounts: BigNumberish[]],
+    [void],
+    "nonpayable"
+  >;
+
   migrateDeposits: TypedContractMethod<
     [entries: OSLOInvestmentEngine.DepositMigrationStruct[]],
     [void],
@@ -871,6 +886,13 @@ export interface OSLOInvestmentEngine extends BaseContract {
   getFunction(
     nameOrSignature: "launchTimestamp"
   ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "migrateCombinedEarnings"
+  ): TypedContractMethod<
+    [_users: AddressLike[], _amounts: BigNumberish[]],
+    [void],
+    "nonpayable"
+  >;
   getFunction(
     nameOrSignature: "migrateDeposits"
   ): TypedContractMethod<

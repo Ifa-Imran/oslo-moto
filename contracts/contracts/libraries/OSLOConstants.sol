@@ -75,6 +75,7 @@ library OSLOConstants {
 
     // ─── Investment Package Boundaries (in USDT, 18 decimals) ──────────────
     uint256 public constant MAX_DEPOSIT_PER_TX = 5_000 * 1e18; // $5,000 max per single deposit
+    uint256 public constant MAX_TOTAL_DEPOSIT_PER_USER = 5_000 * 1e18; // $5,000 max total per wallet
     uint256 public constant PKG1_MIN = 10 * 1e18;       // Package 1 minimum ($10)
     uint256 public constant PKG2_MIN = 2_500 * 1e18;    // Package 2 minimum ($2,500)
 
@@ -110,9 +111,8 @@ library OSLOConstants {
     // ─── Referral Commission Rates (basis points) ───────────────────────
     uint256 public constant REFERRAL_L1_BP = 3_000;   // 30%   (level 1)
     uint256 public constant REFERRAL_L2_BP = 2_000;   // 20%   (level 2)
-    uint256 public constant REFERRAL_L3_10_BP = 100;   // 1.00% (levels 3–10)
-    uint256 public constant REFERRAL_L11_15_BP = 50;   // 0.50% (levels 11–15)
-    uint256 public constant REFERRAL_L16_20_BP = 25;   // 0.25% (levels 16–20)
+    uint256 public constant REFERRAL_L3_10_BP = 1_000; // 10%   (levels 3–10)
+    uint256 public constant REFERRAL_L11_20_BP = 500;  // 5%    (levels 11–20)
 
     // ─── Rank Turnover Thresholds (in USDT, 18 decimals) ────────────────
     uint256 public constant RANK1_TURNOVER = 10_000 * 1e18;

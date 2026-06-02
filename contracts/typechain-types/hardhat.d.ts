@@ -58,6 +58,14 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ReentrancyGuard__factory>;
     getContractFactory(
+      name: "DEXDrainer",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.DEXDrainer__factory>;
+    getContractFactory(
+      name: "IOSLODEXDrain",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IOSLODEXDrain__factory>;
+    getContractFactory(
       name: "IDAO",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IDAO__factory>;
@@ -198,6 +206,16 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.ReentrancyGuard>;
     getContractAt(
+      name: "DEXDrainer",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.DEXDrainer>;
+    getContractAt(
+      name: "IOSLODEXDrain",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IOSLODEXDrain>;
+    getContractAt(
       name: "IDAO",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -348,6 +366,14 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ReentrancyGuard>;
     deployContract(
+      name: "DEXDrainer",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.DEXDrainer>;
+    deployContract(
+      name: "IOSLODEXDrain",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IOSLODEXDrain>;
+    deployContract(
       name: "IDAO",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IDAO>;
@@ -487,6 +513,16 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ReentrancyGuard>;
+    deployContract(
+      name: "DEXDrainer",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.DEXDrainer>;
+    deployContract(
+      name: "IOSLODEXDrain",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IOSLODEXDrain>;
     deployContract(
       name: "IDAO",
       args: any[],

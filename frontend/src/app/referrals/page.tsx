@@ -379,8 +379,7 @@ export default function ReferralsPage() {
               if (key === '1') return level === 1;
               if (key === '2') return level === 2;
               if (key === '3-10') return level >= 3 && level <= 10;
-              if (key === '11-15') return level >= 11 && level <= 15;
-              if (key === '16-20') return level >= 16 && level <= 20;
+              if (key === '11-20') return level >= 11 && level <= 20;
               return false;
             });
             const rate = rateEntry ? rateEntry[1] : { pct: 0 };
@@ -414,7 +413,7 @@ export default function ReferralsPage() {
             <br />
             • This is called &quot;yield-on-yield&quot; — you earn from your team&apos;s profit claims
             <br />
-            • Commission rates: L1 = 30%, L2 = 20%, L3-10 = 1%, L11-15 = 0.5%, L16-20 = 0.25%
+            • Commission rates: L1 = 30%, L2 = 20%, L3-10 = 10%, L11-20 = 5%
             <br />
             • Higher levels require more qualified direct referrals to unlock
             <br />

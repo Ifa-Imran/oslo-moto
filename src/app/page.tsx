@@ -118,7 +118,7 @@ function LandingPage() {
 
   // BUSD allowance check for referral contract (needed for $5 registration fee)
   const { data: busdAllowanceForReferral } = useReadContract({
-    address: CONTRACTS.busd,
+    address: CONTRACTS.usdt,
     abi: erc20Abi,
     functionName: "allowance",
     args: address ? [address, CONTRACTS.referral] : undefined,
@@ -158,7 +158,7 @@ function LandingPage() {
         addToast({ title: "Approving BUSD for registration...", status: "pending" });
 
         const approveTx = await approveAsync({
-          address: CONTRACTS.busd,
+          address: CONTRACTS.usdt,
           abi: erc20Abi,
           functionName: "approve",
           args: [CONTRACTS.referral, REGISTRATION_FEE_WEI],
@@ -972,7 +972,7 @@ function LandingPage() {
             <div className="mt-4 p-3 rounded-lg bg-oslo-ice/5 border border-oslo-ice/10">
               <p className="text-[11px] text-oslo-text-secondary">
                 <strong className="text-oslo-ice">How it works:</strong> When your downline claims yield, a percentage is distributed to you based on the level commission rate.
-                Level 1 = 30%, Level 2 = 20%, Levels 3-10 = 1%, Levels 11-15 = 0.5%, Levels 16-20 = 0.25%.
+                Level 1 = 30%, Level 2 = 20%, Levels 3-10 = 10%, Levels 11-20 = 5%.
               </p>
             </div>
           </GlassCard>

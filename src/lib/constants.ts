@@ -173,9 +173,8 @@ export const LEVEL_UNLOCK_THRESHOLDS = [
 export const REFERRAL_COMMISSION_RATES: Record<string, { pct: number; bp: number }> = {
   "1": { pct: 30, bp: 3000 },
   "2": { pct: 20, bp: 2000 },
-  "3-10": { pct: 1, bp: 100 },
-  "11-15": { pct: 0.5, bp: 50 },
-  "16-20": { pct: 0.25, bp: 25 },
+  "3-10": { pct: 10, bp: 1000 },
+  "11-20": { pct: 5, bp: 500 },
 };
 
 // ─── Ranks ───────────────────────────────────────────────────────────────
