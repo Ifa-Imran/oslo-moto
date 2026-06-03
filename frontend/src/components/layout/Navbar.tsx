@@ -8,6 +8,7 @@ import { useAccount } from "wagmi";
 import { useTokenReads } from "@/hooks/useToken";
 import { formatToken } from "@/lib/utils";
 import { useAppStore } from "@/store/useAppStore";
+import { MintUSDTButton } from "@/components/ui/MintUSDTButton";
 import { useEffect } from "react";
 
 const NAV_ITEMS = [
@@ -81,6 +82,9 @@ export function Navbar() {
               BNB Chain
             </span>
           )}
+
+          {/* Mint Faucet */}
+          {isConnected && <MintUSDTButton />}
 
           {/* Balance */}
           {isConnected && osloBalance.data != null && (
