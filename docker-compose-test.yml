@@ -1,0 +1,53 @@
+services:
+  app-test:
+    image: node:20-alpine
+    restart: unless-stopped
+    working_dir: /app/frontend
+    command: >
+      sh -c "
+        apk add --no-cache git &&
+        if [ ! -f /app/.bootstrap-v3-test-done ]; then
+          rm -rf /tmp/repo &&
+          git clone --depth 1 --branch v3-testnet-dex-vault https://github.com/Ifa-Imran/oslo-moto.git /tmp/repo &&
+          find /app -mindepth 1 -maxdepth 1 ! -name node_modules -exec rm -rf {} + &&
+          cp -a /tmp/repo/. /app/ &&
+          cd /app/frontend &&
+          rm -rf /app/frontend/.next /app/frontend/node_modules/.cache &&
+          printf 'NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=%s\n' \"$${NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID}\" > /app/frontend/.env.local &&
+          printf 'NEXT_PUBLIC_SITE_URL=%s\n' \"$${NEXT_PUBLIC_SITE_URL}\" >> /app/frontend/.env.local &&
+          npm ci --include=dev --legacy-peer-deps &&
+          NODE_OPTIONS=--max-old-space-size=2048 npm run build &&
+          rm -rf /app/frontend/.next/standalone/.next/static /app/frontend/.next/standalone/public &&
+          cp -r .next/static .next/standalone/.next/static &&
+          cp -r public .next/standalone/public &&
+          touch /app/.bootstrap-v3-test-done ;
+        fi &&
+        NODE_ENV=production HOSTNAME=0.0.0.0 PORT=3000 node .next/standalone/server.js
+      "
+    environment:
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=de1938e67e453d4ff13d1689f2262e43
+      - NEXT_PUBLIC_SITE_URL=https://test.oslomoto.com
+      - NEXT_TELEMETRY_DISABLED=1
+    volumes:
+      - oslo_app_test:/app
+    networks:
+      - traefik_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=kairo-dev_kairo_network"
+      - "traefik.http.routers.oslomoto-test.rule=Host(`test.oslomoto.com`)"
+      - "traefik.http.routers.oslomoto-test.entrypoints=websecure"
+      - "traefik.http.routers.oslomoto-test.tls=true"
+      - "traefik.http.routers.oslomoto-test.tls.certresolver=letsencrypt"
+      - "traefik.http.services.oslomoto-test.loadbalancer.server.port=3000"
+      - "traefik.http.routers.oslomoto-test.priority=10"
+
+volumes:
+  oslo_app_test:
+
+networks:
+  traefik_net:
+    external: true
+    name: kairo-dev_kairo_network
