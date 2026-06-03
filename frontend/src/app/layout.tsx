@@ -6,6 +6,7 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { Background } from "@/components/layout/Background";
 import { RegistrationGuard } from "@/components/RegistrationGuard";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { NFTMarketplacePopup } from "@/components/ui/NFTMarketplacePopup";
 import "@rainbow-me/rainbowkit/styles.css";
 import "./globals.css";
 
@@ -75,6 +76,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-oslo-void text-oslo-text-primary antialiased overflow-x-hidden">
         <Providers>
           <ErrorBoundary>
+            <NFTMarketplacePopup />
             <Background />
             <Navbar />
             <Sidebar />
