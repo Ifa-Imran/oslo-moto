@@ -1,6 +1,6 @@
 import { CONTRACTS } from "@/lib/contracts";
-import tokenAbi from "@/abis/OSLOToken.json";
-import { useReadContract, useWatchContractEvent } from "wagmi";
+import tokenAbi from "@/abis/OSLOTokenV2.json";
+import { useReadContract } from "wagmi";
 import { type Address, erc20Abi as standardErc20Abi } from "viem";
 
 export function useTokenReads(userAddress?: Address) {
@@ -38,13 +38,4 @@ export function useUSDTReads(userAddress?: Address) {
   });
 
   return { usdtBalance };
-}
-
-export function useTokenEvents(onEvent?: (event: any) => void) {
-  useWatchContractEvent({
-    address: CONTRACTS.osloToken,
-    abi: tokenAbi,
-    eventName: "SellTaxApplied",
-    onLogs: (logs) => logs.forEach((log) => onEvent?.(log)),
-  });
 }

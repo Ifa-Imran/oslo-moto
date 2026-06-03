@@ -19,17 +19,23 @@ library OSLOConstants {
     // ─── Minimum Withdrawal Threshold ───────────────────────────────────
     uint256 public constant MIN_WITHDRAWAL_THRESHOLD = 10 * 1e18; // $10 USDT minimum to withdraw
 
-    // ─── Sell Tax ───────────────────────────────────────────────────────
-    // On every sell/swap, tokens are distributed:
-    //   10% fee → burned (the fee is paid by burning tokens)
-    //   70% → InvestmentEngine (contract reserve for rewards)
-    //   20% → additionally burned (deflationary)
-    //   Total burn per sell = 30% (until burn cap is reached)
-    //   USDT from the swap stays in the DEX as liquidity.
-    uint256 public constant SELL_TAX_BP = 1_000;         // 10% sell tax (burned as fee)
-    uint256 public constant SELL_TAX_TO_CONTRACT_BP = 7_000; // 70% → InvestmentEngine (contract reserve)
-    uint256 public constant SELL_TAX_TO_BURN_BP = 2_000;     // 20% additional burn
-    uint256 public constant SELL_TAX_FEE_BURN_BP = 1_000;    // 10% fee → burned (was LP, now burn)
+    // ─── Sell Tax (V3 DEX) ──────────────────────────────────────────────
+    // On every sell on DEXv2:
+    //   10% USD tax (user gets 90% of swap value)
+    //   50% of incoming tokens → burned permanently
+    //   50% of incoming tokens → added back to liquidity pool
+    uint256 public constant SELL_TAX_BP = 1_000;             // 10% sell tax on USD output
+    uint256 public constant SELL_BURN_BP = 5_000;            // 50% of tokens burned
+    uint256 public constant SELL_TO_LIQUIDITY_BP = 5_000;    // 50% of tokens to pool
+
+    // Legacy constants (kept for V2 compatibility)
+    uint256 public constant SELL_TAX_TO_CONTRACT_BP = 7_000; // V2: 70% → InvestmentEngine
+    uint256 public constant SELL_TAX_TO_BURN_BP = 2_000;     // V2: 20% additional burn
+    uint256 public constant SELL_TAX_FEE_BURN_BP = 1_000;    // V2: 10% fee → burned
+
+    // ─── V3 DEX Initial Liquidity ─────────────────────────────────────────
+    uint256 public constant INITIAL_DEX_USDT = 2_000 * 1e18;   // $2,000 initial USDT in pool
+    uint256 public constant INITIAL_DEX_OSLO = 100_000 * 1e18; // 100K tokens in pool
 
     // ─── 3X Return Cap ──────────────────────────────────────────────────
     uint256 public constant RETURN_CAP_MULTIPLIER = 3; // 3X combined cap on all earnings

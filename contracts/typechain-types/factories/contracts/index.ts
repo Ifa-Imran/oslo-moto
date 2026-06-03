@@ -2,6 +2,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export * as dexDrainerSol from "./DEXDrainer.sol";
+export * as osloDexV2Sol from "./OSLODexV2.sol";
 export * as interfaces from "./interfaces";
 export * as libraries from "./libraries";
 export * as mocks from "./mocks";
@@ -12,4 +13,6 @@ export { OSLOLiquidityManager__factory } from "./OSLOLiquidityManager__factory";
 export { OSLORankSystem__factory } from "./OSLORankSystem__factory";
 export { OSLOReferral__factory } from "./OSLOReferral__factory";
 export { OSLOToken__factory } from "./OSLOToken__factory";
+export { OSLOTokenV2__factory } from "./OSLOTokenV2__factory";
 export { OSLOTreasury__factory } from "./OSLOTreasury__factory";
+export { OSLOVault__factory } from "./OSLOVault__factory";

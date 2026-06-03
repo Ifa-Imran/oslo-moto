@@ -537,7 +537,7 @@ function DepositCard({
   const publicClient = usePublicClient();
   const { addToast } = useAppStore();
   const { writeContractAsync } = useWriteContract();
-  const { depositData, pendingRewards, isInEarlyExit, earlyExitAmount } = useDepositRead(
+  const { depositData, pendingRewards, isInEarlyExit } = useDepositRead(
     address,
     index
   );
@@ -638,11 +638,11 @@ function DepositCard({
 
   // Early exit data
   const inEarlyExit = (isInEarlyExit?.data as boolean) || false;
-  const exitData = earlyExitAmount?.data as [bigint, bigint, bigint, bigint] | undefined;
-  const exitPrincipal = exitData ? Number(exitData[0]) / 1e18 : 0;
-  const exitAccruedYield = exitData ? Number(exitData[1]) / 1e18 : 0;
-  const exitFee = exitData ? Number(exitData[2]) / 1e18 : 0;
-  const exitNetReturn = exitData ? Number(exitData[3]) / 1e18 : 0;
+  // V3: Calculate exit amounts from principal (10% fee on principal)
+  const exitPrincipal = amountNum;
+  const exitAccruedYield = pendingUsdtNum;
+  const exitFee = amountNum * 0.1;
+  const exitNetReturn = amountNum - exitFee;
   const depositTimestamp = Number(depositTime);
   const exitDeadline = depositTimestamp + EARLY_EXIT_PERIOD_SECONDS;
 

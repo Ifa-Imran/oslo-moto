@@ -3,6 +3,8 @@
 /* eslint-disable */
 import type * as dexDrainerSol from "./DEXDrainer.sol";
 export type { dexDrainerSol };
+import type * as osloDexV2Sol from "./OSLODexV2.sol";
+export type { osloDexV2Sol };
 import type * as interfaces from "./interfaces";
 export type { interfaces };
 import type * as libraries from "./libraries";
@@ -16,4 +18,6 @@ export type { OSLOLiquidityManager } from "./OSLOLiquidityManager";
 export type { OSLORankSystem } from "./OSLORankSystem";
 export type { OSLOReferral } from "./OSLOReferral";
 export type { OSLOToken } from "./OSLOToken";
+export type { OSLOTokenV2 } from "./OSLOTokenV2";
 export type { OSLOTreasury } from "./OSLOTreasury";
+export type { OSLOVault } from "./OSLOVault";

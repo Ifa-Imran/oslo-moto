@@ -1,15 +1,19 @@
-// OSLO Protocol Contract Addresses
-// BSC Mainnet (chainId: 56) — Mainnet V2 Deployment
-// USDT: Real BSC USDT (BEP-20)
+// OSLO Protocol V3 Contract Addresses
+// BSC Testnet (chainId: 97) — Testnet V3 Deployment
+// USDT: MockUSDT on BSC Testnet
 
 export const CONTRACTS = {
-  osloToken:        "0xE1C6B447bFf4e8292d8c2463e3F68ED7Be8e4a32" as `0x${string}`,
-  investmentEngine: "0x4d27A6564BE18fF57f4484aCBd8F5bCc9caB2E80" as `0x${string}`,
-  referral:         "0x04874b7fE1b31B4cC45575f15bcE7Aeb90399Cd3" as `0x${string}`,
-  rankSystem:       "0xb678aB43824a244568f5959c4A1B003023d97aD6" as `0x${string}`,
-  dao:              "0x6228c8896ff70363484049c027fAF27635c98427" as `0x${string}`,
-  treasury:         "0x1f261F826548d737f65231A57Dbba6A240bF0137" as `0x${string}`,
-  liquidityManager: "0xF903159AEAA09d08B35978B3333e9D07172f9e41" as `0x${string}`,
-  osloDEX:          "0xC583E5f125F312a35045B6Be1eDd729658C7A48B" as `0x${string}`,
-  usdt:             "0x55d398326f99059fF775485246999027B3197955" as `0x${string}`,
+  // V3 Core contracts
+  osloToken:  "0x4BF960c174cd7bd07D81ceCB23BBBd9b85C14CA4" as `0x${string}`,
+  osloDEX:    "0x7C927c151A258eCB262f548BbD07B12C37Ae797a" as `0x${string}`,
+  osloVault:  "0xe188afCb1Dacd30Ca8BbF5F69dBf64b08b0136B8" as `0x${string}`,
+  usdt:       "0x87025Ab074A1184802C056A2B8F2fFD8051A6c0f" as `0x${string}`,
+
+  // V2 backward-compatible aliases (point to Vault or stub for compilation)
+  investmentEngine: "0xe188afCb1Dacd30Ca8BbF5F69dBf64b08b0136B8" as `0x${string}`, // = osloVault
+  referral:         "0x0000000000000000000000000000000000000000" as `0x${string}`,
+  rankSystem:       "0x0000000000000000000000000000000000000000" as `0x${string}`,
+  dao:              "0x0000000000000000000000000000000000000000" as `0x${string}`,
+  treasury:         "0x0000000000000000000000000000000000000000" as `0x${string}`,
+  liquidityManager: "0x0000000000000000000000000000000000000000" as `0x${string}`,
 } as const;

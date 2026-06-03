@@ -83,8 +83,8 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\libraries\\OSLOConstants.sol": {
-      "lastModificationDate": 1780377360096,
-      "contentHash": "e6cc72127b90be790cfa5449d850a227",
+      "lastModificationDate": 1780499149121,
+      "contentHash": "31525f8ef7d08cb22c09ea50deed1270",
       "sourceName": "contracts/libraries/OSLOConstants.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -908,7 +908,7 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLOInvestmentEngine.sol": {
-      "lastModificationDate": 1780377372842,
+      "lastModificationDate": 1780378529812,
       "contentHash": "8cca6e99c514584a59c74a7328dfd16d",
       "sourceName": "contracts/OSLOInvestmentEngine.sol",
       "solcConfig": {
@@ -1234,7 +1234,7 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLODEX.sol": {
-      "lastModificationDate": 1780378672277,
+      "lastModificationDate": 1780379498099,
       "contentHash": "ce64ef06a9c8566bcd4422e508a1d6bb",
       "sourceName": "contracts/OSLODEX.sol",
       "solcConfig": {
@@ -1313,6 +1313,207 @@
       "artifacts": [
         "DEXDrainer",
         "IOSLODEXDrain"
+      ]
+    },
+    "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLOTokenV2.sol": {
+      "lastModificationDate": 1780499173488,
+      "contentHash": "456380de2ca168bc8bd711e021a58741",
+      "sourceName": "contracts/OSLOTokenV2.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+        "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol",
+        "@openzeppelin/contracts/utils/ReentrancyGuard.sol",
+        "./libraries/OSLOConstants.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "OSLOTokenV2"
+      ]
+    },
+    "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLOVault.sol": {
+      "lastModificationDate": 1780499373842,
+      "contentHash": "8f8496a7972367b09858f86927b43975",
+      "sourceName": "contracts/OSLOVault.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol",
+        "@openzeppelin/contracts/utils/ReentrancyGuard.sol",
+        "./libraries/OSLOConstants.sol",
+        "./interfaces/IOSLOVault.sol",
+        "./interfaces/IOSLODexV2.sol",
+        "./interfaces/IReferral.sol",
+        "./interfaces/IRankSystem.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "OSLOVault"
+      ]
+    },
+    "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\interfaces\\IOSLOVault.sol": {
+      "lastModificationDate": 1780499124167,
+      "contentHash": "d723edb113f04589871ffcfd6fa1f38c",
+      "sourceName": "contracts/interfaces/IOSLOVault.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "IOSLOVault"
+      ]
+    },
+    "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\interfaces\\IOSLODexV2.sol": {
+      "lastModificationDate": 1780499111250,
+      "contentHash": "7251094394758eaecdcde214ce674e96",
+      "sourceName": "contracts/interfaces/IOSLODexV2.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "IOSLODexV2"
+      ]
+    },
+    "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLODexV2.sol": {
+      "lastModificationDate": 1780499231330,
+      "contentHash": "89adba7bb548154adf0c9e6ffe86c0a3",
+      "sourceName": "contracts/OSLODexV2.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol",
+        "@openzeppelin/contracts/utils/ReentrancyGuard.sol",
+        "./libraries/OSLOConstants.sol",
+        "./interfaces/IOSLODexV2.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "IOSLOTokenV2Burn",
+        "OSLODexV2"
       ]
     }
   }

@@ -34,6 +34,8 @@ export interface OSLOConstantsInterface extends Interface {
       | "DEX_ALLOCATION"
       | "EARLY_EXIT_FEE_BP"
       | "EARLY_EXIT_PERIOD"
+      | "INITIAL_DEX_OSLO"
+      | "INITIAL_DEX_USDT"
       | "LAUNCH_TIMESTAMP"
       | "LIFETIME_RATE"
       | "LIFETIME_RATE_START"
@@ -85,10 +87,12 @@ export interface OSLOConstantsInterface extends Interface {
       | "REFERRAL_L2_BP"
       | "REFERRAL_L3_10_BP"
       | "RETURN_CAP_MULTIPLIER"
+      | "SELL_BURN_BP"
       | "SELL_TAX_BP"
       | "SELL_TAX_FEE_BURN_BP"
       | "SELL_TAX_TO_BURN_BP"
       | "SELL_TAX_TO_CONTRACT_BP"
+      | "SELL_TO_LIQUIDITY_BP"
       | "TIMELOCK_DELAY"
       | "TOTAL_SUPPLY"
       | "TREASURY_TO_DAO_BP"
@@ -145,6 +149,14 @@ export interface OSLOConstantsInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "EARLY_EXIT_PERIOD",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "INITIAL_DEX_OSLO",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "INITIAL_DEX_USDT",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -304,6 +316,10 @@ export interface OSLOConstantsInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "SELL_BURN_BP",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "SELL_TAX_BP",
     values?: undefined
   ): string;
@@ -317,6 +333,10 @@ export interface OSLOConstantsInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "SELL_TAX_TO_CONTRACT_BP",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "SELL_TO_LIQUIDITY_BP",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -398,6 +418,14 @@ export interface OSLOConstantsInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "EARLY_EXIT_PERIOD",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "INITIAL_DEX_OSLO",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "INITIAL_DEX_USDT",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -557,6 +585,10 @@ export interface OSLOConstantsInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "SELL_BURN_BP",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "SELL_TAX_BP",
     data: BytesLike
   ): Result;
@@ -570,6 +602,10 @@ export interface OSLOConstantsInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "SELL_TAX_TO_CONTRACT_BP",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "SELL_TO_LIQUIDITY_BP",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -673,6 +709,10 @@ export interface OSLOConstants extends BaseContract {
 
   EARLY_EXIT_PERIOD: TypedContractMethod<[], [bigint], "view">;
 
+  INITIAL_DEX_OSLO: TypedContractMethod<[], [bigint], "view">;
+
+  INITIAL_DEX_USDT: TypedContractMethod<[], [bigint], "view">;
+
   LAUNCH_TIMESTAMP: TypedContractMethod<[], [bigint], "view">;
 
   LIFETIME_RATE: TypedContractMethod<[], [bigint], "view">;
@@ -775,6 +815,8 @@ export interface OSLOConstants extends BaseContract {
 
   RETURN_CAP_MULTIPLIER: TypedContractMethod<[], [bigint], "view">;
 
+  SELL_BURN_BP: TypedContractMethod<[], [bigint], "view">;
+
   SELL_TAX_BP: TypedContractMethod<[], [bigint], "view">;
 
   SELL_TAX_FEE_BURN_BP: TypedContractMethod<[], [bigint], "view">;
@@ -782,6 +824,8 @@ export interface OSLOConstants extends BaseContract {
   SELL_TAX_TO_BURN_BP: TypedContractMethod<[], [bigint], "view">;
 
   SELL_TAX_TO_CONTRACT_BP: TypedContractMethod<[], [bigint], "view">;
+
+  SELL_TO_LIQUIDITY_BP: TypedContractMethod<[], [bigint], "view">;
 
   TIMELOCK_DELAY: TypedContractMethod<[], [bigint], "view">;
 
@@ -838,6 +882,12 @@ export interface OSLOConstants extends BaseContract {
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "EARLY_EXIT_PERIOD"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "INITIAL_DEX_OSLO"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "INITIAL_DEX_USDT"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "LAUNCH_TIMESTAMP"
@@ -993,6 +1043,9 @@ export interface OSLOConstants extends BaseContract {
     nameOrSignature: "RETURN_CAP_MULTIPLIER"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
+    nameOrSignature: "SELL_BURN_BP"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
     nameOrSignature: "SELL_TAX_BP"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
@@ -1003,6 +1056,9 @@ export interface OSLOConstants extends BaseContract {
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "SELL_TAX_TO_CONTRACT_BP"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "SELL_TO_LIQUIDITY_BP"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "TIMELOCK_DELAY"

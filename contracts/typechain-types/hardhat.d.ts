@@ -82,9 +82,17 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IOSLODEX__factory>;
     getContractFactory(
+      name: "IOSLODexV2",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IOSLODexV2__factory>;
+    getContractFactory(
       name: "IOSLOToken",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IOSLOToken__factory>;
+    getContractFactory(
+      name: "IOSLOVault",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IOSLOVault__factory>;
     getContractFactory(
       name: "IPancakeFactory",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -126,6 +134,14 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.OSLODEX__factory>;
     getContractFactory(
+      name: "IOSLOTokenV2Burn",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IOSLOTokenV2Burn__factory>;
+    getContractFactory(
+      name: "OSLODexV2",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.OSLODexV2__factory>;
+    getContractFactory(
       name: "OSLOInvestmentEngine",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.OSLOInvestmentEngine__factory>;
@@ -146,9 +162,17 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.OSLOToken__factory>;
     getContractFactory(
+      name: "OSLOTokenV2",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.OSLOTokenV2__factory>;
+    getContractFactory(
       name: "OSLOTreasury",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.OSLOTreasury__factory>;
+    getContractFactory(
+      name: "OSLOVault",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.OSLOVault__factory>;
 
     getContractAt(
       name: "IERC1155Errors",
@@ -236,10 +260,20 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.IOSLODEX>;
     getContractAt(
+      name: "IOSLODexV2",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IOSLODexV2>;
+    getContractAt(
       name: "IOSLOToken",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.IOSLOToken>;
+    getContractAt(
+      name: "IOSLOVault",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IOSLOVault>;
     getContractAt(
       name: "IPancakeFactory",
       address: string | ethers.Addressable,
@@ -291,6 +325,16 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.OSLODEX>;
     getContractAt(
+      name: "IOSLOTokenV2Burn",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IOSLOTokenV2Burn>;
+    getContractAt(
+      name: "OSLODexV2",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.OSLODexV2>;
+    getContractAt(
       name: "OSLOInvestmentEngine",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -316,10 +360,20 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.OSLOToken>;
     getContractAt(
+      name: "OSLOTokenV2",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.OSLOTokenV2>;
+    getContractAt(
       name: "OSLOTreasury",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.OSLOTreasury>;
+    getContractAt(
+      name: "OSLOVault",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.OSLOVault>;
 
     deployContract(
       name: "IERC1155Errors",
@@ -390,9 +444,17 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IOSLODEX>;
     deployContract(
+      name: "IOSLODexV2",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IOSLODexV2>;
+    deployContract(
       name: "IOSLOToken",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IOSLOToken>;
+    deployContract(
+      name: "IOSLOVault",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IOSLOVault>;
     deployContract(
       name: "IPancakeFactory",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -434,6 +496,14 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.OSLODEX>;
     deployContract(
+      name: "IOSLOTokenV2Burn",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IOSLOTokenV2Burn>;
+    deployContract(
+      name: "OSLODexV2",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.OSLODexV2>;
+    deployContract(
       name: "OSLOInvestmentEngine",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.OSLOInvestmentEngine>;
@@ -454,9 +524,17 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.OSLOToken>;
     deployContract(
+      name: "OSLOTokenV2",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.OSLOTokenV2>;
+    deployContract(
       name: "OSLOTreasury",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.OSLOTreasury>;
+    deployContract(
+      name: "OSLOVault",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.OSLOVault>;
 
     deployContract(
       name: "IERC1155Errors",
@@ -544,10 +622,20 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IOSLODEX>;
     deployContract(
+      name: "IOSLODexV2",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IOSLODexV2>;
+    deployContract(
       name: "IOSLOToken",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IOSLOToken>;
+    deployContract(
+      name: "IOSLOVault",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IOSLOVault>;
     deployContract(
       name: "IPancakeFactory",
       args: any[],
@@ -599,6 +687,16 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.OSLODEX>;
     deployContract(
+      name: "IOSLOTokenV2Burn",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IOSLOTokenV2Burn>;
+    deployContract(
+      name: "OSLODexV2",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.OSLODexV2>;
+    deployContract(
       name: "OSLOInvestmentEngine",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -624,10 +722,20 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.OSLOToken>;
     deployContract(
+      name: "OSLOTokenV2",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.OSLOTokenV2>;
+    deployContract(
       name: "OSLOTreasury",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.OSLOTreasury>;
+    deployContract(
+      name: "OSLOVault",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.OSLOVault>;
 
     // default types
     getContractFactory(
