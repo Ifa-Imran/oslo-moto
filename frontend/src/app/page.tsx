@@ -125,7 +125,8 @@ function LandingPage() {
 
   const [flowStep, setFlowStep] = useState<"idle" | "approving" | "registering">("idle");
 
-  const registered = isRegistered.data as boolean | undefined;
+  // V3: No registration system — treat all connected users as registered
+  const registered = isConnected ? true : undefined;
   const tier = Number(userTier.data || 0);
   const activeDeposit = totalActiveDeposit.data as bigint | undefined;
   const depositNum = Number(depositCount.data || 0);
@@ -289,172 +290,13 @@ function LandingPage() {
     );
   }
 
-  // ─── STATE 2: Connected, Not Registered ─────────────────────────────
-  if (registered === false) {
-    const myRef = referrer.data as string | undefined;
-    const usdtBal = usdtBalance.data as bigint | undefined;
-    const totalReg = Number((totalRegistered.data as bigint) || 0n);
-    const isFirstUser = totalReg === 0;
-
-    return (
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-light tracking-tight">Welcome to OSLO</h1>
-          <p className="mt-1 text-sm text-oslo-text-secondary">
-            Register to access the full platform
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Registration Form */}
-          <GlassCard>
-            <div className="flex items-center gap-2 mb-4">
-              <UserPlus className="w-5 h-5 text-oslo-ice" />
-              <h2 className="text-lg font-medium">Register</h2>
-            </div>
-
-            <p className="text-sm text-oslo-text-secondary mb-4">
-              You need to register before you can deposit, earn yields, or build
-              your referral network. A <span className="text-oslo-ice font-medium">$1 USDT fee</span> is required — 100% goes to the liquidity pool.
-            </p>
-
-            {/* Registration info */}
-            <div className="mb-4 p-3 rounded-lg bg-oslo-ice/5 border border-oslo-ice/10">
-              <p className="text-xs text-oslo-text-muted uppercase tracking-wider mb-1">
-                Registration Fee
-              </p>
-              <p className="text-sm font-mono text-oslo-ice">$1.00 USDT — 100% to LP</p>
-              <p className="text-[10px] text-oslo-text-muted mt-1">
-                $1 USDT injected directly into liquidity — no tokens issued
-              </p>
-            </div>
-
-            {/* Current wallet */}
-            <div className="mb-4 p-3 rounded-lg bg-white/[0.03] border border-white/5">
-              <p className="text-xs text-oslo-text-muted uppercase tracking-wider mb-1">
-                Your Wallet
-              </p>
-              <AddressChip address={address!} />
-            </div>
-
-            {/* Referrer input */}
-            <div className="mb-4">
-              <label className="text-xs font-medium text-oslo-text-muted uppercase tracking-wider">
-                Referrer Address
-              </label>
-              {isFirstUser ? (
-                <div className="mt-1.5 p-3 rounded-lg bg-oslo-success/5 border border-oslo-success/20">
-                  <p className="text-sm text-oslo-success flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4" />
-                    You&apos;re the first user — no referrer required
-                  </p>
-                  <p className="text-xs text-oslo-text-muted mt-1">
-                    As the root user, you&apos;ll be the top of the referral tree. Start inviting others to earn commissions.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <input
-                    type="text"
-                    value={referrerInput}
-                    onChange={(e) => setReferrerInput(e.target.value)}
-                    placeholder="0x... (from referral link)"
-                    className="mt-1.5 w-full bg-oslo-void border border-white/10 rounded-btn px-4 py-2.5 text-sm font-mono text-oslo-text-primary placeholder:text-oslo-text-muted focus:outline-none focus:border-oslo-ice/50 transition-all"
-                  />
-                  {refParam ? (
-                    <p className="text-[10px] text-oslo-ice mt-1 flex items-center gap-1">
-                      <CheckCircle className="w-3 h-3" />
-                      Referrer detected from invite link
-                    </p>
-                  ) : (
-                    <p className="text-[10px] text-oslo-text-muted mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3" />
-                      Enter a valid referrer address or paste a referral link
-                    </p>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Approval status indicator */}
-            <div className="flex items-center gap-2 text-xs mb-1">
-              {(() => {
-                const feeAmount = parseEther("1");
-                const allowance = (usdtAllowanceForReferral as bigint) || 0n;
-                if (allowance >= feeAmount) {
-                  return (
-                    <>
-                      <ShieldCheck className="w-3.5 h-3.5 text-oslo-success" />
-                      <span className="text-oslo-success">$1 USDT approved — ready to register</span>
-                    </>
-                  );
-                }
-                return (
-                  <>
-                    <AlertTriangle className="w-3.5 h-3.5 text-oslo-warning" />
-                    <span className="text-oslo-warning">Approval required — one-click sign below</span>
-                  </>
-                );
-              })()}
-            </div>
-
-            {/* Register button */}
-            <IceButton
-              onClick={handleRegister}
-              disabled={(!isFirstUser && !referrerInput) || isRegistering || flowStep !== "idle"}
-              loading={isRegistering || flowStep !== "idle"}
-              className="w-full"
-            >
-              <UserPlus className="w-4 h-4 mr-2" />
-              {(() => {
-                if (flowStep === "approving") return "Approving $1 USDT...";
-                if (flowStep === "registering") return "Registering ($1 fee)...";
-                if (isFirstUser) return "Register as Root User — $1 Fee";
-                return "Register Now — $1 Fee";
-              })()}
-            </IceButton>
-
-            {myRef && myRef !== "0x0000000000000000000000000000000000000000" && (
-              <p className="text-xs text-oslo-text-muted text-center mt-3">
-                You are already registered with referrer:{" "}
-                <span className="text-oslo-text-secondary font-mono">
-                  {truncateAddress(myRef, 6)}
-                </span>
-              </p>
-            )}
-          </GlassCard>
-
-          {/* Quick guide */}
-          <div className="space-y-4">
-            <GlassCard>
-              <h3 className="text-sm font-medium mb-3">Getting Started</h3>
-              <div className="space-y-2">
-                {[
-                  "1. Get USDT (BEP-20) in your wallet",
-                  "2. Register ($1 USDT fee)",
-                  "3. Go to Invest to deposit",
-                  "4. Earn daily yields + referral commissions",
-                ].map((step) => (
-                  <p key={step} className="text-xs text-oslo-text-secondary flex items-center gap-2">
-                    <CheckCircle className="w-3 h-3 text-oslo-text-muted flex-shrink-0" />
-                    {step}
-                  </p>
-                ))}
-              </div>
-            </GlassCard>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── STATE 2.5: Loading registration status ─────────────────────────
+  // ─── STATE 2.5: Loading (only if not connected yet) ────────────────
   if (registered === undefined) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-oslo-ice mx-auto mb-4"></div>
-          <p className="text-sm text-oslo-text-secondary">Checking registration status...</p>
+          <p className="text-sm text-oslo-text-secondary">Loading...</p>
         </div>
       </div>
     );
