@@ -30,6 +30,7 @@ export interface OSLODexV2Interface extends Interface {
       | "admin"
       | "completeSetup"
       | "configure"
+      | "drainOSLO"
       | "drainUSDT"
       | "getOSLOForUSDT"
       | "getPrice"
@@ -77,6 +78,10 @@ export interface OSLODexV2Interface extends Interface {
   encodeFunctionData(
     functionFragment: "configure",
     values: [AddressLike, AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "drainOSLO",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "drainUSDT",
@@ -163,6 +168,7 @@ export interface OSLODexV2Interface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "configure", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "drainOSLO", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "drainUSDT", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "getOSLOForUSDT",
@@ -400,6 +406,8 @@ export interface OSLODexV2 extends BaseContract {
     "nonpayable"
   >;
 
+  drainOSLO: TypedContractMethod<[amount: BigNumberish], [void], "nonpayable">;
+
   drainUSDT: TypedContractMethod<[amount: BigNumberish], [void], "nonpayable">;
 
   getOSLOForUSDT: TypedContractMethod<
@@ -498,6 +506,9 @@ export interface OSLODexV2 extends BaseContract {
     [void],
     "nonpayable"
   >;
+  getFunction(
+    nameOrSignature: "drainOSLO"
+  ): TypedContractMethod<[amount: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "drainUSDT"
   ): TypedContractMethod<[amount: BigNumberish], [void], "nonpayable">;

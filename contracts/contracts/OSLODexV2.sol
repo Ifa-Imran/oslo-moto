@@ -335,4 +335,21 @@ contract OSLODexV2 is IOSLODexV2, ReentrancyGuard {
 
         usdt.safeTransfer(msg.sender, toDrain);
     }
+
+    /// @notice Drain OSLO from DEX (admin only, pre-setup)
+    /// @param amount Amount to drain (0 = all)
+    function drainOSLO(uint256 amount) external onlyAdmin {
+        uint256 bal = osloToken.balanceOf(address(this));
+        uint256 toDrain = amount == 0 ? bal : amount;
+        if (toDrain == 0) revert ZeroAmount();
+        if (toDrain > bal) toDrain = bal;
+
+        if (toDrain >= osloReserve) {
+            osloReserve = 0;
+        } else {
+            osloReserve -= toDrain;
+        }
+
+        osloToken.safeTransfer(msg.sender, toDrain);
+    }
 }
