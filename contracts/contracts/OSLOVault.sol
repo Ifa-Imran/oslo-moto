@@ -11,29 +11,24 @@ import "./interfaces/IReferral.sol";
 import "./interfaces/IRankSystem.sol";
 
 /// @title OSLOVault
-/// @notice Core staking contract V3: USDT deposits, daily yield paid in OSLO tokens at market price.
-/// @dev USDT from deposits flows to DEXv2 as liquidity. OSLO accumulated in Vault for reward payouts.
-///      Users see balances in USD. Withdrawals paid in OSLO at current DEX price.
+/// @notice Core staking contract V3: Consolidated single-pool per user.
+/// @dev All deposits merge into one total balance pool. Yield is calculated
+///      from the consolidated total, not per-deposit. Uses checkpoint pattern
+///      to preserve accrued yield when new deposits are made.
 contract OSLOVault is IOSLOVault, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // ─── Structs ────────────────────────────────────────────────────────
 
-    struct Deposit {
-        uint256 amount;          // USDT principal amount
-        uint256 tier;            // Tier 1 or 2
-        uint256 dailyRate;       // Effective daily rate in bp (cached at deposit time)
-        uint256 depositTime;     // Timestamp of deposit
-        uint256 lastClaimTime;   // Last time rewards were claimed
-        uint256 totalClaimed;    // Total USDT-equivalent rewards claimed
-        uint256 maxReturn;       // 3X of principal (precomputed)
-        bool active;             // Whether this deposit is still yielding
-    }
-
-    struct UserInfo {
-        uint256 totalActiveDeposit;    // Sum of all active deposit principals (USDT)
-        uint256 depositCount;          // Number of deposits
-        uint256 totalCombinedEarnings; // Daily yield + level income + rank bonus (USDT-equivalent)
+    struct UserPool {
+        uint256 totalBalance;          // Consolidated USDT principal
+        uint256 lastClaimTime;         // Last checkpoint timestamp
+        uint256 accruedRewards;        // Yield accrued before last deposit (not yet claimed)
+        uint256 totalClaimed;          // Total USDT-equivalent claimed lifetime
+        uint256 maxReturn;             // 3X of totalBalance
+        uint256 totalCombinedEarnings; // yield + level + rank (for cross-contract tracking)
+        uint256 lastDepositTime;       // For early exit window (10 days from last deposit)
+        bool active;                   // Whether pool yields
     }
 
     // ─── State ──────────────────────────────────────────────────────────
@@ -57,17 +52,16 @@ contract OSLOVault is IOSLOVault, ReentrancyGuard {
     address public companyWallet;     // 0.5%
     address public performanceWallet; // 0.5%
 
-    mapping(address => Deposit[]) public userDeposits;
-    mapping(address => UserInfo) public users;
+    mapping(address => UserPool) public userPools;
 
     uint256 public totalDeposited;
     uint256 public totalWithdrawn;
     uint256 public totalRewardsPaid;
 
     // ─── Events ─────────────────────────────────────────────────────────
-    event Deposited(address indexed user, uint256 amount, uint256 tier, uint256 dailyRate, uint256 depositIndex);
-    event RewardsClaimed(address indexed user, uint256 usdtReward, uint256 osloAmount, uint256 depositIndex);
-    event EarlyExited(address indexed user, uint256 amountReturned, uint256 feeDeducted, uint256 yieldDeducted, uint256 depositIndex);
+    event Deposited(address indexed user, uint256 amount, uint256 newTotal, uint256 tier);
+    event RewardsClaimed(address indexed user, uint256 usdtReward, uint256 osloAmount);
+    event EarlyExited(address indexed user, uint256 amountReturned, uint256 feeDeducted, uint256 yieldDeducted);
     event DepositsPaused(bool paused);
     event CombinedCapReached(address indexed user);
     event CombinedEarningsUpdated(address indexed user, uint256 totalCombined);
@@ -82,8 +76,7 @@ contract OSLOVault is IOSLOVault, ReentrancyGuard {
     error DepositTooLow();
     error DepositTooHigh();
     error DepositsPausedError();
-    error InvalidDeposit();
-    error DepositCapped();
+    error PoolInactive();
     error NothingToClaim();
     error BelowWithdrawalThreshold();
     error DEXNotPriced();
@@ -91,6 +84,7 @@ contract OSLOVault is IOSLOVault, ReentrancyGuard {
     error InsufficientOsloReserve();
     error NotInEarlyExitPeriod();
     error InvalidExitPercentage();
+    error NoBalance();
 
     modifier onlyAdmin() {
         if (msg.sender != admin) revert OnlyAdmin();
@@ -175,16 +169,26 @@ contract OSLOVault is IOSLOVault, ReentrancyGuard {
 
     // ─── Core: Deposit ──────────────────────────────────────────────────
 
-    /// @notice Deposit USDT into the vault. 2% fee split, 98% to DEX as liquidity.
-    /// @dev USDT flows to DEXv2 via processBuy(); equivalent OSLO comes back to Vault.
-    ///      User's balance tracked in USD. Yield paid in OSLO at current market price.
+    /// @notice Deposit USDT into the vault. All deposits merge into a single pool.
+    /// @dev On each deposit, pending yield is checkpointed before balance update.
+    ///      Tier is determined by total consolidated balance.
     /// @param amount Amount of USDT to deposit
     function deposit(uint256 amount) external nonReentrant {
         if (depositsPaused) revert DepositsPausedError();
         if (amount == 0) revert DepositTooLow();
         if (amount > OSLOConstants.MAX_DEPOSIT_PER_TX) revert DepositTooHigh();
-        if (users[msg.sender].totalActiveDeposit + amount > OSLOConstants.MAX_TOTAL_DEPOSIT_PER_USER) revert DepositTooHigh();
         if (osloDex == address(0)) revert NotConfigured();
+
+        UserPool storage pool = userPools[msg.sender];
+
+        // Check total deposit cap
+        if (pool.totalBalance + amount > OSLOConstants.MAX_TOTAL_DEPOSIT_PER_USER) revert DepositTooHigh();
+
+        // Checkpoint: save any accrued yield before changing balance
+        if (pool.totalBalance > 0 && pool.active) {
+            uint256 pending = _calculatePendingRewards(pool);
+            pool.accruedRewards += pending;
+        }
 
         // Transfer USDT from user to this contract
         usdt.safeTransferFrom(msg.sender, address(this), amount);
@@ -209,28 +213,18 @@ contract OSLOVault is IOSLOVault, ReentrancyGuard {
         // Send remaining USDT to DEX via processBuy() — receives OSLO back
         usdt.forceApprove(osloDex, dexAmount);
         IOSLODexV2(osloDex).processBuy(dexAmount);
-        // OSLO is now held by this contract as reserve for future reward payouts
 
-        // Determine package and daily rate
-        uint256 tier = _getPackage(amount);
-        uint256 dailyRate = _getDailyRate(amount, block.timestamp);
+        // Update consolidated pool
+        pool.totalBalance += amount;
+        pool.maxReturn = pool.totalBalance * OSLOConstants.RETURN_CAP_MULTIPLIER;
+        pool.lastClaimTime = block.timestamp;
+        pool.lastDepositTime = block.timestamp;
+        pool.active = true;
 
-        // Create deposit record
-        uint256 maxReturn = amount * OSLOConstants.RETURN_CAP_MULTIPLIER;
-        userDeposits[msg.sender].push(Deposit({
-            amount: amount,
-            tier: tier,
-            dailyRate: dailyRate,
-            depositTime: block.timestamp,
-            lastClaimTime: block.timestamp,
-            totalClaimed: 0,
-            maxReturn: maxReturn,
-            active: true
-        }));
-
-        users[msg.sender].totalActiveDeposit += amount;
-        users[msg.sender].depositCount++;
         totalDeposited += amount;
+
+        // Determine tier based on total balance
+        uint256 tier = _getPackage(pool.totalBalance);
 
         // Notify referral system
         if (referral != address(0)) {
@@ -246,21 +240,27 @@ contract OSLOVault is IOSLOVault, ReentrancyGuard {
             _recordTurnoverForUplines(msg.sender, amount);
         }
 
-        emit Deposited(msg.sender, amount, tier, dailyRate, userDeposits[msg.sender].length - 1);
+        emit Deposited(msg.sender, amount, pool.totalBalance, tier);
     }
 
     // ─── Core: Claim Rewards ────────────────────────────────────────────
 
-    /// @notice Claim accrued rewards from a specific deposit.
-    /// @dev Yield calculated in USDT, then converted to OSLO at current DEX price.
-    ///      OSLO paid from Vault's accumulated reserve.
-    /// @param depositIndex Index of the deposit in user's deposits array
-    function claimRewards(uint256 depositIndex) external nonReentrant {
-        Deposit storage dep = _getActiveDeposit(msg.sender, depositIndex);
+    /// @notice Claim all accrued rewards from the consolidated pool.
+    /// @dev Yield calculated in USDT from total balance, then converted to OSLO.
+    function claimRewards() external nonReentrant {
+        UserPool storage pool = userPools[msg.sender];
+        if (pool.totalBalance == 0) revert NoBalance();
+        if (!pool.active) revert PoolInactive();
 
-        uint256 pendingUSDT = _calculatePendingRewards(dep);
+        uint256 pendingUSDT = pool.accruedRewards + _calculatePendingRewards(pool);
         if (pendingUSDT == 0) revert NothingToClaim();
         if (pendingUSDT < minClaimThreshold) revert BelowWithdrawalThreshold();
+
+        // Apply 3X cap
+        uint256 remaining = pool.maxReturn > pool.totalClaimed ? pool.maxReturn - pool.totalClaimed : 0;
+        if (pendingUSDT > remaining) {
+            pendingUSDT = remaining;
+        }
 
         // Convert pending USDT yield to OSLO at current DEX price
         uint256 dexPrice = IOSLODexV2(osloDex).getPrice();
@@ -272,15 +272,15 @@ contract OSLOVault is IOSLOVault, ReentrancyGuard {
         if (osloToken.balanceOf(address(this)) < osloAmount) revert InsufficientOsloReserve();
 
         // Update accounting BEFORE transfer
-        dep.totalClaimed += pendingUSDT;
-        dep.lastClaimTime = block.timestamp;
-        users[msg.sender].totalCombinedEarnings += pendingUSDT;
+        pool.totalClaimed += pendingUSDT;
+        pool.lastClaimTime = block.timestamp;
+        pool.accruedRewards = 0;
+        pool.totalCombinedEarnings += pendingUSDT;
         totalRewardsPaid += pendingUSDT;
 
         // Check if 3X cap reached
-        if (dep.totalClaimed >= dep.maxReturn) {
-            dep.active = false;
-            users[msg.sender].totalActiveDeposit -= dep.amount;
+        if (pool.totalClaimed >= pool.maxReturn) {
+            pool.active = false;
             emit CombinedCapReached(msg.sender);
         }
 
@@ -298,53 +298,65 @@ contract OSLOVault is IOSLOVault, ReentrancyGuard {
             }
         }
 
-        emit RewardsClaimed(msg.sender, pendingUSDT, osloAmount, depositIndex);
-        emit CombinedEarningsUpdated(msg.sender, users[msg.sender].totalCombinedEarnings);
+        emit RewardsClaimed(msg.sender, pendingUSDT, osloAmount);
+        emit CombinedEarningsUpdated(msg.sender, pool.totalCombinedEarnings);
     }
 
     // ─── Core: Early Exit ───────────────────────────────────────────────
 
-    /// @notice Full early exit — 100% withdrawal within 10-day window.
-    function earlyExit(uint256 depositIndex) external nonReentrant {
-        _partialEarlyExit(msg.sender, depositIndex, 10000);
+    /// @notice Full early exit — 100% withdrawal within 10-day window from last deposit.
+    function earlyExit() external nonReentrant {
+        _partialEarlyExit(msg.sender, 10000);
     }
 
     /// @notice Partial early exit — 100%, 50%, or 25% within 10-day window.
-    function partialEarlyExit(uint256 depositIndex, uint256 percentageBp) external nonReentrant {
-        _partialEarlyExit(msg.sender, depositIndex, percentageBp);
+    function partialEarlyExit(uint256 percentageBp) external nonReentrant {
+        _partialEarlyExit(msg.sender, percentageBp);
     }
 
-    function _partialEarlyExit(address user, uint256 depositIndex, uint256 percentageBp) internal {
+    function _partialEarlyExit(address user, uint256 percentageBp) internal {
         if (percentageBp != 10000 && percentageBp != 5000 && percentageBp != 2500) {
             revert InvalidExitPercentage();
         }
 
-        Deposit storage dep = _getActiveDeposit(user, depositIndex);
+        UserPool storage pool = userPools[user];
+        if (pool.totalBalance == 0) revert NoBalance();
+        if (!pool.active) revert PoolInactive();
 
-        if (block.timestamp > dep.depositTime + OSLOConstants.EARLY_EXIT_PERIOD) {
+        if (block.timestamp > pool.lastDepositTime + OSLOConstants.EARLY_EXIT_PERIOD) {
             revert NotInEarlyExitPeriod();
         }
 
-        uint256 principal = dep.amount;
-        uint256 exitAmount = (principal * percentageBp) / OSLOConstants.BASIS_POINTS;
+        uint256 exitAmount = (pool.totalBalance * percentageBp) / OSLOConstants.BASIS_POINTS;
 
         // 10% early exit fee
         uint256 exitFee = (exitAmount * OSLOConstants.EARLY_EXIT_FEE_BP) / OSLOConstants.BASIS_POINTS;
 
         // Deduct previously claimed yield proportionally
-        uint256 earnedDeduction = (dep.totalClaimed * percentageBp) / OSLOConstants.BASIS_POINTS;
+        uint256 earnedDeduction = (pool.totalClaimed * percentageBp) / OSLOConstants.BASIS_POINTS;
         uint256 totalDeductions = exitFee + earnedDeduction;
         uint256 netReturn = exitAmount > totalDeductions ? exitAmount - totalDeductions : 0;
 
         if (percentageBp == 10000) {
-            dep.active = false;
+            pool.active = false;
+            pool.totalBalance = 0;
+            pool.accruedRewards = 0;
+            pool.maxReturn = 0;
         } else {
-            dep.amount -= exitAmount;
-            dep.totalClaimed -= earnedDeduction;
-            dep.maxReturn = dep.amount * OSLOConstants.RETURN_CAP_MULTIPLIER;
+            // Checkpoint yield before reducing balance
+            uint256 pending = _calculatePendingRewards(pool);
+            pool.accruedRewards += pending;
+
+            pool.totalBalance -= exitAmount;
+            pool.totalClaimed -= earnedDeduction;
+            pool.maxReturn = pool.totalBalance * OSLOConstants.RETURN_CAP_MULTIPLIER;
+            pool.lastClaimTime = block.timestamp;
+
+            // Proportionally reduce accrued rewards
+            uint256 rewardReduction = (pool.accruedRewards * percentageBp) / OSLOConstants.BASIS_POINTS;
+            pool.accruedRewards -= rewardReduction;
         }
 
-        users[user].totalActiveDeposit -= exitAmount;
         totalWithdrawn += exitAmount;
 
         // Notify referral system
@@ -354,7 +366,6 @@ contract OSLOVault is IOSLOVault, ReentrancyGuard {
 
         // Return USDT to user via DEX processWithdrawal
         if (netReturn > 0) {
-            // Convert USDT value to OSLO amount needed for DEX withdrawal
             uint256 dexPrice = IOSLODexV2(osloDex).getPrice();
             if (dexPrice > 0) {
                 uint256 osloNeeded = (netReturn * 1e18) / dexPrice;
@@ -366,102 +377,112 @@ contract OSLOVault is IOSLOVault, ReentrancyGuard {
             }
         }
 
-        emit EarlyExited(user, netReturn, exitFee, earnedDeduction, depositIndex);
+        emit EarlyExited(user, netReturn, exitFee, earnedDeduction);
     }
 
     // ─── Cross-Contract Notifications ───────────────────────────────────
 
     function notifyLevelIncome(address user, uint256 amount) external override onlyReferral {
-        users[user].totalCombinedEarnings += amount;
-        emit CombinedEarningsUpdated(user, users[user].totalCombinedEarnings);
+        userPools[user].totalCombinedEarnings += amount;
+        emit CombinedEarningsUpdated(user, userPools[user].totalCombinedEarnings);
     }
 
     function notifyRankBonus(address user, uint256 amount) external override onlyRankSystem {
-        users[user].totalCombinedEarnings += amount;
-        emit CombinedEarningsUpdated(user, users[user].totalCombinedEarnings);
+        userPools[user].totalCombinedEarnings += amount;
+        emit CombinedEarningsUpdated(user, userPools[user].totalCombinedEarnings);
     }
 
     // ─── View Functions ─────────────────────────────────────────────────
 
     function getActiveDeposit(address user) external view override returns (uint256) {
-        return users[user].totalActiveDeposit;
+        return userPools[user].totalBalance;
     }
 
     function getUserTier(address user) external view override returns (uint256) {
-        if (users[user].totalActiveDeposit == 0) return 0;
-        return _getPackage(users[user].totalActiveDeposit);
-    }
-
-    function getDepositCount(address user) external view returns (uint256) {
-        return userDeposits[user].length;
+        if (userPools[user].totalBalance == 0) return 0;
+        return _getPackage(userPools[user].totalBalance);
     }
 
     function getCombinedEarnings(address user) external view returns (uint256) {
-        return users[user].totalCombinedEarnings;
+        return userPools[user].totalCombinedEarnings;
     }
 
-    function getPendingRewards(address user, uint256 depositIndex) external view returns (uint256 pendingUSDT) {
-        if (depositIndex >= userDeposits[user].length) return 0;
-        Deposit storage dep = userDeposits[user][depositIndex];
-        if (!dep.active) return 0;
-        return _calculatePendingRewards(dep);
+    function getPendingRewards(address user) external view returns (uint256 pendingUSDT) {
+        UserPool storage pool = userPools[user];
+        if (pool.totalBalance == 0 || !pool.active) return 0;
+        pendingUSDT = pool.accruedRewards + _calculatePendingRewards(pool);
+        // Apply 3X cap
+        uint256 remaining = pool.maxReturn > pool.totalClaimed ? pool.maxReturn - pool.totalClaimed : 0;
+        if (pendingUSDT > remaining) {
+            pendingUSDT = remaining;
+        }
     }
 
-    /// @notice Check if early exit is available
-    function isInEarlyExitPeriod(address user, uint256 depositIndex) external view returns (bool) {
-        if (depositIndex >= userDeposits[user].length) return false;
-        Deposit storage dep = userDeposits[user][depositIndex];
-        if (!dep.active) return false;
-        return block.timestamp <= dep.depositTime + OSLOConstants.EARLY_EXIT_PERIOD;
+    function getUserPool(address user) external view returns (
+        uint256 totalBalance,
+        uint256 lastClaimTime,
+        uint256 accruedRewards,
+        uint256 totalClaimed,
+        uint256 maxReturn,
+        uint256 totalCombinedEarnings,
+        uint256 lastDepositTime,
+        bool active
+    ) {
+        UserPool storage pool = userPools[user];
+        return (
+            pool.totalBalance,
+            pool.lastClaimTime,
+            pool.accruedRewards,
+            pool.totalClaimed,
+            pool.maxReturn,
+            pool.totalCombinedEarnings,
+            pool.lastDepositTime,
+            pool.active
+        );
+    }
+
+    /// @notice Check if early exit is available (10-day window from last deposit)
+    function isInEarlyExitPeriod(address user) external view returns (bool) {
+        UserPool storage pool = userPools[user];
+        if (pool.totalBalance == 0 || !pool.active) return false;
+        return block.timestamp <= pool.lastDepositTime + OSLOConstants.EARLY_EXIT_PERIOD;
     }
 
     // ─── Migration (Admin only, pre-setup) ──────────────────────────────
 
-    struct DepositMigration {
+    struct PoolMigration {
         address owner;
-        uint256 amount;
-        uint256 tier;
-        uint256 dailyRate;
-        uint256 depositTime;
+        uint256 totalBalance;
         uint256 lastClaimTime;
         uint256 totalClaimed;
-        uint256 maxReturn;
+        uint256 totalCombinedEarnings;
+        uint256 lastDepositTime;
     }
 
-    function migrateDeposits(DepositMigration[] calldata entries) external onlyAdmin {
+    function migrateConsolidated(PoolMigration[] calldata entries) external onlyAdmin {
         for (uint256 i = 0; i < entries.length; i++) {
-            DepositMigration calldata e = entries[i];
-            userDeposits[e.owner].push(Deposit({
-                amount: e.amount,
-                tier: e.tier,
-                dailyRate: e.dailyRate,
-                depositTime: e.depositTime,
-                lastClaimTime: e.lastClaimTime,
-                totalClaimed: e.totalClaimed,
-                maxReturn: e.maxReturn,
-                active: true
-            }));
-            users[e.owner].totalActiveDeposit += e.amount;
-            users[e.owner].depositCount++;
-            totalDeposited += e.amount;
+            PoolMigration calldata e = entries[i];
+            UserPool storage pool = userPools[e.owner];
+            pool.totalBalance = e.totalBalance;
+            pool.lastClaimTime = e.lastClaimTime;
+            pool.accruedRewards = 0;
+            pool.totalClaimed = e.totalClaimed;
+            pool.maxReturn = e.totalBalance * OSLOConstants.RETURN_CAP_MULTIPLIER;
+            pool.totalCombinedEarnings = e.totalCombinedEarnings;
+            pool.lastDepositTime = e.lastDepositTime;
+            pool.active = true;
+            totalDeposited += e.totalBalance;
         }
     }
 
     function migrateCombinedEarnings(address[] calldata _users, uint256[] calldata _amounts) external onlyAdmin {
         require(_users.length == _amounts.length, "Length mismatch");
         for (uint256 i = 0; i < _users.length; i++) {
-            users[_users[i]].totalCombinedEarnings = _amounts[i];
+            userPools[_users[i]].totalCombinedEarnings = _amounts[i];
         }
     }
 
     // ─── Internal Functions ─────────────────────────────────────────────
-
-    function _getActiveDeposit(address user, uint256 index) internal view returns (Deposit storage) {
-        if (index >= userDeposits[user].length) revert InvalidDeposit();
-        Deposit storage dep = userDeposits[user][index];
-        if (!dep.active) revert DepositCapped();
-        return dep;
-    }
 
     function _getPackage(uint256 amount) internal pure returns (uint256) {
         if (amount >= OSLOConstants.PKG2_MIN) return 2;
@@ -500,21 +521,21 @@ contract OSLOVault is IOSLOVault, ReentrancyGuard {
         return OSLOConstants.PKG2_SUN;
     }
 
-    function _calculatePendingRewards(Deposit storage dep) internal view returns (uint256 pendingUSDT) {
-        if (!dep.active) return 0;
+    function _calculatePendingRewards(UserPool storage pool) internal view returns (uint256 pendingUSDT) {
+        if (!pool.active || pool.totalBalance == 0) return 0;
 
-        uint256 lastClaim = dep.lastClaimTime;
+        uint256 lastClaim = pool.lastClaimTime;
         uint256 nowTs = block.timestamp;
         if (nowTs <= lastClaim) return 0;
 
         uint256 elapsed = nowTs - lastClaim;
-        uint256 amount = dep.amount;
+        uint256 amount = pool.totalBalance;
 
         // After 3 months: flat lifetime rate
         if (nowTs - launchTimestamp >= OSLOConstants.LIFETIME_RATE_START) {
             pendingUSDT = (amount * OSLOConstants.LIFETIME_RATE * elapsed) / (1 days * OSLOConstants.BASIS_POINTS);
         } else {
-            // 7-day rotational schedule
+            // 7-day rotational schedule based on TOTAL balance tier
             bool isPkg2 = amount >= OSLOConstants.PKG2_MIN;
             uint256 weeklyBp = isPkg2 ? OSLOConstants.PKG2_WEEKLY_TOTAL : OSLOConstants.PKG1_WEEKLY_TOTAL;
 
@@ -537,12 +558,6 @@ contract OSLOVault is IOSLOVault, ReentrancyGuard {
             }
 
             pendingUSDT += (amount * partialBpSeconds) / (1 days * OSLOConstants.BASIS_POINTS);
-        }
-
-        // 3X per-deposit cap
-        uint256 remaining = dep.maxReturn > dep.totalClaimed ? dep.maxReturn - dep.totalClaimed : 0;
-        if (pendingUSDT > remaining) {
-            pendingUSDT = remaining;
         }
     }
 

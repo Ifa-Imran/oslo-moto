@@ -9,7 +9,7 @@ import { TierBadge } from "@/components/ui/TierBadge";
 import { ProgressRing } from "@/components/ui/ProgressRing";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { CountdownTimer } from "@/components/ui/CountdownTimer";
-import { useInvestmentEngineReads, useDepositRead, useInvestmentEngineWrites } from "@/hooks/useInvestmentEngine";
+import { useInvestmentEngineReads, useInvestmentEngineWrites } from "@/hooks/useInvestmentEngine";
 import { useTokenReads, useUSDTReads } from "@/hooks/useToken";
 import { useReferralReads } from "@/hooks/useReferral";
 import { useRankSystemReads } from "@/hooks/useRankSystem";
@@ -52,31 +52,30 @@ import {
   BarChart3,
 } from "lucide-react";
 
-const TIER_COLORS: Record<number, string> = {
-  1: "bg-slate-500/20 border-slate-500/50 text-slate-400",
-  2: "bg-blue-500/20 border-blue-500/50 text-blue-400",
-  3: "bg-cyan-500/20 border-cyan-500/50 text-cyan-400",
-  4: "bg-purple-500/20 border-purple-500/50 text-purple-400",
-  5: "bg-oslo-ice/20 border-oslo-ice/50 text-oslo-ice",
-};
-
 export default function InvestPage() {
   const { address, isConnected } = useAccount();
   const { addToast } = useAppStore();
   const publicClient = usePublicClient();
-  const { totalActiveDeposit, userTier, depositCount, launchTimestamp, combinedEarnings } =
-    useInvestmentEngineReads(address);
+  const {
+    totalActiveDeposit,
+    userTier,
+    launchTimestamp,
+    combinedEarnings,
+    pendingRewards,
+    isInEarlyExit,
+    userPool,
+  } = useInvestmentEngineReads(address);
   const { deposit, claimRewards, earlyExit, partialEarlyExit, isLoading } =
     useInvestmentEngineWrites();
   const { usdtBalance } = useUSDTReads(address);
   const { referralRewards } = useReferralReads(address);
   const { pendingBonus } = useRankSystemReads(address);
   const { pendingRoyalty } = useDAOReads(address);
+  const { osloBalance } = useTokenReads(address);
   const userUsdtBalance = usdtBalance?.data as bigint | undefined;
   const userUsdtNum = userUsdtBalance ? Number(userUsdtBalance) / 1e18 : 0;
 
   const [amount, setAmount] = useState("");
-  const [selectedDeposit, setSelectedDeposit] = useState(0);
   const [flowStep, setFlowStep] = useState<"idle" | "approving" | "depositing">("idle");
 
   // ─── USDT Allowance Check ────────────────────────────────────────────
@@ -84,24 +83,22 @@ export default function InvestPage() {
     address: CONTRACTS.usdt,
     abi: erc20Abi,
     functionName: "allowance",
-    args: address ? [address, CONTRACTS.investmentEngine] : undefined,
+    args: address ? [address, CONTRACTS.osloVault] : undefined,
     query: { enabled: !!address },
   });
 
   const { writeContractAsync: approveAsync } = useWriteContract();
 
   const tier = Number(userTier.data || 0);
-  const depositNum = Number(depositCount.data || 0);
   const activeDepositWei = totalActiveDeposit.data as bigint | undefined;
   const activeDepositNum = activeDepositWei ? Number(activeDepositWei) / 1e18 : 0;
-  const cycleCount = 0; // completedCycles removed — not in contract
   const amountNum = parseFloat(amount) || 0;
-  const predictedTier = amountNum >= 10 ? getTier(amountNum) : 0;
-  const effectiveRateBp = amountNum >= 10 ? getDailyRate(amountNum) : 0;
+  const predictedTier = amountNum >= 10 ? getTier(amountNum + activeDepositNum) : 0;
+  const effectiveRateBp = amountNum >= 10 ? getDailyRate(amountNum + activeDepositNum) : 0;
   const dailyRate = effectiveRateBp / 100;
   const lifetimeActive = isLifetimeRateActive();
-  const dailyYield = amountNum * (dailyRate / 100);
-  const threeXCap = amountNum * RETURN_CAP_MULTIPLIER;
+  const dailyYield = (amountNum + activeDepositNum) * (dailyRate / 100);
+  const threeXCap = (amountNum + activeDepositNum) * RETURN_CAP_MULTIPLIER;
 
   // ─── Consolidated Income Tracking ──────────────────────────────────────
   const combinedEarningsWei = combinedEarnings.data as bigint | undefined;
@@ -112,11 +109,90 @@ export default function InvestPage() {
   const pendingBonusNum = pendingBonusWei ? Number(pendingBonusWei) / 1e18 : 0;
   const pendingRoyaltyWei = pendingRoyalty.data as bigint | undefined;
   const pendingRoyaltyNum = pendingRoyaltyWei ? Number(pendingRoyaltyWei) / 1e18 : 0;
-  // Yield claimed = combinedEarnings - referralRewards (since referral is tracked separately)
   const yieldClaimedNum = Math.max(0, combinedEarningsNum - referralRewardsNum);
   const totalCapLimit = activeDepositNum * RETURN_CAP_MULTIPLIER;
   const capRemainingNum = Math.max(0, totalCapLimit - combinedEarningsNum);
   const capUsedPct = totalCapLimit > 0 ? (combinedEarningsNum / totalCapLimit) * 100 : 0;
+
+  // ─── DEX reserves for OSLO yield conversion ────────────────────────────
+  const { data: dexReserves } = useReadContract({
+    address: CONTRACTS.osloDEX,
+    abi: osloDEXAbi,
+    functionName: "getReserves",
+    query: { refetchInterval: 10000 },
+  });
+
+  // ─── OSLO allowance for DEX ────────────────────────────────────────────
+  const { data: osloAllowance } = useReadContract({
+    address: CONTRACTS.osloToken,
+    abi: erc20Abi,
+    functionName: "allowance",
+    args: address ? [address, CONTRACTS.osloDEX] : undefined,
+    query: { enabled: !!address },
+  });
+
+  const { writeContractAsync: swapWriteAsync } = useWriteContract();
+
+  // ─── Real-time yield interpolation (monotonic) ──────────────────────────
+  const pendingUSDTRaw = pendingRewards.data as bigint | undefined;
+  const [liveElapsed, setLiveElapsed] = useState(0);
+  const lastFetchRef = useRef(Date.now());
+  const lastPendingRef = useRef<number>(0);
+  const displayFloorRef = useRef<number>(0);
+  const osloFloorRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (pendingUSDTRaw != null) {
+      const newValue = Number(pendingUSDTRaw) / 1e18;
+      if (lastPendingRef.current > 0 && newValue < lastPendingRef.current * 0.5) {
+        displayFloorRef.current = 0;
+        osloFloorRef.current = 0;
+      }
+      lastPendingRef.current = newValue;
+      lastFetchRef.current = Date.now();
+      setLiveElapsed(0);
+    }
+  }, [pendingUSDTRaw]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLiveElapsed((Date.now() - lastFetchRef.current) / 1000);
+    }, 250);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Interpolated pending yield
+  const todayRateBp = activeDepositNum > 0 ? getDailyRate(activeDepositNum) : 0;
+  const perSecondUSDT = activeDepositNum * (todayRateBp / 10000) / 86400;
+  const contractPending = lastPendingRef.current;
+  const poolActive = (userPool?.data as any)?.[7] ?? true;
+  const rawPending = contractPending + (poolActive ? perSecondUSDT * liveElapsed : 0);
+  const pendingUsdtNum = Math.max(rawPending, displayFloorRef.current);
+  displayFloorRef.current = pendingUsdtNum;
+
+  // OSLO conversion
+  const dexRes = dexReserves as [bigint, bigint] | undefined;
+  const dexUsdtNum = dexRes ? Number(dexRes[0]) / 1e18 : 0;
+  const dexOsloNum = dexRes ? Number(dexRes[1]) / 1e18 : 0;
+  const rawOsloYield = dexUsdtNum > 0 && dexOsloNum > 0 && pendingUsdtNum > 0
+    ? (pendingUsdtNum * dexOsloNum) / (dexUsdtNum + pendingUsdtNum)
+    : 0;
+  const osloYield = Math.max(rawOsloYield, osloFloorRef.current);
+  osloFloorRef.current = osloYield;
+
+  const osloBal = osloBalance?.data as bigint | undefined;
+  const osloBalNum = osloBal ? Number(osloBal) / 1e18 : 0;
+
+  // Early exit data
+  const inEarlyExit = (isInEarlyExit?.data as boolean) || false;
+  const poolData = userPool?.data as [bigint, bigint, bigint, bigint, bigint, bigint, bigint, boolean] | undefined;
+  const lastDepositTimestamp = poolData ? Number(poolData[6]) : 0;
+  const exitDeadline = lastDepositTimestamp + EARLY_EXIT_PERIOD_SECONDS;
+  const exitFee = activeDepositNum * 0.1;
+  const exitNetReturn = activeDepositNum - exitFee;
+
+  const [convertingOslo, setConvertingOslo] = useState(false);
+  const [earlyExiting, setEarlyExiting] = useState(false);
 
   const handleDeposit = async () => {
     if (!amountNum || !address || !publicClient) return;
@@ -125,7 +201,6 @@ export default function InvestPage() {
     const currentAllowance = (usdtAllowance as bigint) || 0n;
 
     try {
-      // ── Step 1: Approve USDT if needed (MaxUint256 = one-time infinite approval) ──
       if (currentAllowance < depositAmount) {
         setFlowStep("approving");
         addToast({ title: "Approving USDT...", status: "pending" });
@@ -134,7 +209,7 @@ export default function InvestPage() {
           address: CONTRACTS.usdt,
           abi: erc20Abi,
           functionName: "approve",
-          args: [CONTRACTS.investmentEngine, maxUint256],
+          args: [CONTRACTS.osloVault, maxUint256],
         });
 
         addToast({
@@ -145,24 +220,22 @@ export default function InvestPage() {
         });
 
         await publicClient.waitForTransactionReceipt({ hash: approveTx });
-        // Wait for RPC node propagation to prevent simulation failure
         await new Promise(resolve => setTimeout(resolve, 3000));
         addToast({ title: "USDT Approved", status: "success", txHash: approveTx });
       }
 
-      // ── Step 2: Deposit ────────────────────────────────────────
       setFlowStep("depositing");
       addToast({
         title: "Depositing USDT...",
-        description: `${amountNum} USDT → Package ${predictedTier}`,
+        description: `${amountNum} USDT → Consolidated Pool`,
         status: "pending",
       });
 
       const tx = await deposit(depositAmount);
 
       addToast({
-        title: "Deposit Submitted!",
-        description: `${formatNumber(amountNum)} USDT at Package ${predictedTier}`,
+        title: "Deposit Successful!",
+        description: `${formatNumber(amountNum)} USDT added to your pool`,
         status: "success",
         txHash: tx,
       });
@@ -179,10 +252,10 @@ export default function InvestPage() {
     }
   };
 
-  const handleClaim = async (index: number) => {
+  const handleClaim = async () => {
     try {
       addToast({ title: "Claiming Rewards...", status: "pending" });
-      const tx = await claimRewards(index);
+      const tx = await claimRewards();
       addToast({ title: "Rewards Claimed!", status: "success", txHash: tx });
     } catch (err: any) {
       addToast({
@@ -193,10 +266,11 @@ export default function InvestPage() {
     }
   };
 
-  const handleEarlyExit = async (index: number, percentageBp: number = 10000) => {
+  const handleEarlyExit = async (percentageBp: number = 10000) => {
+    setEarlyExiting(true);
     try {
       addToast({ title: `Early Exit ${percentageBp / 100}% — Returning USDT...`, status: "pending" });
-      const tx = await partialEarlyExit(index, percentageBp);
+      const tx = await partialEarlyExit(percentageBp);
       addToast({ title: "Early Exit Complete — USDT Returned", status: "success", txHash: tx });
     } catch (err: any) {
       addToast({
@@ -204,6 +278,45 @@ export default function InvestPage() {
         description: err?.message?.slice(0, 100) || "Transaction rejected",
         status: "error",
       });
+    } finally {
+      setEarlyExiting(false);
+    }
+  };
+
+  const handleConvertOsloToUSDT = async () => {
+    if (!osloBal || osloBal === 0n || !address || !publicClient) return;
+    setConvertingOslo(true);
+    try {
+      const currentAllowance = (osloAllowance as bigint) || 0n;
+      if (currentAllowance < osloBal) {
+        addToast({ title: "Approving OSLO for DEX...", status: "pending" });
+        const approveTx = await swapWriteAsync({
+          address: CONTRACTS.osloToken,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [CONTRACTS.osloDEX, osloBal],
+        });
+        await publicClient.waitForTransactionReceipt({ hash: approveTx });
+        addToast({ title: "OSLO Approved", status: "success", txHash: approveTx });
+      }
+
+      addToast({ title: "Converting OSLO to USDT...", status: "pending" });
+      const tx = await swapWriteAsync({
+        address: CONTRACTS.osloDEX,
+        abi: osloDEXAbi,
+        functionName: "swapOSLOForUSDT",
+        args: [osloBal, 0n],
+      });
+      addToast({ title: "Converted to USDT!", status: "success", txHash: tx });
+    } catch (err: any) {
+      if (err?.message?.includes("rejected") || err?.message?.includes("denied")) return;
+      addToast({
+        title: "Conversion Failed",
+        description: err?.message?.slice(0, 100) || "Transaction rejected",
+        status: "error",
+      });
+    } finally {
+      setConvertingOslo(false);
     }
   };
 
@@ -212,9 +325,8 @@ export default function InvestPage() {
       <div>
         <h1 className="text-3xl font-light tracking-tight">Staking Engine</h1>
         <p className="mt-1 text-sm text-oslo-text-secondary">
-          Deposit USDT and earn daily OSLO yields — paid exclusively in OSLO tokens — {lifetimeActive ? `Lifetime ${formatRate(LIFETIME_RATE_BP)}` : `${formatRate(effectiveRateBp)} daily`}
+          Deposit USDT and earn daily OSLO yields — all deposits merge into a single pool — {lifetimeActive ? `Lifetime ${formatRate(LIFETIME_RATE_BP)}` : `${tier > 0 ? formatRate(getDailyRate(activeDepositNum)) : '0.55% – 1.25%'} daily`}
         </p>
-
       </div>
 
       {/* Protocol Reserve */}
@@ -228,7 +340,7 @@ export default function InvestPage() {
             <p className="text-xl font-mono font-light text-oslo-text-primary">
               11,000,000 OSLO
             </p>
-            <p className="text-[10px] text-oslo-text-muted mt-0.5">Held in InvestmentEngine for rewards</p>
+            <p className="text-[10px] text-oslo-text-muted mt-0.5">Held in Vault for rewards</p>
           </div>
         </div>
         <div className="glass-card p-5 flex items-center gap-4">
@@ -240,14 +352,13 @@ export default function InvestPage() {
             <p className="text-sm font-light text-oslo-text-primary">
               98% Liquidity · 1% Rewards · 0.5% Company · 0.5% Growth
             </p>
-            <p className="text-[10px] text-oslo-text-muted mt-0.5">Applied on every deposit, re-investment, and re-stake</p>
+            <p className="text-[10px] text-oslo-text-muted mt-0.5">Applied on every deposit</p>
           </div>
         </div>
       </div>
 
-      {/* Deposit Panel + Tier Calculator */}
+      {/* Deposit Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Deposit Form */}
         <GlassCard>
           <h2 className="text-lg font-medium mb-4">Deposit USDT</h2>
           <div className="space-y-4">
@@ -271,7 +382,7 @@ export default function InvestPage() {
                 </span>
               </div>
               <p className="text-[10px] text-oslo-text-muted mt-1">
-                Min $10 — Max ${MAX_DEPOSIT_PER_TX.toLocaleString()} per transaction. Multiple deposits allowed.
+                Min $10 — Max ${MAX_DEPOSIT_PER_TX.toLocaleString()} per transaction. All deposits merge into your pool.
               </p>
             </div>
 
@@ -285,6 +396,12 @@ export default function InvestPage() {
                   <span className="text-oslo-text-muted">Deposit Amount</span>
                   <span className="font-mono text-oslo-text-primary">{formatNumber(amountNum)} USDT</span>
                 </div>
+                {activeDepositNum > 0 && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-oslo-text-muted">New Total Pool</span>
+                    <span className="font-mono text-oslo-ice">{formatNumber(amountNum + activeDepositNum)} USDT</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-xs">
                   <span className="text-oslo-text-muted">To Liquidity Pool (98%)</span>
                   <span className="font-mono text-oslo-ice">{formatNumber(amountNum * 0.98)} USDT</span>
@@ -293,29 +410,13 @@ export default function InvestPage() {
                   <span className="text-oslo-text-muted">To Reward Wallet (1%)</span>
                   <span className="font-mono text-oslo-success">{formatNumber(amountNum * 0.01)} USDT</span>
                 </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-oslo-text-muted">Company Support (0.5%)</span>
-                  <span className="font-mono text-oslo-text-muted">{formatNumber(amountNum * 0.005)} USDT</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-oslo-text-muted">Better Performance (0.5%)</span>
-                  <span className="font-mono text-oslo-text-muted">{formatNumber(amountNum * 0.005)} USDT</span>
-                </div>
                 <div className="flex justify-between text-xs pt-1 border-t border-white/5">
-                  <span className="text-oslo-text-muted">Tier</span>
+                  <span className="text-oslo-text-muted">Tier (after deposit)</span>
                   <TierBadge tier={predictedTier} />
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-oslo-text-muted">Daily Yield</span>
-                  <span className="font-mono text-oslo-ice">${formatNumber(dailyYield)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-oslo-text-muted">Daily Rate</span>
                   <span className="font-mono text-oslo-ice">{formatRate(effectiveRateBp)}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-oslo-text-muted">Claim Fee</span>
-                  <span className="font-mono text-oslo-text-muted">{WITHDRAWAL_FEE_PCT}%</span>
                 </div>
               </motion.div>
             )}
@@ -366,7 +467,7 @@ export default function InvestPage() {
             {amountNum > MAX_DEPOSIT_PER_TX && (
               <div className="flex items-center gap-2 text-xs p-2 rounded-lg bg-oslo-danger/5 border border-oslo-danger/10">
                 <AlertTriangle className="w-3.5 h-3.5 text-oslo-danger" />
-                <span className="text-oslo-danger">Max ${MAX_DEPOSIT_PER_TX.toLocaleString()} per transaction. Split into multiple deposits of $5,000 each.</span>
+                <span className="text-oslo-danger">Max ${MAX_DEPOSIT_PER_TX.toLocaleString()} per transaction.</span>
               </div>
             )}
 
@@ -392,25 +493,24 @@ export default function InvestPage() {
                 if (userUsdtBalance !== undefined && amountNum > userUsdtNum) return "Insufficient USDT";
                 const allowance = (usdtAllowance as bigint) || 0n;
                 if (allowance < parseEther(amount)) return "Approve & Deposit";
-                return "Deposit USDT";
+                return activeDepositNum > 0 ? "Add to Pool" : "Deposit USDT";
               })()}
             </IceButton>
           </div>
         </GlassCard>
-
       </div>
 
-      {/* Portfolio Cards */}
-      {isConnected && depositNum > 0 && (
-        <div>
-          {/* Consolidated Income & 3X Cap Panel */}
-          <GlassCard className="mb-4">
+      {/* Consolidated Pool View */}
+      {isConnected && activeDepositNum > 0 && (
+        <div className="space-y-6">
+          {/* Income & 3X Cap Panel */}
+          <GlassCard>
             <h2 className="text-lg font-medium mb-4">Income & 3X Cap Tracker</h2>
 
             {/* Row 1: Key Metrics */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
               <div>
-                <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">Total Invested</p>
+                <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">Total Pool</p>
                 <p className="text-lg font-mono text-oslo-text-primary">${formatNumber(activeDepositNum)}</p>
               </div>
               <div>
@@ -418,8 +518,8 @@ export default function InvestPage() {
                 <p className="text-lg font-mono text-oslo-success">${formatNumber(combinedEarningsNum)}</p>
               </div>
               <div>
-                <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">Total Claimed</p>
-                <p className="text-lg font-mono text-oslo-ice">${formatNumber(combinedEarningsNum)}</p>
+                <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">Current Tier</p>
+                <TierBadge tier={tier} />
               </div>
               <div>
                 <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">3X Remaining</p>
@@ -481,7 +581,7 @@ export default function InvestPage() {
             </div>
 
             {/* 3X Cap Alert */}
-            {(capUsedPct >= 90 || cycleCount > 0) && (
+            {capUsedPct >= 90 && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -503,381 +603,173 @@ export default function InvestPage() {
             )}
           </GlassCard>
 
-          {/* Dynamic Yield Schedule removed */}
+          {/* Your Staking Pool — Single Card */}
+          <GlassCard className="p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-medium">Your Staking Pool</h2>
+                <p className="text-xs text-oslo-text-muted mt-0.5">All deposits consolidated into one pool</p>
+              </div>
+              <TierBadge tier={tier} />
+            </div>
 
-          <h2 className="text-lg font-medium mb-4">Your Deposits</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {Array.from({ length: Math.min(depositNum, 6) }).map((_, i) => (
-              <DepositCard
-                key={i}
-                index={i}
-                onClaim={handleClaim}
-                onEarlyExit={handleEarlyExit}
+            {/* Pool Balance */}
+            <div className="mb-5">
+              <p className="text-xs text-oslo-text-muted uppercase tracking-wider">Total Pool Balance</p>
+              <p className="text-2xl font-mono font-light text-oslo-text-primary">
+                ${formatNumber(activeDepositNum)}
+              </p>
+              <p className="text-[10px] text-oslo-text-muted mt-0.5">
+                Daily rate: {formatRate(getDailyRate(activeDepositNum))} · 3X Cap: ${formatNumber(totalCapLimit)}
+              </p>
+            </div>
+
+            {/* Yield Section */}
+            <div className="grid grid-cols-2 gap-4 mb-5 p-4 rounded-lg bg-white/[0.03] border border-white/5">
+              <div>
+                <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">Pending Yield (OSLO)</p>
+                <p className="text-lg font-mono text-oslo-ice">
+                  {formatNumber(osloYield, 4)} OSLO
+                </p>
+                <p className="text-[10px] text-oslo-text-muted">≈ ${formatNumber(pendingUsdtNum)} USDT</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">Total Claimed</p>
+                <p className="text-lg font-mono text-oslo-success">
+                  ${formatNumber(combinedEarningsNum)}
+                </p>
+              </div>
+            </div>
+
+            {/* 3X Cap Progress (pool level) */}
+            <div className="flex items-center gap-3 mb-5 p-3 rounded-lg bg-white/[0.02]">
+              <ProgressRing
+                progress={Math.min(capUsedPct, 100)}
+                size={40}
+                strokeWidth={3}
+                color={capUsedPct >= 75 ? "warning" : "ice"}
               />
-            ))}
-          </div>
+              <div>
+                <p className="text-[10px] text-oslo-text-muted">Pool 3X Cap</p>
+                <p className="text-sm font-mono text-oslo-text-primary">
+                  ${formatNumber(combinedEarningsNum)} / ${formatNumber(totalCapLimit)}
+                  <span className="text-oslo-text-muted ml-1">({Math.min(capUsedPct, 100).toFixed(0)}%)</span>
+                </p>
+              </div>
+            </div>
+
+            {/* OSLO Balance */}
+            {osloBalNum > 0 && (
+              <div className="mb-5 p-3 rounded-lg bg-oslo-ice/5 border border-oslo-ice/10">
+                <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">OSLO Balance (from claims)</p>
+                <p className="text-sm font-mono text-oslo-ice">{formatNumber(osloBalNum)} OSLO</p>
+              </div>
+            )}
+
+            {/* Claim Button */}
+            {poolActive && (
+              <div className="space-y-2 mb-5">
+                <p className="text-[10px] text-oslo-text-muted leading-relaxed">
+                  Yield accrues in OSLO. Claim to receive tokens directly to your wallet — <span className="text-oslo-success">zero fee</span>.
+                </p>
+                <IceButton
+                  size="sm"
+                  variant="secondary"
+                  className="w-full"
+                  onClick={handleClaim}
+                  disabled={pendingUsdtNum < 1 || isLoading}
+                  loading={isLoading}
+                >
+                  Claim OSLO
+                </IceButton>
+                {pendingUsdtNum > 0 && pendingUsdtNum < 1 && (
+                  <p className="text-[10px] text-oslo-text-muted text-center">
+                    Minimum $1.00 yield required to claim
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Convert OSLO to USDT */}
+            {osloBalNum > 0 && (
+              <div className="space-y-1 mb-5">
+                <p className="text-[10px] text-oslo-text-muted">
+                  Sell OSLO for USDT — <span className="text-oslo-aurora">10% fee</span> (to LP + burn)
+                </p>
+                {(() => {
+                  const allowance = (osloAllowance as bigint) || 0n;
+                  if (allowance >= (osloBal || 0n)) {
+                    return (
+                      <p className="text-[10px] text-oslo-success flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" /> OSLO approved
+                      </p>
+                    );
+                  }
+                  return (
+                    <p className="text-[10px] text-oslo-warning flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" /> Approval required
+                    </p>
+                  );
+                })()}
+                <IceButton
+                  size="sm"
+                  variant="primary"
+                  className="w-full mt-1"
+                  onClick={handleConvertOsloToUSDT}
+                  loading={convertingOslo}
+                  disabled={convertingOslo}
+                >
+                  {(() => {
+                    const allowance = (osloAllowance as bigint) || 0n;
+                    if (allowance < (osloBal || 0n)) return `Approve & Sell ${formatNumber(osloBalNum)} OSLO`;
+                    return `Sell ${formatNumber(osloBalNum)} OSLO → USDT`;
+                  })()}
+                </IceButton>
+              </div>
+            )}
+
+            {/* Early Exit Section */}
+            {poolActive && inEarlyExit && activeDepositNum > 0 && (
+              <div className="mt-8 pt-6 border-t-2 border-oslo-danger/20">
+                <div className="mb-3 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-oslo-danger" />
+                  <span className="text-[11px] font-semibold text-oslo-danger uppercase tracking-wider">
+                    Early Exit Zone
+                  </span>
+                </div>
+
+                <div className="mb-3 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3 h-3 text-oslo-aurora" />
+                  <span className="text-[10px] text-oslo-aurora font-medium">
+                    Early Exit Available —{" "}
+                    <CountdownTimer
+                      targetTimestamp={exitDeadline}
+                      className="text-[10px] text-oslo-aurora font-medium"
+                    />
+                  </span>
+                </div>
+
+                <p className="text-[10px] text-oslo-text-muted mb-3 leading-relaxed">
+                  Exiting early incurs a {EARLY_EXIT_FEE_PCT}% fee. Choose how much of your pool to exit:
+                </p>
+                <div className="mb-3 p-2.5 rounded-lg bg-oslo-danger/5 border border-oslo-danger/10">
+                  <p className="text-[10px] text-oslo-text-secondary leading-relaxed">
+                    <strong className="text-oslo-danger">Important:</strong> Upon taking an early exit, any income already received will be deducted, and a {EARLY_EXIT_FEE_PCT}% processing fee will also apply.
+                  </p>
+                </div>
+                <EarlyExitOptions
+                  principal={activeDepositNum}
+                  fee={exitFee}
+                  netReturn={exitNetReturn}
+                  onExit={handleEarlyExit}
+                  loading={earlyExiting}
+                />
+              </div>
+            )}
+          </GlassCard>
         </div>
       )}
     </div>
-  );
-}
-
-// ─── Deposit Card Component ──────────────────────────────────────────────
-
-function DepositCard({
-  index,
-  onClaim,
-  onEarlyExit,
-}: {
-  index: number;
-  onClaim: (i: number) => void;
-  onEarlyExit: (i: number, percentageBp: number) => Promise<void>;
-}) {
-  const { address } = useAccount();
-  const publicClient = usePublicClient();
-  const { addToast } = useAppStore();
-  const { writeContractAsync } = useWriteContract();
-  const { depositData, pendingRewards, isInEarlyExit } = useDepositRead(
-    address,
-    index
-  );
-  const { osloBalance } = useTokenReads(address);
-
-  // DEX reserves for OSLO yield conversion
-  const { data: dexReserves } = useReadContract({
-    address: CONTRACTS.osloDEX,
-    abi: osloDEXAbi,
-    functionName: "getReserves",
-    query: { refetchInterval: 10000 },
-  });
-
-  // OSLO allowance check for DEX
-  const { data: osloAllowance } = useReadContract({
-    address: CONTRACTS.osloToken,
-    abi: erc20Abi,
-    functionName: "allowance",
-    args: address ? [address, CONTRACTS.osloDEX] : undefined,
-    query: { enabled: !!address },
-  });
-
-  const deposit = depositData.data as [bigint, bigint, bigint, bigint, bigint, bigint, bigint, boolean] | undefined;
-  const pendingUSDT = pendingRewards.data as bigint | undefined;
-
-  const [convertingOslo, setConvertingOslo] = useState(false);
-  const [earlyExiting, setEarlyExiting] = useState(false);
-
-  // ─── Real-time yield interpolation (monotonic — never visually decreases) ──
-  // Between contract refetches (every 15s), smoothly interpolate yield.
-  // Uses a "display floor" to prevent visible drops when contract value
-  // is slightly less than interpolated (due to block timing differences).
-  const [liveElapsed, setLiveElapsed] = useState(0);
-  const lastFetchRef = useRef(Date.now());
-  const lastPendingRef = useRef<number>(0);
-  const displayFloorRef = useRef<number>(0);
-  const osloFloorRef = useRef<number>(0);
-
-  // Update anchor on contract refetch; detect claims (big drops) to reset floor
-  useEffect(() => {
-    if (pendingUSDT != null) {
-      const newValue = Number(pendingUSDT) / 1e18;
-      // Detect claim/exit: value dropped >50% → user claimed, reset floors
-      if (lastPendingRef.current > 0 && newValue < lastPendingRef.current * 0.5) {
-        displayFloorRef.current = 0;
-        osloFloorRef.current = 0;
-      }
-      lastPendingRef.current = newValue;
-      lastFetchRef.current = Date.now();
-      setLiveElapsed(0);
-    }
-  }, [pendingUSDT]);
-
-  // Tick 4x/sec for smooth yield animation
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setLiveElapsed((Date.now() - lastFetchRef.current) / 1000);
-    }, 250);
-    return () => clearInterval(interval);
-  }, []);
-
-  if (!deposit) return <Skeleton className="h-64" />;
-
-  const [amount, tier, _cachedDailyRate, depositTime, lastClaimTime, totalClaimed, _maxReturn, active] = deposit;
-  const amountNum = Number(amount) / 1e18;
-  const tierNum = Number(tier);
-  const claimedNum = Number(totalClaimed) / 1e18;
-  const capProgress = (claimedNum / (amountNum * RETURN_CAP_MULTIPLIER)) * 100;
-
-  // Use TODAY's actual rate from 7-day schedule (not the cached deposit-time rate)
-  // This matches what the contract's _calculatePendingRewards actually computes
-  const todayRateBp = getDailyRate(amountNum);
-
-  // Live interpolated pending: contractPending + (perSecond * elapsed since last fetch)
-  const contractPending = lastPendingRef.current;
-  const perSecondUSDT = amountNum * (todayRateBp / 10000) / 86400; // today's rate in bp → decimal / seconds
-  const rawPending = contractPending + (active ? perSecondUSDT * liveElapsed : 0);
-  // Monotonic guarantee: never show a decrease (prevents flicker on refetch)
-  const pendingUsdtNum = Math.max(rawPending, displayFloorRef.current);
-  displayFloorRef.current = pendingUsdtNum;
-
-  // Calculate OSLO equivalent of pending USDT yield using DEX rate
-  const dexRes = dexReserves as [bigint, bigint] | undefined;
-  const dexUsdtNum = dexRes ? Number(dexRes[0]) / 1e18 : 0;
-  const dexOsloNum = dexRes ? Number(dexRes[1]) / 1e18 : 0;
-  const rawOsloYield = dexUsdtNum > 0 && dexOsloNum > 0 && pendingUsdtNum > 0
-    ? (pendingUsdtNum * dexOsloNum) / (dexUsdtNum + pendingUsdtNum)
-    : 0;
-  // Monotonic OSLO yield: prevent visual decrease from DEX reserve fluctuations
-  const osloYield = Math.max(rawOsloYield, osloFloorRef.current);
-  osloFloorRef.current = osloYield;
-  // Total claimed converted to OSLO at current DEX rate
-  const claimedOslo = dexUsdtNum > 0 && dexOsloNum > 0 && claimedNum > 0
-    ? (claimedNum * dexOsloNum) / (dexUsdtNum + claimedNum)
-    : 0;
-  const osloBal = osloBalance?.data as bigint | undefined;
-  const osloBalNum = osloBal ? Number(osloBal) / 1e18 : 0;
-
-  // Early exit data
-  const inEarlyExit = (isInEarlyExit?.data as boolean) || false;
-  // V3: Calculate exit amounts from principal (10% fee on principal)
-  const exitPrincipal = amountNum;
-  const exitAccruedYield = pendingUsdtNum;
-  const exitFee = amountNum * 0.1;
-  const exitNetReturn = amountNum - exitFee;
-  const depositTimestamp = Number(depositTime);
-  const exitDeadline = depositTimestamp + EARLY_EXIT_PERIOD_SECONDS;
-
-  const handleConvertOsloToUSDT = async () => {
-    if (!osloBal || osloBal === 0n || !address || !publicClient) return;
-    setConvertingOslo(true);
-    try {
-      // ── Step 1: Approve OSLO if needed ──────────────────────────
-      const currentAllowance = (osloAllowance as bigint) || 0n;
-      if (currentAllowance < osloBal) {
-        addToast({ title: "Approving OSLO for DEX...", status: "pending" });
-        const approveTx = await writeContractAsync({
-          address: CONTRACTS.osloToken,
-          abi: erc20Abi,
-          functionName: "approve",
-          args: [CONTRACTS.osloDEX, osloBal],
-        });
-        await publicClient.waitForTransactionReceipt({ hash: approveTx });
-        addToast({ title: "OSLO Approved", status: "success", txHash: approveTx });
-      }
-
-      // ── Step 2: Swap ───────────────────────────────────────────
-      addToast({ title: "Converting OSLO to USDT...", status: "pending" });
-      const tx = await writeContractAsync({
-        address: CONTRACTS.osloDEX,
-        abi: osloDEXAbi,
-        functionName: "swapOSLOForUSDT",
-        args: [osloBal, 0n],
-      });
-      addToast({ title: "Converted to USDT!", status: "success", txHash: tx });
-    } catch (err: any) {
-      if (err?.message?.includes("rejected") || err?.message?.includes("denied")) return;
-      addToast({
-        title: "Conversion Failed",
-        description: err?.message?.slice(0, 100) || "Transaction rejected",
-        status: "error",
-      });
-    } finally {
-      setConvertingOslo(false);
-    }
-  };
-
-  return (
-    <GlassCard className="p-5 relative overflow-hidden">
-
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <TierBadge tier={tierNum} />
-        </div>
-        {!active && (
-          <span className="text-[10px] text-oslo-danger font-medium px-2 py-0.5 rounded-full bg-oslo-danger-dim border border-oslo-danger/30">
-            Capped
-          </span>
-        )}
-      </div>
-
-      <div className="mb-4">
-        <p className="text-xs text-oslo-text-muted uppercase tracking-wider">Principal</p>
-        <p className="text-xl font-mono font-light text-oslo-text-primary">
-          ${formatNumber(amountNum)}
-        </p>
-      </div>
-
-      {/* Accrued — V3: Yield displayed in OSLO, auto-buys on claim */}
-      <div className="grid grid-cols-2 gap-3 mb-4 p-3 rounded-lg bg-white/[0.03]">
-        <div>
-          <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">
-            Yield (OSLO)
-          </p>
-          <p className="text-sm font-mono text-oslo-text-primary">
-            {formatNumber(osloYield, 4)} OSLO
-          </p>
-        </div>
-        <div>
-          <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">
-            Total Claimed
-          </p>
-          <p className="text-sm font-mono text-oslo-text-primary">
-            {formatNumber(claimedOslo, 4)} OSLO
-          </p>
-        </div>
-      </div>
-
-
-
-      {/* OSLO Balance (from yield claims) */}
-      {osloBalNum > 0 && (
-        <div className="mb-3 p-3 rounded-lg bg-oslo-ice/5 border border-oslo-ice/10">
-          <p className="text-[10px] text-oslo-text-muted uppercase tracking-wider">
-            OSLO Balance
-          </p>
-          <p className="text-sm font-mono text-oslo-ice">
-            {formatNumber(osloBalNum)} OSLO
-          </p>
-        </div>
-      )}
-
-      {/* 3X Cap Progress (per-deposit) */}
-      <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-white/[0.02]">
-        <ProgressRing
-          progress={Math.min(capProgress, 100)}
-          size={32}
-          strokeWidth={2.5}
-          color={capProgress >= 75 ? "warning" : "ice"}
-        />
-        <div className="text-[10px]">
-          <p className="text-oslo-text-muted">Deposit 3X Cap</p>
-          <p className="font-mono text-oslo-text-primary">
-            ${formatNumber(claimedNum)} / ${formatNumber(amountNum * RETURN_CAP_MULTIPLIER)}
-            <span className="text-oslo-text-muted ml-1">({Math.min(capProgress, 100).toFixed(0)}%)</span>
-          </p>
-        </div>
-      </div>
-
-      {/* Early Exit — 10-day window with 10% fee + earned yield deduction, paid in USDT */}
-      {active && inEarlyExit && exitPrincipal > 0 && (
-        <div className="mb-4 p-3 rounded-lg bg-oslo-aurora/5 border border-oslo-aurora/10 space-y-2">
-          <div className="flex items-center gap-1.5">
-            <ShieldCheck className="w-3 h-3 text-oslo-aurora" />
-            <span className="text-[10px] text-oslo-aurora font-medium">
-              Early Exit Available —{" "}
-              <CountdownTimer
-                targetTimestamp={exitDeadline}
-                className="text-[10px] text-oslo-aurora font-medium"
-              />
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
-            <span className="text-oslo-text-muted">Principal</span>
-            <span className="font-mono text-oslo-text-primary text-right">${formatNumber(exitPrincipal)}</span>
-            <span className="text-oslo-text-muted">{EARLY_EXIT_FEE_PCT}% Exit Fee</span>
-            <span className="font-mono text-oslo-danger text-right">-${formatNumber(exitFee)}</span>
-            {exitAccruedYield > 0 && (
-              <>
-                <span className="text-oslo-text-muted">Earned Yield Deduction</span>
-                <span className="font-mono text-oslo-danger text-right">-${formatNumber(exitAccruedYield)}</span>
-              </>
-            )}
-            <span className="text-oslo-text-muted pt-1 border-t border-white/5">You Receive (USDT)</span>
-            <span className="font-mono text-oslo-ice text-right pt-1 border-t border-white/5">${formatNumber(exitNetReturn)}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Actions */}
-      {active && (
-        <div className="space-y-2">
-          {/* V3: Yield accrues in USDT internally, displayed as OSLO. Claim sends OSLO to wallet. */}
-          <p className="text-[10px] text-oslo-text-muted leading-relaxed">
-            Yield accrues in OSLO. Claim to receive tokens directly to your wallet — <span className="text-oslo-success">zero fee</span>.
-          </p>
-          <IceButton
-            size="sm"
-            variant="secondary"
-            className="w-full"
-            onClick={() => onClaim(index)}
-            disabled={pendingUsdtNum < 1}
-          >
-            Claim OSLO
-          </IceButton>
-          {pendingUsdtNum > 0 && pendingUsdtNum < 1 && (
-            <p className="text-[10px] text-oslo-text-muted text-center">
-              Minimum $1.00 yield required to claim
-            </p>
-          )}
-        </div>
-      )}
-      {/* Convert OSLO to USDT — V3: 10% fee (USDT→LP, OSLO→burn) */}
-      {osloBalNum > 0 && (
-        <div className="space-y-1">
-          <p className="text-[10px] text-oslo-text-muted">
-            Sell OSLO for USDT — <span className="text-oslo-aurora">10% fee</span> (to LP + burn)
-          </p>
-          {/* Allowance indicator */}
-          {(() => {
-            const allowance = (osloAllowance as bigint) || 0n;
-            if (allowance >= (osloBal || 0n)) {
-              return (
-                <p className="text-[10px] text-oslo-success flex items-center gap-1">
-                  <CheckCircle className="w-3 h-3" /> OSLO approved
-                </p>
-              );
-            }
-            return (
-              <p className="text-[10px] text-oslo-warning flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" /> Approval required
-              </p>
-            );
-          })()}
-          <IceButton
-            size="sm"
-            variant="primary"
-            className="w-full mt-1"
-            onClick={handleConvertOsloToUSDT}
-            loading={convertingOslo}
-            disabled={convertingOslo}
-          >
-            {(() => {
-              const allowance = (osloAllowance as bigint) || 0n;
-              if (allowance < (osloBal || 0n)) return `Approve & Sell ${formatNumber(osloBalNum)} OSLO`;
-              return `Sell ${formatNumber(osloBalNum)} OSLO → USDT`;
-            })()}
-          </IceButton>
-        </div>
-      )}
-      {/* Early Exit button — within 10-day window, returns USDT */}
-      {active && inEarlyExit && exitNetReturn > 0 && (
-        <div className="mt-10 pt-6 border-t-2 border-oslo-danger/20">
-          <div className="mb-3 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-oslo-danger" />
-            <span className="text-[11px] font-semibold text-oslo-danger uppercase tracking-wider">
-              Early Exit Zone
-            </span>
-          </div>
-          <p className="text-[10px] text-oslo-text-muted mb-3 leading-relaxed">
-            Exiting early incurs a {EARLY_EXIT_FEE_PCT}% fee. Choose how much of your deposit to exit:
-          </p>
-          <div className="mb-3 p-2.5 rounded-lg bg-oslo-danger/5 border border-oslo-danger/10">
-            <p className="text-[10px] text-oslo-text-secondary leading-relaxed">
-              <strong className="text-oslo-danger">Important:</strong> Upon taking an early exit, any income already received will be deducted, and a {EARLY_EXIT_FEE_PCT}% processing fee will also apply. Only the remaining balance after these deductions will be paid out.
-            </p>
-          </div>
-          <EarlyExitOptions
-            principal={exitPrincipal}
-            fee={exitFee}
-            netReturn={exitNetReturn}
-            onExit={async (pctBp) => {
-              setEarlyExiting(true);
-              try { await onEarlyExit(index, pctBp); } finally { setEarlyExiting(false); }
-            }}
-            loading={earlyExiting}
-          />
-        </div>
-      )}
-    </GlassCard>
   );
 }
 
@@ -907,7 +799,6 @@ function EarlyExitOptions({
 
   return (
     <div className="space-y-3">
-      {/* Percentage selector buttons */}
       <div className="grid grid-cols-3 gap-2">
         {exitOptions.map((pct) => (
           <button
@@ -924,7 +815,6 @@ function EarlyExitOptions({
         ))}
       </div>
 
-      {/* Breakdown for selected percentage */}
       <div className="p-3 rounded-lg bg-white/[0.03] border border-white/5 space-y-1.5">
         <div className="flex justify-between text-[10px]">
           <span className="text-oslo-text-muted">Exit Amount ({selectedPct}%)</span>
@@ -940,7 +830,7 @@ function EarlyExitOptions({
         </div>
         {selectedPct < 100 && (
           <div className="flex justify-between text-[10px] pt-1 border-t border-white/5">
-            <span className="text-oslo-text-muted">Remaining Balance</span>
+            <span className="text-oslo-text-muted">Remaining Pool</span>
             <span className="font-mono text-oslo-success">${formatNumber(remainingBalance)}</span>
           </div>
         )}

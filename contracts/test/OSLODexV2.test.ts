@@ -241,12 +241,12 @@ describe("OSLODexV2 & OSLOVault", function () {
             await ethers.provider.send("evm_increaseTime", [86400]);
             await ethers.provider.send("evm_mine", []);
 
-            const pending = await osloVault.getPendingRewards(user1.address, 0);
+            const pending = await osloVault.getPendingRewards(user1.address);
             expect(pending).to.be.gt(0);
 
             // Claim rewards
             const osloBefore = await osloToken.balanceOf(user1.address);
-            await osloVault.connect(user1).claimRewards(0);
+            await osloVault.connect(user1).claimRewards();
             const osloAfter = await osloToken.balanceOf(user1.address);
 
             expect(osloAfter).to.be.gt(osloBefore);
@@ -262,7 +262,7 @@ describe("OSLODexV2 & OSLOVault", function () {
             await ethers.provider.send("evm_increaseTime", [86400 * 700]);
             await ethers.provider.send("evm_mine", []);
 
-            const pending = await osloVault.getPendingRewards(user1.address, 0);
+            const pending = await osloVault.getPendingRewards(user1.address);
             // Max should be capped at 3X = $300
             expect(pending).to.equal(ethers.parseEther("300"));
         });
@@ -276,7 +276,7 @@ describe("OSLODexV2 & OSLOVault", function () {
 
             // Exit immediately (within 10-day window)
             const usdtBefore = await usdt.balanceOf(user1.address);
-            await osloVault.connect(user1).earlyExit(0);
+            await osloVault.connect(user1).earlyExit();
             const usdtAfter = await usdt.balanceOf(user1.address);
 
             // Should get back ~90% (10% fee)
@@ -294,8 +294,55 @@ describe("OSLODexV2 & OSLOVault", function () {
             await ethers.provider.send("evm_mine", []);
 
             await expect(
-                osloVault.connect(user1).earlyExit(0)
+                osloVault.connect(user1).earlyExit()
             ).to.be.revertedWithCustomError(osloVault, "NotInEarlyExitPeriod");
+        });
+    });
+
+    describe("Consolidated Pool", function () {
+        it("should merge multiple deposits into single pool", async function () {
+            // First deposit
+            await usdt.connect(user1).approve(await osloVault.getAddress(), ethers.parseEther("5000"));
+            await osloVault.connect(user1).deposit(ethers.parseEther("100"));
+            expect(await osloVault.getActiveDeposit(user1.address)).to.equal(ethers.parseEther("100"));
+
+            // Second deposit — should merge
+            await osloVault.connect(user1).deposit(ethers.parseEther("200"));
+            expect(await osloVault.getActiveDeposit(user1.address)).to.equal(ethers.parseEther("300"));
+
+            // Third deposit — should merge
+            await osloVault.connect(user1).deposit(ethers.parseEther("500"));
+            expect(await osloVault.getActiveDeposit(user1.address)).to.equal(ethers.parseEther("800"));
+        });
+
+        it("should tier up when total exceeds $2500", async function () {
+            await usdt.connect(user1).approve(await osloVault.getAddress(), ethers.parseEther("5000"));
+
+            await osloVault.connect(user1).deposit(ethers.parseEther("1000"));
+            expect(await osloVault.getUserTier(user1.address)).to.equal(1); // Below $2500
+
+            await osloVault.connect(user1).deposit(ethers.parseEther("2000"));
+            expect(await osloVault.getUserTier(user1.address)).to.equal(2); // Now $3000 total
+        });
+
+        it("should checkpoint yield on new deposit", async function () {
+            await usdt.connect(user1).approve(await osloVault.getAddress(), ethers.parseEther("5000"));
+            await osloVault.connect(user1).deposit(ethers.parseEther("1000"));
+
+            // Fast forward 1 day to accumulate yield
+            await ethers.provider.send("evm_increaseTime", [86400]);
+            await ethers.provider.send("evm_mine", []);
+
+            // Get pending before second deposit
+            const pendingBefore = await osloVault.getPendingRewards(user1.address);
+            expect(pendingBefore).to.be.gt(0);
+
+            // Second deposit should checkpoint yield
+            await osloVault.connect(user1).deposit(ethers.parseEther("1000"));
+
+            // Pending should still include the checkpointed amount
+            const pendingAfter = await osloVault.getPendingRewards(user1.address);
+            expect(pendingAfter).to.be.gte(pendingBefore);
         });
     });
 

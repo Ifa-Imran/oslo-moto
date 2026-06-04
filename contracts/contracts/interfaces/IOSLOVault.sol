@@ -2,12 +2,12 @@
 pragma solidity ^0.8.24;
 
 /// @title IOSLOVault
-/// @notice Interface for the OSLO Vault/Staking contract
+/// @notice Interface for the OSLO Vault/Staking contract (consolidated pool model)
 interface IOSLOVault {
     /// @notice Get total active deposit for a user (in USDT)
     function getActiveDeposit(address user) external view returns (uint256);
 
-    /// @notice Get user's package tier (1 or 2)
+    /// @notice Get user's package tier (1 or 2) based on total balance
     function getUserTier(address user) external view returns (uint256);
 
     /// @notice Notify vault of level income for 3X cap tracking

@@ -82,7 +82,7 @@ function LandingPage() {
   const { claimRewards: claimYieldRewards, isLoading: isClaimingYield } = useInvestmentEngineWrites();
 
   // Dashboard data (when registered)
-  const { totalActiveDeposit, userTier, depositCount, totalDeposited, totalRewardsPaid, totalWithdrawn, launchTimestamp } =
+  const { totalActiveDeposit, userTier, totalDeposited, totalRewardsPaid, totalWithdrawn, launchTimestamp } =
     useInvestmentEngineReads(address);
   const { totalBurned, osloBalance, totalSupply } = useTokenReads(address);
   const { usdtBalance } = useUSDTReads(address);
@@ -129,7 +129,8 @@ function LandingPage() {
   const registered = isConnected ? true : undefined;
   const tier = Number(userTier.data || 0);
   const activeDeposit = totalActiveDeposit.data as bigint | undefined;
-  const depositNum = Number(depositCount.data || 0);
+  const activeDepositNum = activeDeposit ? Number(activeDeposit) / 1e18 : 0;
+  const hasDeposits = activeDepositNum > 0;
 
   // Referrer from URL param
   const [referrerInput, setReferrerInput] = useState("");
@@ -315,7 +316,6 @@ function LandingPage() {
   const usdtBal = usdtBalance.data as bigint | undefined;
   const osloBal = osloBalance.data as bigint | undefined;
   const osloPriceNum = parseFloat(osloPrice) || 0;
-  const activeDepositNum = activeDeposit ? Number(activeDeposit) / 1e18 : 0;
   const pendingOsloAmt = osloPriceNum > 0 ? pendingTotalNum / osloPriceNum : 0;
   const dailyYieldNum = activeDepositNum * (dailyRate / 100);
   const dailyYieldOslo = osloPriceNum > 0 ? dailyYieldNum / osloPriceNum : 0;
@@ -419,7 +419,7 @@ function LandingPage() {
         const handleClaimYield = async () => {
           try {
             addToast({ title: "Claiming Investment Yield...", status: "pending" });
-            const tx = await claimYieldRewards(0);
+            const tx = await claimYieldRewards();
             addToast({ title: "Yield Claimed!", status: "success", txHash: tx });
             refetchPending?.();
           } catch (err: any) {
@@ -597,7 +597,7 @@ function LandingPage() {
           <p className="text-sm text-oslo-text-muted py-8 text-center">
             Connect your wallet to view your deposits
           </p>
-        ) : depositNum === 0 ? (
+        ) : !hasDeposits ? (
           <div className="text-center py-12">
             <Zap className="w-10 h-10 text-oslo-text-muted mx-auto mb-3" />
             <p className="text-sm text-oslo-text-secondary mb-4">
@@ -620,7 +620,7 @@ function LandingPage() {
                 </tr>
               </thead>
               <tbody>
-                {depositNum > 0 && (
+                {hasDeposits && (
                   <tr className="border-b border-white/5 hover:bg-white/[0.02]">
                     <td className="py-3 px-3">
                       <TierBadge tier={tier || 1} />

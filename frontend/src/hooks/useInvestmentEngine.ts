@@ -21,14 +21,6 @@ export function useInvestmentEngineReads(userAddress?: Address) {
     query: { enabled: !!userAddress },
   });
 
-  const depositCount = useReadContract({
-    address: CONTRACTS.osloVault,
-    abi: vaultAbi,
-    functionName: "getDepositCount",
-    args: userAddress ? [userAddress] : undefined,
-    query: { enabled: !!userAddress },
-  });
-
   const totalDeposited = useReadContract({
     address: CONTRACTS.osloVault,
     abi: vaultAbi,
@@ -67,47 +59,43 @@ export function useInvestmentEngineReads(userAddress?: Address) {
     query: { enabled: !!userAddress, refetchInterval: 15000 },
   });
 
-  return {
-    totalActiveDeposit,
-    userTier,
-    depositCount,
-    totalDeposited,
-    totalRewardsPaid,
-    totalWithdrawn,
-    depositsPaused,
-    launchTimestamp,
-    combinedEarnings,
-  };
-}
-
-export function useDepositRead(userAddress?: Address, depositIndex?: number) {
-  const enabled = !!userAddress && depositIndex !== undefined && depositIndex >= 0;
-
   const pendingRewards = useReadContract({
     address: CONTRACTS.osloVault,
     abi: vaultAbi,
     functionName: "getPendingRewards",
-    args: enabled ? [userAddress!, depositIndex!] : undefined,
-    query: { enabled, refetchInterval: 15000 },
+    args: userAddress ? [userAddress] : undefined,
+    query: { enabled: !!userAddress, refetchInterval: 15000 },
   });
 
   const isInEarlyExit = useReadContract({
     address: CONTRACTS.osloVault,
     abi: vaultAbi,
     functionName: "isInEarlyExitPeriod",
-    args: enabled ? [userAddress!, depositIndex!] : undefined,
-    query: { enabled },
+    args: userAddress ? [userAddress] : undefined,
+    query: { enabled: !!userAddress },
   });
 
-  const depositData = useReadContract({
+  const userPool = useReadContract({
     address: CONTRACTS.osloVault,
     abi: vaultAbi,
-    functionName: "userDeposits",
-    args: enabled ? [userAddress!, depositIndex!] : undefined,
-    query: { enabled },
+    functionName: "getUserPool",
+    args: userAddress ? [userAddress] : undefined,
+    query: { enabled: !!userAddress, refetchInterval: 15000 },
   });
 
-  return { pendingRewards, isInEarlyExit, depositData };
+  return {
+    totalActiveDeposit,
+    userTier,
+    totalDeposited,
+    totalRewardsPaid,
+    totalWithdrawn,
+    depositsPaused,
+    launchTimestamp,
+    combinedEarnings,
+    pendingRewards,
+    isInEarlyExit,
+    userPool,
+  };
 }
 
 export function useInvestmentEngineWrites() {
@@ -125,30 +113,30 @@ export function useInvestmentEngineWrites() {
     });
   };
 
-  const claimRewards = async (depositIndex: number) => {
+  const claimRewards = async () => {
     return claimAsync({
       address: CONTRACTS.osloVault,
       abi: vaultAbi,
       functionName: "claimRewards",
-      args: [BigInt(depositIndex)],
+      args: [],
     });
   };
 
-  const earlyExit = async (depositIndex: number) => {
+  const earlyExit = async () => {
     return earlyExitAsync({
       address: CONTRACTS.osloVault,
       abi: vaultAbi,
       functionName: "earlyExit",
-      args: [BigInt(depositIndex)],
+      args: [],
     });
   };
 
-  const partialEarlyExit = async (depositIndex: number, percentageBp: number) => {
+  const partialEarlyExit = async (percentageBp: number) => {
     return partialExitAsync({
       address: CONTRACTS.osloVault,
       abi: vaultAbi,
       functionName: "partialEarlyExit",
-      args: [BigInt(depositIndex), BigInt(percentageBp)],
+      args: [BigInt(percentageBp)],
     });
   };
 
