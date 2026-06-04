@@ -191,39 +191,33 @@ export default function SwapPage() {
           {/* Fee Breakdown — only visible when input > 0 */}
           {swapInput && parseFloat(swapInput) > 0 && (() => {
             const inputOSLO = parseFloat(swapInput);
-            const feeBurn = inputOSLO * 0.1;       // 10% — burned via OSLOToken._update
-            const netToDEX = inputOSLO * 0.9;       // 90% received by DEX
-            const additionalBurn = netToDEX * 0.2;  // 20% of received → burned
-            const recycled = netToDEX * 0.7;        // 70% → InvestmentEngine
-            const toLP = netToDEX * 0.1;            // 10% → DEX LP
-            const totalBurn = feeBurn + additionalBurn;
+            const toBurn = inputOSLO * 0.5;         // 50% of tokens burned
+            const toLP = inputOSLO * 0.5;           // 50% added to OSLO reserve (LP)
+            const usdtTax = estimatedOutput * 0.1;  // 10% USD tax (stays in pool)
+            const userReceives = estimatedOutput;   // Already 90% (getEstimatedOutput applies tax)
             return (
               <div className="mb-4 mt-1 px-3 sm:px-4 py-3 bg-red-900/20 border border-red-500/20 rounded-xl space-y-1.5">
                 <div className="flex justify-between items-center text-xs sm:text-sm">
-                  <span className="text-gray-400">You pay (OSLO)</span>
+                  <span className="text-gray-400">You sell (OSLO)</span>
                   <span className="text-white font-mono font-semibold">{inputOSLO.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
                 </div>
                 <div className="border-t border-red-500/20" />
                 <div className="flex justify-between items-center text-xs sm:text-sm">
-                  <span className="text-red-400">Fee burn (10%)</span>
-                  <span className="text-red-400 font-mono">-{feeBurn.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
+                  <span className="text-red-400">Burned (50%)</span>
+                  <span className="text-red-400 font-mono">-{toBurn.toLocaleString(undefined, { maximumFractionDigits: 4 })} OSLO</span>
                 </div>
                 <div className="flex justify-between items-center text-xs sm:text-sm">
-                  <span className="text-red-400">Additional burn (20%)</span>
-                  <span className="text-red-400 font-mono">-{additionalBurn.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
-                </div>
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-red-300/60">└ Total burned (30%)</span>
-                  <span className="text-red-300/60 font-mono">-{totalBurn.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
-                </div>
-                <div className="flex justify-between items-center text-xs sm:text-sm">
-                  <span className="text-yellow-400">Recycled to contract (70%)</span>
-                  <span className="text-yellow-400 font-mono">-{recycled.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
+                  <span className="text-green-400">Added to LP (50%)</span>
+                  <span className="text-green-400 font-mono">+{toLP.toLocaleString(undefined, { maximumFractionDigits: 4 })} OSLO</span>
                 </div>
                 <div className="border-t border-red-500/20" />
                 <div className="flex justify-between items-center text-xs sm:text-sm">
-                  <span className="text-green-400 font-medium">Added to LP (10%)</span>
-                  <span className="text-green-400 font-mono font-semibold">+{toLP.toLocaleString(undefined, { maximumFractionDigits: 4 })} OSLO</span>
+                  <span className="text-yellow-400">USDT sell tax (10%)</span>
+                  <span className="text-yellow-400 font-mono">stays in pool</span>
+                </div>
+                <div className="flex justify-between items-center text-xs sm:text-sm">
+                  <span className="text-blue-300 font-medium">You receive (90%)</span>
+                  <span className="text-blue-300 font-mono font-semibold">{userReceives.toFixed(4)} USDT</span>
                 </div>
               </div>
             );
@@ -343,11 +337,11 @@ export default function SwapPage() {
           <ul className="space-y-2 text-sm text-gray-300">
             <li>• <strong>Sell OSLO → USDT:</strong> Convert your OSLO tokens to USDT anytime</li>
             <li>• <strong>Protocol-Controlled Liquidity:</strong> All liquidity is managed by the OSLO protocol</li>
-            <li>• <strong>Fair Pricing:</strong> Price = USDT Reserve / OSLO Reserve</li>
+            <li>• <strong>Fair Pricing:</strong> AMM constant-product formula (xy=k)</li>
             <li>• <strong>Slippage Protection:</strong> Customizable slippage tolerance for every swap</li>
-            <li>• <strong>10% Sell Fee:</strong> 10% of your OSLO is burned · you receive USDT for the remaining 90%</li>
-            <li>• <strong>Distribution:</strong> Of the 90% reaching the DEX — 20% burned, 70% recycled to contract, 10% added to LP</li>
-            <li>• <strong>Total Deflation:</strong> 30% of swapped OSLO is permanently burned, driving up token price</li>
+            <li>• <strong>10% USDT Tax:</strong> 10% of your USDT output stays in the pool as liquidity</li>
+            <li>• <strong>Token Split:</strong> 50% of sold OSLO is burned, 50% added to DEX reserve (LP)</li>
+            <li>• <strong>Deflation:</strong> 50% of every sell is permanently burned, driving up token price</li>
             <li>• <strong>Burn Cap:</strong> Burning stops when 90% of supply (9.99M OSLO) is burned; 1.11M OSLO remain</li>
             <li>• <strong>Buy OSLO:</strong> OSLO is earned through yield on your staked USDT — not purchasable directly</li>
           </ul>

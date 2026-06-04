@@ -16,7 +16,7 @@ import { AddressChip } from "@/components/ui/AddressChip";
 import { RealTimeYield } from "@/components/dashboard/RealTimeYield";
 import { AllocationBreakdown } from "@/components/dashboard/AllocationBreakdown";
 import { useInvestmentEngineReads, useInvestmentEngineWrites } from "@/hooks/useInvestmentEngine";
-import investmentEngineAbi from "@/abis/OSLOInvestmentEngine.json";
+import investmentEngineAbi from "@/abis/OSLOVault.json";
 import { useTokenReads, useUSDTReads } from "@/hooks/useToken";
 import { useLiquidityManagerReads } from "@/hooks/useLiquidityManager";
 import { useOSLODEX } from "@/hooks/useOSLODEX";
@@ -101,7 +101,7 @@ function LandingPage() {
     address: CONTRACTS.investmentEngine,
     abi: investmentEngineAbi,
     functionName: "getPendingRewards",
-    args: address ? [address as Address, 0n] : undefined,
+    args: address ? [address as Address] : undefined,
     query: { enabled: !!address && isConnected },
   });
 
