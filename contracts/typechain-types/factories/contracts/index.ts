@@ -6,6 +6,8 @@ export * as osloDexV2Sol from "./OSLODexV2.sol";
 export * as interfaces from "./interfaces";
 export * as libraries from "./libraries";
 export * as mocks from "./mocks";
+export { FeeRouter__factory } from "./FeeRouter__factory";
+export { FeeRouterV2__factory } from "./FeeRouterV2__factory";
 export { OSLODAO__factory } from "./OSLODAO__factory";
 export { OSLODEX__factory } from "./OSLODEX__factory";
 export { OSLOInvestmentEngine__factory } from "./OSLOInvestmentEngine__factory";

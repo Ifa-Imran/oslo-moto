@@ -11,6 +11,8 @@ import type * as libraries from "./libraries";
 export type { libraries };
 import type * as mocks from "./mocks";
 export type { mocks };
+export type { FeeRouter } from "./FeeRouter";
+export type { FeeRouterV2 } from "./FeeRouterV2";
 export type { OSLODAO } from "./OSLODAO";
 export type { OSLODEX } from "./OSLODEX";
 export type { OSLOInvestmentEngine } from "./OSLOInvestmentEngine";

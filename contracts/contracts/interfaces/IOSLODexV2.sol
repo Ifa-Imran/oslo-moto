@@ -34,6 +34,11 @@ interface IOSLODexV2 {
     /// @param osloAmount Amount of OSLO to add to reserves
     function replenishOsloReserve(uint256 osloAmount) external;
 
+    /// @notice Inject USDT liquidity into the DEX (pure liquidity injection)
+    /// @dev Adds USDT to reserve without removing OSLO. Callable by anyone.
+    /// @param usdtAmount Amount of USDT to inject
+    function injectUSDTLiquidity(uint256 usdtAmount) external;
+
     /// @notice Get current OSLO price in USDT
     /// @return Price in USDT per OSLO (18 decimals)
     function getPrice() external view returns (uint256);

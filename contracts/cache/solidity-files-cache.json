@@ -1357,7 +1357,7 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLOVault.sol": {
-      "lastModificationDate": 1780552047103,
+      "lastModificationDate": 1780553635979,
       "contentHash": "92117723d780f5ffb4cf14a708fa0d5a",
       "sourceName": "contracts/OSLOVault.sol",
       "solcConfig": {
@@ -1438,8 +1438,8 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\interfaces\\IOSLODexV2.sol": {
-      "lastModificationDate": 1780499111250,
-      "contentHash": "7251094394758eaecdcde214ce674e96",
+      "lastModificationDate": 1780562669282,
+      "contentHash": "22da92d8ae8b5a3772b504f506a69e34",
       "sourceName": "contracts/interfaces/IOSLODexV2.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -1474,8 +1474,8 @@
       ]
     },
     "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\OSLODexV2.sol": {
-      "lastModificationDate": 1780559112908,
-      "contentHash": "7f0a2a2b3e6cb3be8b72ec65ce487707",
+      "lastModificationDate": 1780562651272,
+      "contentHash": "3dc430ea71da276dd2b80655a06c50a8",
       "sourceName": "contracts/OSLODexV2.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -1514,6 +1514,84 @@
       "artifacts": [
         "IOSLOTokenV2Burn",
         "OSLODexV2"
+      ]
+    },
+    "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\FeeRouter.sol": {
+      "lastModificationDate": 1780564561014,
+      "contentHash": "a11f49f13c6c637197d4954f1724b348",
+      "sourceName": "contracts/FeeRouter.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "FeeRouter"
+      ]
+    },
+    "E:\\Projects\\OSLO-MOTO\\contracts\\contracts\\FeeRouterV2.sol": {
+      "lastModificationDate": 1780566392673,
+      "contentHash": "d007886b5d0cbb9f2776f368ccaf7bdc",
+      "sourceName": "contracts/FeeRouterV2.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "FeeRouterV2"
       ]
     }
   }

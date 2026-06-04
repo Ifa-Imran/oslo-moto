@@ -66,6 +66,14 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IOSLODEXDrain__factory>;
     getContractFactory(
+      name: "FeeRouter",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.FeeRouter__factory>;
+    getContractFactory(
+      name: "FeeRouterV2",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.FeeRouterV2__factory>;
+    getContractFactory(
       name: "IDAO",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IDAO__factory>;
@@ -240,6 +248,16 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.IOSLODEXDrain>;
     getContractAt(
+      name: "FeeRouter",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.FeeRouter>;
+    getContractAt(
+      name: "FeeRouterV2",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.FeeRouterV2>;
+    getContractAt(
       name: "IDAO",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -428,6 +446,14 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IOSLODEXDrain>;
     deployContract(
+      name: "FeeRouter",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.FeeRouter>;
+    deployContract(
+      name: "FeeRouterV2",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.FeeRouterV2>;
+    deployContract(
       name: "IDAO",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IDAO>;
@@ -601,6 +627,16 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IOSLODEXDrain>;
+    deployContract(
+      name: "FeeRouter",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.FeeRouter>;
+    deployContract(
+      name: "FeeRouterV2",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.FeeRouterV2>;
     deployContract(
       name: "IDAO",
       args: any[],

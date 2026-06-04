@@ -273,10 +273,12 @@ contract OSLODexV2 is IOSLODexV2, ReentrancyGuard {
         emit OsloReplenished(osloAmount);
     }
 
-    /// @notice Inject USDT liquidity into the DEX (admin only)
-    /// @dev Adds USDT to the reserve without removing OSLO (pure liquidity injection)
+    /// @notice Inject USDT liquidity into the DEX
+    /// @dev Adds USDT to the reserve without removing OSLO (pure liquidity injection).
+    ///      Callable by anyone — safe because caller pays via safeTransferFrom.
+    ///      Used by referral contract to route registration fees into DEX liquidity.
     /// @param usdtAmount Amount of USDT to inject
-    function injectUSDTLiquidity(uint256 usdtAmount) external onlyAdmin {
+    function injectUSDTLiquidity(uint256 usdtAmount) external override {
         if (usdtAmount == 0) revert ZeroAmount();
         usdt.safeTransferFrom(msg.sender, address(this), usdtAmount);
         usdtReserve += usdtAmount;

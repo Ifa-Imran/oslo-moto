@@ -104,6 +104,19 @@ const _abi = [
         type: "uint256",
       },
     ],
+    name: "injectUSDTLiquidity",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "usdtAmount",
+        type: "uint256",
+      },
+    ],
     name: "processBuy",
     outputs: [
       {
