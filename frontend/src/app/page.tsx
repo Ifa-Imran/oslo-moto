@@ -125,8 +125,8 @@ function LandingPage() {
 
   const [flowStep, setFlowStep] = useState<"idle" | "approving" | "registering">("idle");
 
-  // V3: No registration system — treat all connected users as registered
-  const registered = isConnected ? true : undefined;
+  // Check on-chain registration status
+  const registered = isRegistered.isLoading ? undefined : (isRegistered.data as boolean | undefined);
   const tier = Number(userTier.data || 0);
   const activeDeposit = totalActiveDeposit.data as bigint | undefined;
   const activeDepositNum = activeDeposit ? Number(activeDeposit) / 1e18 : 0;
@@ -207,7 +207,7 @@ function LandingPage() {
           >
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-oslo-ice/10 border border-oslo-ice/20 text-xs text-oslo-ice mb-6">
               <span className="w-1.5 h-1.5 rounded-full bg-oslo-ice animate-pulse" />
-              BNB Smart Chain Testnet
+              BNB Smart Chain
             </div>
             <h1 className="text-4xl md:text-6xl font-light tracking-tight text-oslo-text-primary leading-tight">
               OSLO Protocol
@@ -231,7 +231,7 @@ function LandingPage() {
               </p>
               <p className="text-xs text-oslo-text-muted max-w-sm">
                 Use the &quot;Connect Wallet&quot; button in the top-right corner.
-                BSC Testnet supported via MetaMask, Trust Wallet, and WalletConnect.
+                BSC Mainnet supported via MetaMask, Trust Wallet, and WalletConnect.
               </p>
             </div>
           </motion.div>
@@ -276,9 +276,9 @@ function LandingPage() {
         {/* Contract Links */}
         <div className="text-center">
           <p className="text-xs text-oslo-text-muted">
-            Verified on BSC Testnet ·{" "}
+            Verified on BSC Mainnet ·{" "}
             <a
-              href={`https://testnet.bscscan.com/address/${CONTRACTS.investmentEngine}`}
+              href={`https://bscscan.com/address/${CONTRACTS.investmentEngine}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-oslo-ice hover:underline inline-flex items-center gap-1"
@@ -291,20 +291,75 @@ function LandingPage() {
     );
   }
 
-  // ─── STATE 2.5: Loading (only if not connected yet) ────────────────
+  // ─── STATE 2.5: Loading registration status ────────────────
   if (registered === undefined) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-oslo-ice mx-auto mb-4"></div>
-          <p className="text-sm text-oslo-text-secondary">Loading...</p>
+          <p className="text-sm text-oslo-text-secondary">Checking registration status...</p>
         </div>
       </div>
     );
   }
 
+  // ─── STATE 2: Connected but NOT Registered ─────────────────────────────
+  if (!registered) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-md"
+        >
+          <GlassCard className="p-8 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-oslo-ice/10 border border-oslo-ice/20 mb-6">
+              <Users className="w-8 h-8 text-oslo-ice" />
+            </div>
+            <h2 className="text-2xl font-light text-oslo-text-primary mb-2">Register to OSLO Protocol</h2>
+            <p className="text-sm text-oslo-text-secondary mb-6">
+              Join the OSLO ecosystem. A one-time $1 USDT registration fee is required.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs text-oslo-text-muted mb-1.5 text-left">Referrer Address</label>
+                <input
+                  type="text"
+                  placeholder="0x... (referrer wallet address)"
+                  value={referrerInput}
+                  onChange={(e) => setReferrerInput(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-lg bg-oslo-dark/50 border border-oslo-ice/20 text-sm text-oslo-text-primary placeholder:text-oslo-text-muted focus:outline-none focus:border-oslo-ice/50 transition-colors"
+                />
+                {refParam && (
+                  <p className="text-xs text-oslo-ice mt-1">Referrer set from link</p>
+                )}
+              </div>
+
+              <button
+                onClick={handleRegister}
+                disabled={isRegistering || flowStep !== "idle"}
+                className="w-full px-6 py-3 rounded-lg bg-oslo-ice/20 hover:bg-oslo-ice/30 border border-oslo-ice/30 text-oslo-ice font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {flowStep === "approving"
+                  ? "Approving USDT..."
+                  : flowStep === "registering"
+                  ? "Registering..."
+                  : "Register ($1 USDT)"}
+              </button>
+
+              <p className="text-xs text-oslo-text-muted">
+                Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
+              </p>
+            </div>
+          </GlassCard>
+        </motion.div>
+      </div>
+    );
+  }
+
   // ─── STATE 3: Registered — Dashboard ─────────────────────────────────
-  // registered === true at this point
   const dailyRate = getDailyRate(activeDeposit ? Number(formatToken(activeDeposit, 0)) : 10);
   const lifetimeActive = isLifetimeRateActive();
   const totalReg = Number((totalRegistered.data as bigint) || 0n);
