@@ -35,6 +35,7 @@ export interface OSLODexV2Interface extends Interface {
       | "getPrice"
       | "getReserves"
       | "getUSDTForOSLO"
+      | "injectUSDTLiquidity"
       | "lastPrice"
       | "liquidityInitialized"
       | "osloReserve"
@@ -92,6 +93,10 @@ export interface OSLODexV2Interface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "getUSDTForOSLO",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "injectUSDTLiquidity",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(functionFragment: "lastPrice", values?: undefined): string;
@@ -170,6 +175,10 @@ export interface OSLODexV2Interface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "getUSDTForOSLO",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "injectUSDTLiquidity",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "lastPrice", data: BytesLike): Result;
@@ -409,6 +418,12 @@ export interface OSLODexV2 extends BaseContract {
     "view"
   >;
 
+  injectUSDTLiquidity: TypedContractMethod<
+    [usdtAmount: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   lastPrice: TypedContractMethod<[], [bigint], "view">;
 
   liquidityInitialized: TypedContractMethod<[], [boolean], "view">;
@@ -498,6 +513,9 @@ export interface OSLODexV2 extends BaseContract {
   getFunction(
     nameOrSignature: "getUSDTForOSLO"
   ): TypedContractMethod<[osloAmount: BigNumberish], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "injectUSDTLiquidity"
+  ): TypedContractMethod<[usdtAmount: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "lastPrice"
   ): TypedContractMethod<[], [bigint], "view">;

@@ -273,6 +273,15 @@ contract OSLODexV2 is IOSLODexV2, ReentrancyGuard {
         emit OsloReplenished(osloAmount);
     }
 
+    /// @notice Inject USDT liquidity into the DEX (admin only)
+    /// @dev Adds USDT to the reserve without removing OSLO (pure liquidity injection)
+    /// @param usdtAmount Amount of USDT to inject
+    function injectUSDTLiquidity(uint256 usdtAmount) external onlyAdmin {
+        if (usdtAmount == 0) revert ZeroAmount();
+        usdt.safeTransferFrom(msg.sender, address(this), usdtAmount);
+        usdtReserve += usdtAmount;
+    }
+
     // ─── View Functions ─────────────────────────────────────────────────
 
     /// @notice Get current OSLO price in USDT
