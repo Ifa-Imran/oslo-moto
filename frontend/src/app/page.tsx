@@ -98,7 +98,7 @@ function LandingPage() {
     data: pendingRewardsData,
     refetch: refetchPending,
   } = useReadContract({
-    address: CONTRACTS.investmentEngine,
+    address: CONTRACTS.osloVault,
     abi: investmentEngineAbi,
     functionName: "getPendingRewards",
     args: address ? [address as Address] : undefined,
@@ -278,7 +278,7 @@ function LandingPage() {
           <p className="text-xs text-oslo-text-muted">
             Verified on BSC Mainnet ·{" "}
             <a
-              href={`https://bscscan.com/address/${CONTRACTS.investmentEngine}`}
+              href={`https://bscscan.com/address/${CONTRACTS.osloVault}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-oslo-ice hover:underline inline-flex items-center gap-1"
