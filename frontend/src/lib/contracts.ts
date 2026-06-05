@@ -10,7 +10,7 @@ export const CONTRACTS = {
   usdt:       "0x55d398326f99059fF775485246999027B3197955" as `0x${string}`,
 
   // V2 backward-compatible aliases
-  investmentEngine: "0x988bA1DffA546cF8b76FcfEEe81F407851A89CC3" as `0x${string}`, // = osloVault
+  investmentEngine: "0xe0625F7D8482617A2E05cf1dFdab6b75C5b9ACCa" as `0x${string}`, // = OSLOInvestmentEngine
   referral:         "0xe152a63A8f0587Af9C0bAe1acfccA5345642358e" as `0x${string}`,
   rankSystem:       "0xf0C3bFCf6a90269b40Cbda15374EF9b4A1a9F67C" as `0x${string}`,
   dao:              "0x708C360721baabb9FA982b37c79Fd3E21e374FEF" as `0x${string}`,
