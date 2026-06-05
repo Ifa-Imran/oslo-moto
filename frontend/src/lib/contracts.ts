@@ -5,7 +5,7 @@
 export const CONTRACTS = {
   // V3 Core contracts
   osloToken:  "0xD22fA2a8AC7F97aFaB46e580FbbF59696D3F942c" as `0x${string}`,
-  osloDEX:    "0x5A7C5046FbB6aDdF7Ae36D08Ab0A603be694798C" as `0x${string}`,
+  osloDEX:    "0x1dA86De96E3A7f9bA3645A01B843F0ded8E6e84D" as `0x${string}`,
   osloVault:  "0x988bA1DffA546cF8b76FcfEEe81F407851A89CC3" as `0x${string}`,
   usdt:       "0x55d398326f99059fF775485246999027B3197955" as `0x${string}`,
 

@@ -36,17 +36,21 @@ export interface OSLODexV2Interface extends Interface {
       | "getPrice"
       | "getReserves"
       | "getUSDTForOSLO"
+      | "getUSDTForOSLOOutput"
       | "injectUSDTLiquidity"
+      | "investmentEngine"
       | "lastPrice"
       | "liquidityInitialized"
       | "osloReserve"
       | "osloToken"
       | "processBuy"
+      | "processDeposit"
       | "processWithdrawal"
       | "replenishOsloReserve"
       | "sellOSLO"
       | "setVault"
       | "setupComplete"
+      | "swapYieldForOSLO"
       | "timelock"
       | "totalBurned"
       | "totalSwaps"
@@ -77,7 +81,7 @@ export interface OSLODexV2Interface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "configure",
-    values: [AddressLike, AddressLike]
+    values: [AddressLike, AddressLike, AddressLike]
   ): string;
   encodeFunctionData(
     functionFragment: "drainOSLO",
@@ -101,8 +105,16 @@ export interface OSLODexV2Interface extends Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "getUSDTForOSLOOutput",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "injectUSDTLiquidity",
     values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "investmentEngine",
+    values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "lastPrice", values?: undefined): string;
   encodeFunctionData(
@@ -116,6 +128,10 @@ export interface OSLODexV2Interface extends Interface {
   encodeFunctionData(functionFragment: "osloToken", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "processBuy",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "processDeposit",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
@@ -137,6 +153,10 @@ export interface OSLODexV2Interface extends Interface {
   encodeFunctionData(
     functionFragment: "setupComplete",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "swapYieldForOSLO",
+    values: [BigNumberish, AddressLike]
   ): string;
   encodeFunctionData(functionFragment: "timelock", values?: undefined): string;
   encodeFunctionData(
@@ -184,7 +204,15 @@ export interface OSLODexV2Interface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "getUSDTForOSLOOutput",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "injectUSDTLiquidity",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "investmentEngine",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "lastPrice", data: BytesLike): Result;
@@ -199,6 +227,10 @@ export interface OSLODexV2Interface extends Interface {
   decodeFunctionResult(functionFragment: "osloToken", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "processBuy", data: BytesLike): Result;
   decodeFunctionResult(
+    functionFragment: "processDeposit",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "processWithdrawal",
     data: BytesLike
   ): Result;
@@ -210,6 +242,10 @@ export interface OSLODexV2Interface extends Interface {
   decodeFunctionResult(functionFragment: "setVault", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "setupComplete",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "swapYieldForOSLO",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "timelock", data: BytesLike): Result;
@@ -401,7 +437,11 @@ export interface OSLODexV2 extends BaseContract {
   completeSetup: TypedContractMethod<[], [void], "nonpayable">;
 
   configure: TypedContractMethod<
-    [_vault: AddressLike, _timelock: AddressLike],
+    [
+      _vault: AddressLike,
+      _timelock: AddressLike,
+      _investmentEngine: AddressLike
+    ],
     [void],
     "nonpayable"
   >;
@@ -426,11 +466,19 @@ export interface OSLODexV2 extends BaseContract {
     "view"
   >;
 
+  getUSDTForOSLOOutput: TypedContractMethod<
+    [usdtAmount: BigNumberish],
+    [bigint],
+    "view"
+  >;
+
   injectUSDTLiquidity: TypedContractMethod<
     [usdtAmount: BigNumberish],
     [void],
     "nonpayable"
   >;
+
+  investmentEngine: TypedContractMethod<[], [string], "view">;
 
   lastPrice: TypedContractMethod<[], [bigint], "view">;
 
@@ -441,6 +489,12 @@ export interface OSLODexV2 extends BaseContract {
   osloToken: TypedContractMethod<[], [string], "view">;
 
   processBuy: TypedContractMethod<
+    [usdtAmount: BigNumberish],
+    [bigint],
+    "nonpayable"
+  >;
+
+  processDeposit: TypedContractMethod<
     [usdtAmount: BigNumberish],
     [bigint],
     "nonpayable"
@@ -467,6 +521,12 @@ export interface OSLODexV2 extends BaseContract {
   setVault: TypedContractMethod<[_vault: AddressLike], [void], "nonpayable">;
 
   setupComplete: TypedContractMethod<[], [boolean], "view">;
+
+  swapYieldForOSLO: TypedContractMethod<
+    [usdtAmount: BigNumberish, recipient: AddressLike],
+    [bigint],
+    "nonpayable"
+  >;
 
   timelock: TypedContractMethod<[], [string], "view">;
 
@@ -502,7 +562,11 @@ export interface OSLODexV2 extends BaseContract {
   getFunction(
     nameOrSignature: "configure"
   ): TypedContractMethod<
-    [_vault: AddressLike, _timelock: AddressLike],
+    [
+      _vault: AddressLike,
+      _timelock: AddressLike,
+      _investmentEngine: AddressLike
+    ],
     [void],
     "nonpayable"
   >;
@@ -525,8 +589,14 @@ export interface OSLODexV2 extends BaseContract {
     nameOrSignature: "getUSDTForOSLO"
   ): TypedContractMethod<[osloAmount: BigNumberish], [bigint], "view">;
   getFunction(
+    nameOrSignature: "getUSDTForOSLOOutput"
+  ): TypedContractMethod<[usdtAmount: BigNumberish], [bigint], "view">;
+  getFunction(
     nameOrSignature: "injectUSDTLiquidity"
   ): TypedContractMethod<[usdtAmount: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "investmentEngine"
+  ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "lastPrice"
   ): TypedContractMethod<[], [bigint], "view">;
@@ -541,6 +611,9 @@ export interface OSLODexV2 extends BaseContract {
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "processBuy"
+  ): TypedContractMethod<[usdtAmount: BigNumberish], [bigint], "nonpayable">;
+  getFunction(
+    nameOrSignature: "processDeposit"
   ): TypedContractMethod<[usdtAmount: BigNumberish], [bigint], "nonpayable">;
   getFunction(
     nameOrSignature: "processWithdrawal"
@@ -565,6 +638,13 @@ export interface OSLODexV2 extends BaseContract {
   getFunction(
     nameOrSignature: "setupComplete"
   ): TypedContractMethod<[], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "swapYieldForOSLO"
+  ): TypedContractMethod<
+    [usdtAmount: BigNumberish, recipient: AddressLike],
+    [bigint],
+    "nonpayable"
+  >;
   getFunction(
     nameOrSignature: "timelock"
   ): TypedContractMethod<[], [string], "view">;

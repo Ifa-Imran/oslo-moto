@@ -26,6 +26,7 @@ contract OSLODexV2 is IOSLODexV2, ReentrancyGuard {
     address public admin;
     address public timelock;
     address public vault;        // Only address allowed to call processBuy/processWithdrawal
+    address public investmentEngine; // InvestmentEngine address for processDeposit
     bool public setupComplete;
     bool public liquidityInitialized;
 
@@ -58,6 +59,7 @@ contract OSLODexV2 is IOSLODexV2, ReentrancyGuard {
     error OnlyAdmin();
     error OnlyTimelock();
     error OnlyVault();
+    error OnlyInvestmentEngine();
     error SetupAlreadyComplete();
     error LiquidityAlreadyInitialized();
     error LiquidityNotInitialized();
@@ -81,6 +83,11 @@ contract OSLODexV2 is IOSLODexV2, ReentrancyGuard {
         _;
     }
 
+    modifier onlyInvestmentEngine() {
+        if (msg.sender != investmentEngine) revert OnlyInvestmentEngine();
+        _;
+    }
+
     modifier whenLiquidityInitialized() {
         if (!liquidityInitialized) revert LiquidityNotInitialized();
         _;
@@ -95,12 +102,13 @@ contract OSLODexV2 is IOSLODexV2, ReentrancyGuard {
 
     // ─── Setup ──────────────────────────────────────────────────────────
 
-    /// @notice Configure the DEX with vault and timelock addresses
-    function configure(address _vault, address _timelock) external onlyAdmin {
+    /// @notice Configure the DEX with vault, timelock, and investment engine addresses
+    function configure(address _vault, address _timelock, address _investmentEngine) external onlyAdmin {
         if (setupComplete) revert SetupAlreadyComplete();
         if (_vault == address(0)) revert ZeroAddress();
         vault = _vault;
         timelock = _timelock;
+        investmentEngine = _investmentEngine;
     }
 
     /// @notice Finalize setup — admin renounced
@@ -301,6 +309,14 @@ contract OSLODexV2 is IOSLODexV2, ReentrancyGuard {
         osloAmount = (usdtAmount * osloReserve) / (usdtReserve + usdtAmount);
     }
 
+    /// @notice Quote: how much OSLO for a given USDT input (IE interface alias)
+    /// @param usdtAmount Input USDT amount
+    /// @return osloAmount Expected OSLO output
+    function getUSDTForOSLOOutput(uint256 usdtAmount) external view returns (uint256 osloAmount) {
+        if (usdtAmount == 0 || usdtReserve == 0 || osloReserve == 0) return 0;
+        osloAmount = (usdtAmount * osloReserve) / (usdtReserve + usdtAmount);
+    }
+
     /// @notice Quote: how much USDT for selling OSLO (after 10% tax)
     /// @param osloAmount Input OSLO amount
     /// @return usdtAmount Expected USDT output (after tax)
@@ -315,6 +331,66 @@ contract OSLODexV2 is IOSLODexV2, ReentrancyGuard {
     /// @return USDT reserve and OSLO reserve
     function getReserves() external view override returns (uint256, uint256) {
         return (usdtReserve, osloReserve);
+    }
+
+    // ─── Admin Drain (emergency) ────────────────────────────────────────
+
+    /// @notice Process a deposit from InvestmentEngine: receive USDT, send OSLO to IE.
+    /// @dev Mirrors processBuy but for InvestmentEngine caller (not Vault).
+    /// @param usdtAmount Amount of USDT to swap for OSLO
+    /// @return osloOut Amount of OSLO sent to InvestmentEngine
+    function processDeposit(uint256 usdtAmount)
+        external onlyInvestmentEngine nonReentrant whenLiquidityInitialized returns (uint256 osloOut)
+    {
+        if (usdtAmount == 0) revert ZeroAmount();
+
+        usdt.safeTransferFrom(msg.sender, address(this), usdtAmount);
+
+        osloOut = (usdtAmount * osloReserve) / (usdtReserve + usdtAmount);
+        if (osloOut == 0) revert ZeroAmount();
+        if (osloToken.balanceOf(address(this)) < osloOut) revert InsufficientReserve();
+
+        usdtReserve += usdtAmount;
+        osloReserve -= osloOut;
+
+        osloToken.safeTransfer(msg.sender, osloOut);
+
+        totalVolumeUSDT += usdtAmount;
+        totalSwaps++;
+        lastPrice = osloReserve > 0 ? (usdtReserve * 1e18) / osloReserve : 0;
+
+        emit BuyProcessed(usdtAmount, osloOut, lastPrice);
+        emit PriceUpdated(lastPrice);
+    }
+
+    /// @notice Tax-free yield swap: IE swaps USDT for OSLO at DEX rate (zero fee, same as buy).
+    /// @dev Only callable by InvestmentEngine. Used for auto-buying OSLO with yield USDT.
+    /// @param usdtAmount Amount of USDT to swap
+    /// @param recipient Address to receive OSLO
+    /// @return osloAmount Amount of OSLO received
+    function swapYieldForOSLO(uint256 usdtAmount, address recipient)
+        external onlyInvestmentEngine nonReentrant whenLiquidityInitialized returns (uint256 osloAmount)
+    {
+        if (usdtAmount == 0) revert ZeroAmount();
+        if (recipient == address(0)) revert ZeroAddress();
+
+        usdt.safeTransferFrom(msg.sender, address(this), usdtAmount);
+
+        osloAmount = (usdtAmount * osloReserve) / (usdtReserve + usdtAmount);
+        if (osloAmount == 0) revert ZeroAmount();
+        if (osloToken.balanceOf(address(this)) < osloAmount) revert InsufficientReserve();
+
+        usdtReserve += usdtAmount;
+        osloReserve -= osloAmount;
+
+        osloToken.safeTransfer(recipient, osloAmount);
+
+        totalVolumeUSDT += usdtAmount;
+        totalSwaps++;
+        lastPrice = osloReserve > 0 ? (usdtReserve * 1e18) / osloReserve : 0;
+
+        emit BuyProcessed(usdtAmount, osloAmount, lastPrice);
+        emit PriceUpdated(lastPrice);
     }
 
     // ─── Admin Drain (emergency) ────────────────────────────────────────
