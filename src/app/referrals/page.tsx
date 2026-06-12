@@ -214,7 +214,7 @@ export default function ReferralsPage() {
       </div>
 
       {/* Header Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
         <StatCard label="Direct Referrals" value={directs.length.toString()} mono={false} />
         <StatCard label="Qualified Directs" value={qualified.toString()} mono={false} />
         <StatCard
@@ -223,7 +223,6 @@ export default function ReferralsPage() {
           mono={false}
         />
         <StatCard label="Team Size" value={team.toString()} mono={false} />
-        <StatCard label="Total Registered" value={totalReg.toLocaleString()} mono={false} />
         <StatCard
           label="Total Commissions"
           value={`$${totalComm != null ? formatToken(totalComm, 0) : "0"}`}

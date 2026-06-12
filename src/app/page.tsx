@@ -377,7 +377,7 @@ function LandingPage() {
                     value={referrerInput}
                     onChange={(e) => setReferrerInput(e.target.value)}
                     placeholder="0x... (from referral link)"
-                    className="mt-1.5 w-full bg-oslo-void border border-white/10 rounded-btn px-4 py-2.5 text-sm font-mono text-oslo-text-primary placeholder:text-oslo-text-muted focus:outline-none focus:border-oslo-ice/50 transition-all"
+                    className="mt-1.5 w-full bg-oslo-void border border-white/10 rounded-btn px-4 py-2.5 text-sm font-mono text-white placeholder:text-oslo-text-muted focus:outline-none focus:border-oslo-ice/50 transition-all"
                   />
                   {refParam ? (
                     <p className="text-[10px] text-oslo-ice mt-1 flex items-center gap-1">
@@ -562,7 +562,6 @@ function LandingPage() {
         <StatCard
           label="Total Value Locked"
           value={`$${formatToken(totalLiquidityAdded?.data as bigint || 0n, 2)}`}
-          subValue={totalRegistered.data != null ? `${String(totalRegistered.data)} users registered` : undefined}
           icon={<TrendingUp className="w-4 h-4" />}
         />
         <StatCard
