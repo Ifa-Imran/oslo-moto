@@ -215,10 +215,15 @@ contract OSLOVault is IOSLOVault, ReentrancyGuard {
         IOSLODexV2(osloDex).processBuy(dexAmount);
 
         // Update consolidated pool
+        bool isFirstDeposit = (pool.totalBalance == 0);
         pool.totalBalance += amount;
         pool.maxReturn = pool.totalBalance * OSLOConstants.RETURN_CAP_MULTIPLIER;
         pool.lastClaimTime = block.timestamp;
-        pool.lastDepositTime = block.timestamp;
+        
+        // Set lastDepositTime ONLY on first deposit (early exit timer is one-time per account)
+        if (isFirstDeposit) {
+            pool.lastDepositTime = block.timestamp;
+        }
         pool.active = true;
 
         totalDeposited += amount;

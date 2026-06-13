@@ -425,6 +425,30 @@
         },
         {
           "internalType": "uint256",
+          "name": "minUSDTOut",
+          "type": "uint256"
+        }
+      ],
+      "name": "sellOSLO",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "toUser",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "osloAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
           "name": "minBUSDAmount",
           "type": "uint256"
         }

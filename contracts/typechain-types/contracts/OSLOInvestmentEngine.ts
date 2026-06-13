@@ -73,8 +73,10 @@ export interface OSLOInvestmentEngineInterface extends Interface {
       | "getEarlyExitAmount"
       | "getPartialEarlyExitAmount"
       | "getPendingRewards"
+      | "getTrialTimeRemaining"
       | "getUserTier"
       | "isInEarlyExitPeriod"
+      | "isInTrialPeriod"
       | "launchTimestamp"
       | "migrateCombinedEarnings"
       | "migrateDeposits"
@@ -169,11 +171,19 @@ export interface OSLOInvestmentEngineInterface extends Interface {
     values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "getTrialTimeRemaining",
+    values: [AddressLike, BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "getUserTier",
     values: [AddressLike]
   ): string;
   encodeFunctionData(
     functionFragment: "isInEarlyExitPeriod",
+    values: [AddressLike, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "isInTrialPeriod",
     values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
@@ -305,11 +315,19 @@ export interface OSLOInvestmentEngineInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "getTrialTimeRemaining",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "getUserTier",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
     functionFragment: "isInEarlyExitPeriod",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "isInTrialPeriod",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -666,9 +684,21 @@ export interface OSLOInvestmentEngine extends BaseContract {
     "view"
   >;
 
+  getTrialTimeRemaining: TypedContractMethod<
+    [user: AddressLike, depositIndex: BigNumberish],
+    [bigint],
+    "view"
+  >;
+
   getUserTier: TypedContractMethod<[user: AddressLike], [bigint], "view">;
 
   isInEarlyExitPeriod: TypedContractMethod<
+    [user: AddressLike, depositIndex: BigNumberish],
+    [boolean],
+    "view"
+  >;
+
+  isInTrialPeriod: TypedContractMethod<
     [user: AddressLike, depositIndex: BigNumberish],
     [boolean],
     "view"
@@ -782,10 +812,11 @@ export interface OSLOInvestmentEngine extends BaseContract {
   users: TypedContractMethod<
     [arg0: AddressLike],
     [
-      [bigint, bigint, bigint] & {
+      [bigint, bigint, bigint, boolean] & {
         totalActiveDeposit: bigint;
         depositCount: bigint;
         totalCombinedEarnings: bigint;
+        earlyExitExpired: boolean;
       }
     ],
     "view"
@@ -874,10 +905,24 @@ export interface OSLOInvestmentEngine extends BaseContract {
     "view"
   >;
   getFunction(
+    nameOrSignature: "getTrialTimeRemaining"
+  ): TypedContractMethod<
+    [user: AddressLike, depositIndex: BigNumberish],
+    [bigint],
+    "view"
+  >;
+  getFunction(
     nameOrSignature: "getUserTier"
   ): TypedContractMethod<[user: AddressLike], [bigint], "view">;
   getFunction(
     nameOrSignature: "isInEarlyExitPeriod"
+  ): TypedContractMethod<
+    [user: AddressLike, depositIndex: BigNumberish],
+    [boolean],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "isInTrialPeriod"
   ): TypedContractMethod<
     [user: AddressLike, depositIndex: BigNumberish],
     [boolean],
@@ -1006,10 +1051,11 @@ export interface OSLOInvestmentEngine extends BaseContract {
   ): TypedContractMethod<
     [arg0: AddressLike],
     [
-      [bigint, bigint, bigint] & {
+      [bigint, bigint, bigint, boolean] & {
         totalActiveDeposit: bigint;
         depositCount: bigint;
         totalCombinedEarnings: bigint;
+        earlyExitExpired: boolean;
       }
     ],
     "view"

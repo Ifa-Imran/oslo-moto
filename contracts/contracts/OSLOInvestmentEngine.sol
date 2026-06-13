@@ -35,6 +35,7 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         uint256 totalActiveDeposit;  // Sum of all active deposit principals (USDT)
         uint256 depositCount;        // Number of deposits
         uint256 totalCombinedEarnings; // Daily yield + level income + rank bonus (USDT-equivalent)
+        bool earlyExitExpired;       // True once first deposit's 10-day period has expired (one-time per account)
     }
 
     // ─── State ──────────────────────────────────────────────────────────
@@ -307,6 +308,19 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         users[msg.sender].depositCount++;
         totalDeposited += amount;
 
+        // Mark early exit as expired if first deposit's 10-day period has passed
+        // This ensures subsequent deposits never show the early exit timer again
+        if (users[msg.sender].depositCount == 1) {
+            // First deposit - check if 10 days have already passed (edge case)
+            // This will be checked on each subsequent deposit
+        } else {
+            // Subsequent deposit - check if first deposit's period has expired
+            Deposit storage firstDep = userDeposits[msg.sender][0];
+            if (block.timestamp > firstDep.depositTime + OSLOConstants.EARLY_EXIT_PERIOD) {
+                users[msg.sender].earlyExitExpired = true;
+            }
+        }
+
         // Update referral levels — check depositor AND their referrer
         // (this deposit may qualify msg.sender as a "qualified direct" for their upline)
         if (referral != address(0)) {
@@ -332,6 +346,14 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
     /// @param depositIndex Index of the deposit in user's deposits array
     function claimRewards(uint256 depositIndex) external nonReentrant {
         Deposit storage dep = _getActiveDeposit(msg.sender, depositIndex);
+
+        // Update earlyExitExpired flag if first deposit's period has passed
+        if (!users[msg.sender].earlyExitExpired && userDeposits[msg.sender].length > 0) {
+            Deposit storage firstDep = userDeposits[msg.sender][0];
+            if (block.timestamp > firstDep.depositTime + OSLOConstants.EARLY_EXIT_PERIOD) {
+                users[msg.sender].earlyExitExpired = true;
+            }
+        }
 
         uint256 pendingUSDT = _calculatePendingRewards(msg.sender, dep);
         if (pendingUSDT == 0) revert NothingToClaim();
@@ -576,6 +598,34 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         Deposit storage dep = userDeposits[user][depositIndex];
         if (!dep.active) return 0;
         return _calculatePendingRewards(user, dep);
+    }
+
+    /// @notice Check if a deposit is within the trial/early exit period
+    /// @dev Returns false if user's first 10-day period has already expired (one-time per account)
+    function isInTrialPeriod(address user, uint256 depositIndex) external view returns (bool) {
+        // If user's first early exit period has expired, no more trials
+        if (users[user].earlyExitExpired) return false;
+        
+        if (depositIndex >= userDeposits[user].length) return false;
+        Deposit storage dep = userDeposits[user][depositIndex];
+        if (!dep.active) return false;
+        
+        return block.timestamp <= dep.depositTime + OSLOConstants.EARLY_EXIT_PERIOD;
+    }
+
+    /// @notice Get remaining trial time for a deposit
+    /// @dev Returns 0 if user's first 10-day period has already expired (one-time per account)
+    function getTrialTimeRemaining(address user, uint256 depositIndex) external view returns (uint256) {
+        // If user's first early exit period has expired, no time remaining
+        if (users[user].earlyExitExpired) return 0;
+        
+        if (depositIndex >= userDeposits[user].length) return 0;
+        Deposit storage dep = userDeposits[user][depositIndex];
+        if (!dep.active) return 0;
+        
+        uint256 trialEnd = dep.depositTime + OSLOConstants.EARLY_EXIT_PERIOD;
+        if (block.timestamp >= trialEnd) return 0;
+        return trialEnd - block.timestamp;
     }
 
     // ─── Internal Functions ─────────────────────────────────────────────

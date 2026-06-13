@@ -79,13 +79,15 @@ export function useOSLODEX() {
   const handleSwapOSLOForBUSD = async (osloAmount: string) => {
     const amount = parseEther(osloAmount);
     const estimatedOutput = getEstimatedOutput(osloAmount, false);
-    const minOutput = estimatedOutput * (1 - slippage / 100);
+    // Apply 10% fee to estimate (user gets 90%)
+    const outputAfterFee = estimatedOutput * 0.9;
+    const minOutput = outputAfterFee * (1 - slippage / 100);
     const minAmount = parseEther(minOutput.toString());
 
     swapBUSDForOSLO({
       address: CONTRACTS.osloDEX,
       abi: osloDEXABI,
-      functionName: "swapOSLOForBUSD",
+      functionName: "sellOSLO",
       args: [amount, minAmount],
     });
   };

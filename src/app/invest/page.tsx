@@ -464,7 +464,7 @@ function DepositCard({
       const tx = await writeContractAsync({
         address: CONTRACTS.osloDEX,
         abi: osloDEXAbi,
-        functionName: "swapOSLOForBUSD",
+        functionName: "sellOSLO",
         args: [osloBal, 0n],
       });
       addToast({ title: "Converted to USDT!", status: "success", txHash: tx });

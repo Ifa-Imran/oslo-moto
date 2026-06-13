@@ -330,7 +330,7 @@ function LandingPage() {
                   placeholder="0x... (referrer wallet address)"
                   value={referrerInput}
                   onChange={(e) => setReferrerInput(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-lg bg-oslo-dark/50 border border-oslo-ice/20 text-sm text-oslo-text-primary placeholder:text-oslo-text-muted focus:outline-none focus:border-oslo-ice/50 transition-colors"
+                  className="w-full px-4 py-2.5 rounded-lg bg-oslo-dark/50 border border-oslo-ice/20 text-sm text-white placeholder:text-oslo-text-muted focus:outline-none focus:border-oslo-ice/50 transition-colors"
                 />
                 {refParam && (
                   <p className="text-xs text-oslo-ice mt-1">Referrer set from link</p>
