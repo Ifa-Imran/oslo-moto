@@ -1,13 +1,19 @@
 import { ethers } from "hardhat";
 
 async function main() {
-  const referral = await ethers.getContractAt("OSLOReferral", "0xe152a63A8f0587Af9C0bAe1acfccA5345642358e");
+  // V3 testnet addresses
+  const referral = await ethers.getContractAt("OSLOReferral", "0x77e81eE198d93b16FFA7784540d2FEeE3cD25274");
   const total = await referral.totalRegistered();
-  console.log("Total registered:", total.toString());
-
-  const vault = await ethers.getContractAt("OSLOVault", "0x988bA1DffA546cF8b76FcfEEe81F407851A89CC3");
-  const totalDeposited = await vault.totalDeposited();
-  console.log("Vault totalDeposited:", ethers.formatEther(totalDeposited));
+  console.log("📊 Total registered:", total.toString());
+  
+  // Check if first user is registered
+  if (total > 0n) {
+    console.log("\n⚠️  There are already registered users.");
+    console.log("👉 You MUST provide a referrer address to register.");
+    console.log("👉 Use a referral link or ask for a referrer address.");
+  } else {
+    console.log("\n✅ No users registered yet. You can register as root user.");
+  }
 }
 
 main().catch(console.error);

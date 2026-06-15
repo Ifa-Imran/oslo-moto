@@ -1,267 +1,144 @@
-import { ethers } from "hardhat";
-import * as fs from "fs";
-import * as path from "path";
+﻿import { ethers } from "hardhat";
 
-const SNAPSHOT_PATH = path.join(__dirname, "../data/testnet-final-snapshot.json");
-
-// Deployed in step 1-9 of redeploy-v5
-const USDT = "0x217565cbF9772E2A2F1FBd50aC7E673fa5980aFB";
-const OSLO = "0x2Dc0e9ef353287D2D3880eF7F3Ee2386EF24F8d1";
-const LM_ADDR = "0x23512bbf86a47c79F3194f5aC950a6E4113f5FC1";
-const DEX_ADDR = "0xC1996eeeCbEeF5aB98d8eD501d3D02ec3d928942";
-const IE_ADDR = "0xA6Ecd84D101630f0FaDe26D3aDfaB9364f44CD1B";
-const REF_ADDR = "0xC9cbF61F09Fe9ae9EaB2553Aa13BE2f64C67112e";
-const RANK_ADDR = "0x362f5E21426E2A1D4922A7853371761df7922188";
-const TREASURY_ADDR = "0x2D7BAd0fB36A95465d7a85dF6822C2ef4b7fbE46";
-const DAO_ADDR = "0x2d00EC2Cde140Ae8c7eeb8d34987aae4Ed53997E";
+// ─── Addresses ───────────────────────────────────────────────────────────────
+const USDT = "0xbC9352a7abb1Af216aC65B2efB55A9738fAdC62C";
+const OSLO = "0x3191BBd57A21725E4Bf1eE9EC3C9d475b43b3DE6";
+const NEW_DEX = "0xb220f4A59ab079879Cc38AF2d69B0E2918Db100B"; // Just deployed
+const REFERRAL = "0x0D584e91182a91e0500db20a603D0f732bE01B12";
+const RANK_SYSTEM = "0xf2F0C4ecA5152dDE2ADbadE8F311f297370F0844";
+const TREASURY = "0xaE99dFB0285d30Bf263fA9192A414ac818b686a1";
+const LAUNCH_TIMESTAMP = 1_778_371_200;
 
 async function main() {
   const [deployer] = await ethers.getSigners();
-  const admin = deployer.address;
-  console.log("V5 CONTINUATION — from step 11");
-  console.log("Deployer:", admin);
-  console.log("Balance:", ethers.formatEther(await ethers.provider.getBalance(admin)), "BNB");
+  const bal = await deployer.provider.getBalance(deployer.address);
+  console.log("=".repeat(60));
+  console.log("CONTINUE DEPLOY: IE + CONFIGURE ALL");
+  console.log("=".repeat(60));
+  console.log("Deployer:", deployer.address);
+  console.log("Balance:", ethers.formatEther(bal), "BNB");
+  console.log("DEX (already deployed):", NEW_DEX);
+  console.log("");
 
-  const snapshot = JSON.parse(fs.readFileSync(SNAPSHOT_PATH, "utf-8"));
-  console.log(`Snapshot: ${snapshot.users.length} users, ${snapshot.deposits.length} deposits`);
+  // ─── Step 1: Deploy InvestmentEngine ───────────────────────────────────────
+  console.log("Step 1: Deploying OSLOInvestmentEngine...");
+  const IEFactory = await ethers.getContractFactory("OSLOInvestmentEngine");
+  const newIE = await IEFactory.deploy(USDT, OSLO, LAUNCH_TIMESTAMP);
+  await newIE.waitForDeployment();
+  const newIEAddress = await newIE.getAddress();
+  console.log("  New IE:", newIEAddress);
 
-  // Attach to deployed contracts
-  const oslo = await ethers.getContractAt("OSLOToken", OSLO);
-  const usdt = await ethers.getContractAt("MockUSDT", USDT);
-  const dex = await ethers.getContractAt("OSLODEX", DEX_ADDR);
-  const lm = await ethers.getContractAt("OSLOLiquidityManager", LM_ADDR);
-  const ie = await ethers.getContractAt("OSLOInvestmentEngine", IE_ADDR);
-  const ref = await ethers.getContractAt("OSLOReferral", REF_ADDR);
-  const rank = await ethers.getContractAt("OSLORankSystem", RANK_ADDR);
-  const treasury = await ethers.getContractAt("OSLOTreasury", TREASURY_ADDR);
-  const dao = await ethers.getContractAt("OSLODAO", DAO_ADDR);
-
-  let tx;
-
-  // ═══════════════════════════════════════════════════════════════════
-  // 11. OSLOToken setup
-  // ═══════════════════════════════════════════════════════════════════
-  console.log("\n11. OSLOToken config");
-  tx = await oslo.setSellTaxAddresses(LM_ADDR, IE_ADDR);
-  await tx.wait();
-  console.log("  ✓ setSellTaxAddresses");
-
-  const whitelist = [TREASURY_ADDR, LM_ADDR, IE_ADDR, REF_ADDR, RANK_ADDR, DEX_ADDR, DAO_ADDR];
-  for (const a of whitelist) {
-    tx = await oslo.setTaxWhitelist(a, true);
+  // ─── Step 2: Configure DEX ─────────────────────────────────────────────────
+  console.log("\nStep 2: Configuring DEX...");
+  const dex = await ethers.getContractAt("OSLODEX", NEW_DEX);
+  const dexSetupDone = await dex.setupComplete();
+  if (!dexSetupDone) {
+    let tx = await dex.configure(deployer.address, deployer.address, newIEAddress);
     await tx.wait();
-  }
-  tx = await oslo.setSellEndpoint(DEX_ADDR, true);
-  await tx.wait();
-  console.log("  ✓", whitelist.length, "addresses whitelisted + DEX sell endpoint");
-
-  // ═══════════════════════════════════════════════════════════════════
-  // 12. OSLO allocations
-  // ═══════════════════════════════════════════════════════════════════
-  console.log("\n12. OSLO allocations");
-  tx = await oslo.transfer(IE_ADDR, ethers.parseEther("11000000"));
-  await tx.wait();
-  console.log("  ✓ 11M OSLO → IE");
-
-  tx = await oslo.transfer(LM_ADDR, ethers.parseEther("100000"));
-  await tx.wait();
-  console.log("  ✓ 100K OSLO → LM");
-
-  // ═══════════════════════════════════════════════════════════════════
-  // 13. Seed DEX
-  // ═══════════════════════════════════════════════════════════════════
-  console.log("\n13. Seed DEX");
-  tx = await usdt.mint(admin, ethers.parseEther("100000"));
-  await tx.wait();
-  console.log("  ✓ 100K USDT minted");
-
-  const seedUsdt = ethers.parseEther("1000");
-  tx = await usdt.transfer(LM_ADDR, seedUsdt);
-  await tx.wait();
-  tx = await lm.addInitialLiquidity(seedUsdt);
-  await tx.wait();
-  const [rU, rO] = await dex.getReserves();
-  console.log("  ✓ DEX seeded:", ethers.formatEther(rU), "USDT +", ethers.formatEther(rO), "OSLO");
-
-  // ═══════════════════════════════════════════════════════════════════
-  // 14. MIGRATE REFERRAL USERS
-  // ═══════════════════════════════════════════════════════════════════
-  console.log("\n14. Migrating referral users...");
-  const users = snapshot.users;
-  const BATCH_SIZE = 20;
-
-  const userAddresses: string[] = [];
-  const userReferrers: string[] = [];
-  const userLevels: bigint[] = [];
-
-  for (const u of users) {
-    userAddresses.push(u.address);
-    userReferrers.push(u.referrer);
-    userLevels.push(BigInt(u.unlockedLevels));
-  }
-
-  for (let i = 0; i < userAddresses.length; i += BATCH_SIZE) {
-    const bA = userAddresses.slice(i, i + BATCH_SIZE);
-    const bR = userReferrers.slice(i, i + BATCH_SIZE);
-    const bL = userLevels.slice(i, i + BATCH_SIZE);
-    tx = await ref.migrateUsers(bA, bR, bL);
+    console.log("  DEX configured");
+    tx = await dex.forceSetReferralContract(REFERRAL);
     await tx.wait();
-    console.log(`  ✓ Users ${i + 1}-${Math.min(i + BATCH_SIZE, userAddresses.length)}`);
-  }
-  console.log(`  Total: ${userAddresses.length} users migrated`);
-
-  // ═══════════════════════════════════════════════════════════════════
-  // 15. MIGRATE REFERRAL EARNINGS
-  // ═══════════════════════════════════════════════════════════════════
-  console.log("\n15. Migrating referral earnings...");
-  const earningUsers: string[] = [];
-  const earningTotals: bigint[] = [];
-  const earningRewards: bigint[] = [];
-
-  for (const u of users) {
-    const te = parseFloat(u.totalEarned);
-    const rr = parseFloat(u.referralRewards);
-    if (te > 0 || rr > 0) {
-      earningUsers.push(u.address);
-      earningTotals.push(ethers.parseEther(u.totalEarned));
-      earningRewards.push(ethers.parseEther(u.referralRewards));
-    }
-  }
-
-  if (earningUsers.length > 0) {
-    for (let i = 0; i < earningUsers.length; i += BATCH_SIZE) {
-      const bU = earningUsers.slice(i, i + BATCH_SIZE);
-      const bT = earningTotals.slice(i, i + BATCH_SIZE);
-      const bR = earningRewards.slice(i, i + BATCH_SIZE);
-      tx = await ref.migrateEarnings(bU, bT, bR);
-      await tx.wait();
-      console.log(`  ✓ Earnings batch ${Math.floor(i / BATCH_SIZE) + 1}`);
-    }
-  }
-  console.log(`  ${earningUsers.length} users with earnings migrated`);
-
-  // ═══════════════════════════════════════════════════════════════════
-  // 16. MIGRATE DEPOSITS
-  // ═══════════════════════════════════════════════════════════════════
-  console.log("\n16. Migrating deposits...");
-  const deposits = snapshot.deposits;
-  const DEP_BATCH = 15;
-
-  for (let i = 0; i < deposits.length; i += DEP_BATCH) {
-    const batch = deposits.slice(i, i + DEP_BATCH);
-    const entries = batch.map((d: any) => ({
-      owner: d.owner,
-      amount: ethers.parseEther(d.amount),
-      tier: d.tier,
-      dailyRate: d.dailyRate,
-      depositTime: d.depositTime,
-      lastClaimTime: d.lastClaimTime,
-      totalClaimed: ethers.parseEther(d.totalClaimed),
-      maxReturn: ethers.parseEther(d.maxReturn),
-    }));
-    tx = await ie.migrateDeposits(entries);
+    console.log("  DEX referral set");
+  } else {
+    console.log("  DEX already configured, updating IE...");
+    let tx = await dex.setInvestmentEngine(newIEAddress);
     await tx.wait();
-    console.log(`  ✓ Deposits ${i + 1}-${Math.min(i + DEP_BATCH, deposits.length)}`);
-  }
-  console.log(`  Total: ${deposits.length} deposits migrated`);
-
-  // ═══════════════════════════════════════════════════════════════════
-  // 17. MIGRATE COMBINED EARNINGS
-  // ═══════════════════════════════════════════════════════════════════
-  console.log("\n17. Migrating combined earnings...");
-  const ceUsers: string[] = [];
-  const ceAmounts: bigint[] = [];
-
-  for (const u of users) {
-    const ce = parseFloat(u.totalCombinedEarnings);
-    if (ce > 0) {
-      ceUsers.push(u.address);
-      ceAmounts.push(ethers.parseEther(u.totalCombinedEarnings));
-    }
+    console.log("  DEX IE updated");
   }
 
-  if (ceUsers.length > 0) {
-    for (let i = 0; i < ceUsers.length; i += BATCH_SIZE) {
-      const bU = ceUsers.slice(i, i + BATCH_SIZE);
-      const bA = ceAmounts.slice(i, i + BATCH_SIZE);
-      tx = await ie.migrateCombinedEarnings(bU, bA);
-      await tx.wait();
-      console.log(`  ✓ CombinedEarnings batch ${Math.floor(i / BATCH_SIZE) + 1}`);
-    }
-  }
-  console.log(`  ${ceUsers.length} users with combined earnings`);
+  // ─── Step 3: Configure IE ──────────────────────────────────────────────────
+  console.log("\nStep 3: Configuring IE...");
+  let tx = await newIE.configure(TREASURY, REFERRAL, RANK_SYSTEM, NEW_DEX, deployer.address);
+  await tx.wait();
+  console.log("  IE configured");
 
-  // ═══════════════════════════════════════════════════════════════════
-  // 18. Complete setup
-  // ═══════════════════════════════════════════════════════════════════
-  console.log("\n18. Finalizing setup");
-  const completions = [
-    { name: "IE", c: ie },
-    { name: "Referral", c: ref },
-    { name: "Rank", c: rank },
-    { name: "Treasury", c: treasury },
-    { name: "DAO", c: dao },
-    { name: "OSLOToken", c: oslo },
-  ];
-  for (const { name, c } of completions) {
-    tx = await c.completeSetup();
+  tx = await newIE.setRewardWallets(deployer.address, deployer.address, deployer.address);
+  await tx.wait();
+  console.log("  Reward wallets set");
+
+  // ─── Step 4: Add liquidity ─────────────────────────────────────────────────
+  console.log("\nStep 4: Adding initial liquidity...");
+  const usdtContract = await ethers.getContractAt("MockUSDT", USDT);
+  const osloContract = await ethers.getContractAt("OSLOToken", OSLO);
+
+  let deployerUSDT = await usdtContract.balanceOf(deployer.address);
+  if (deployerUSDT < ethers.parseEther("2000")) {
+    tx = await usdtContract.faucet();
     await tx.wait();
-    console.log(`  ✓ ${name}.completeSetup()`);
+    deployerUSDT = await usdtContract.balanceOf(deployer.address);
+    console.log("  Faucet: deployer USDT =", ethers.formatEther(deployerUSDT));
   }
 
-  // Save addresses
-  const addresses = {
-    network: "bscTestnet",
-    chainId: 97,
-    deployedAt: new Date().toISOString(),
-    deployer: admin,
-    USDT,
-    OSLOToken: OSLO,
-    OSLODEX: DEX_ADDR,
-    OSLOTreasury: TREASURY_ADDR,
-    OSLOLiquidityManager: LM_ADDR,
-    OSLODAO: DAO_ADDR,
-    OSLORankSystem: RANK_ADDR,
-    OSLOReferral: REF_ADDR,
-    OSLOInvestmentEngine: IE_ADDR,
-  };
-  fs.writeFileSync(
-    path.join(__dirname, "../data/testnet-addresses.json"),
-    JSON.stringify(addresses, null, 2)
-  );
+  const deployerOSLO = await osloContract.balanceOf(deployer.address);
+  console.log("  Deployer OSLO:", ethers.formatEther(deployerOSLO));
 
-  console.log("\n" + "═".repeat(60));
-  console.log("V5 DEPLOYMENT + MIGRATION COMPLETE");
-  console.log("═".repeat(60));
-  console.log("USDT:                ", USDT);
-  console.log("OSLOToken:           ", OSLO);
-  console.log("LiquidityManager:    ", LM_ADDR);
-  console.log("OSLODEX:             ", DEX_ADDR);
-  console.log("InvestmentEngine:    ", IE_ADDR);
-  console.log("Referral:            ", REF_ADDR);
-  console.log("RankSystem:          ", RANK_ADDR);
-  console.log("Treasury:            ", TREASURY_ADDR);
-  console.log("DAO:                 ", DAO_ADDR);
-  console.log("═".repeat(60));
-  console.log(`Users migrated:    ${userAddresses.length}`);
-  console.log(`Deposits migrated: ${deposits.length}`);
-  console.log("═".repeat(60));
+  const liqUSDT = ethers.parseEther("2000");
+  const liqOSLO = ethers.parseEther("100000");
 
-  console.log("\n// === contracts.ts snippet ===");
-  console.log(`  osloToken:           "${OSLO}" as \`0x\${string}\`,`);
-  console.log(`  investmentEngine:    "${IE_ADDR}" as \`0x\${string}\`,`);
-  console.log(`  referral:            "${REF_ADDR}" as \`0x\${string}\`,`);
-  console.log(`  rankSystem:          "${RANK_ADDR}" as \`0x\${string}\`,`);
-  console.log(`  dao:                 "${DAO_ADDR}" as \`0x\${string}\`,`);
-  console.log(`  treasury:            "${TREASURY_ADDR}" as \`0x\${string}\`,`);
-  console.log(`  liquidityManager:    "${LM_ADDR}" as \`0x\${string}\`,`);
-  console.log(`  osloDEX:             "${DEX_ADDR}" as \`0x\${string}\`,`);
-  console.log(`  usdt:                "${USDT}" as \`0x\${string}\`,`);
+  if (deployerOSLO >= liqOSLO && deployerUSDT >= liqUSDT) {
+    tx = await usdtContract.approve(NEW_DEX, liqUSDT);
+    await tx.wait();
+    tx = await osloContract.approve(NEW_DEX, liqOSLO);
+    await tx.wait();
+    tx = await dex.addInitialLiquidity(liqUSDT, liqOSLO);
+    await tx.wait();
+    console.log("  Added: 2,000 USDT + 100,000 OSLO (price $0.02)");
+  } else if (deployerOSLO > 0n && deployerUSDT > 0n) {
+    // Use whatever we have, maintain $0.02 ratio
+    let osloForLiq = deployerOSLO > liqOSLO ? liqOSLO : deployerOSLO;
+    let usdtForLiq = (osloForLiq * 2n) / 100n;
+    if (usdtForLiq > deployerUSDT) {
+      usdtForLiq = deployerUSDT;
+      osloForLiq = (usdtForLiq * 100n) / 2n;
+    }
+    tx = await usdtContract.approve(NEW_DEX, usdtForLiq);
+    await tx.wait();
+    tx = await osloContract.approve(NEW_DEX, osloForLiq);
+    await tx.wait();
+    tx = await dex.addInitialLiquidity(usdtForLiq, osloForLiq);
+    await tx.wait();
+    console.log(`  Added: ${ethers.formatEther(usdtForLiq)} USDT + ${ethers.formatEther(osloForLiq)} OSLO`);
+  } else {
+    console.log("  SKIP: no tokens for liquidity");
+  }
+
+  // ─── Step 5: Transfer OSLO to IE ───────────────────────────────────────────
+  console.log("\nStep 5: OSLO to IE for rewards...");
+  const remainingOSLO = await osloContract.balanceOf(deployer.address);
+  if (remainingOSLO > 0n) {
+    tx = await osloContract.transfer(newIEAddress, remainingOSLO);
+    await tx.wait();
+    console.log("  Sent", ethers.formatEther(remainingOSLO), "OSLO to IE");
+  }
+
+  // ─── Step 6: Update Referral ───────────────────────────────────────────────
+  console.log("\nStep 6: Updating Referral...");
+  try {
+    const ref = await ethers.getContractAt("OSLOReferral", REFERRAL);
+    tx = await ref.setInvestmentEngine(newIEAddress);
+    await tx.wait();
+    console.log("  Referral IE updated");
+    try { tx = await ref.setOsloDex(NEW_DEX); await tx.wait(); console.log("  Referral DEX updated"); } catch { console.log("  Referral DEX: no setter"); }
+  } catch (e: any) { console.log("  Failed:", e.message?.slice(0, 80)); }
+
+  // ─── Step 7: Update RankSystem ─────────────────────────────────────────────
+  console.log("\nStep 7: Updating RankSystem...");
+  try {
+    const rs = await ethers.getContractAt("OSLORankSystem", RANK_SYSTEM);
+    tx = await rs.setInvestmentEngine(newIEAddress);
+    await tx.wait();
+    console.log("  RankSystem IE updated");
+  } catch (e: any) { console.log("  Failed:", e.message?.slice(0, 80)); }
+
+  // ─── Done ──────────────────────────────────────────────────────────────────
+  console.log("\n" + "=".repeat(60));
+  console.log("DEPLOYMENT COMPLETE!");
+  console.log("=".repeat(60));
+  console.log("\n  OSLODEX:", NEW_DEX);
+  console.log("  InvestmentEngine:", newIEAddress);
+  console.log("\nUpdate contracts-testnet.ts:");
+  console.log(`  osloDEX:    "${NEW_DEX}"`);
+  console.log(`  investmentEngine: "${newIEAddress}"`);
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+main().catch(console.error);

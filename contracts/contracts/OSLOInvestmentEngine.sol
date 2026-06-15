@@ -35,7 +35,6 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         uint256 totalActiveDeposit;  // Sum of all active deposit principals (USDT)
         uint256 depositCount;        // Number of deposits
         uint256 totalCombinedEarnings; // Daily yield + level income + rank bonus (USDT-equivalent)
-        bool earlyExitExpired;       // True once first deposit's 10-day period has expired (one-time per account)
     }
 
     // ─── State ──────────────────────────────────────────────────────────
@@ -69,7 +68,6 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
     event Deposited(address indexed user, uint256 amount, uint256 tier, uint256 dailyRate, uint256 depositIndex);
     event RewardsClaimed(address indexed user, uint256 usdtReward, uint256 osloAmount, uint256 depositIndex);
     event PrincipalWithdrawn(address indexed user, uint256 netPrincipal, uint256 depositIndex);
-    event EarlyExited(address indexed user, uint256 amountReturned, uint256 feeDeducted, uint256 yieldDeducted, uint256 depositIndex);
     event DepositsPaused(bool paused);
     event CombinedCapReached(address indexed user);
     event CombinedEarningsUpdated(address indexed user, uint256 totalCombined);
@@ -92,9 +90,6 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
     error DEXNotPriced();
     error ZeroAddress();
     error InsufficientOsloReserve();
-    error NotInEarlyExitPeriod();
-    error InsufficientUSDTReserve();
-    error InvalidExitPercentage();
 
     modifier onlyAdmin() {
         if (msg.sender != admin) revert OnlyAdmin();
@@ -259,9 +254,11 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         }
 
         // Ensure DEX has sufficient OSLO reserve for this deposit.
+        // SKIP on testnet - DEX already has 66K+ OSLO reserve
         // DEX OSLO is consumed by every deposit but never replenished by sells
         // (tax routing sends 70% to IE + 30% burn, 0% to DEX).
         // InvestmentEngine holds 11M OSLO reserve — auto-refill DEX as needed.
+        /* DISABLED FOR TESTNET
         {
             uint256 dexOsloBalance = osloToken.balanceOf(osloDex);
             uint256 estimatedOsloNeeded;
@@ -276,14 +273,15 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
                 uint256 shortfall = (estimatedOsloNeeded + minBuffer) - dexOsloBalance;
                 uint256 ieOsloBalance = osloToken.balanceOf(address(this));
                 if (ieOsloBalance >= shortfall) {
-                    osloToken.forceApprove(osloDex, shortfall);
+                    osloToken.approve(osloDex, shortfall);
                     IOSLODEX(osloDex).replenishOsloReserve(shortfall);
                 }
             }
         }
+        */
 
         // Approve and send USDT to DEX, receive OSLO in return
-        usdt.forceApprove(osloDex, dexAmount);
+        usdt.approve(osloDex, dexAmount);
         uint256 osloReceived = IOSLODEX(osloDex).processDeposit(dexAmount);
         // OSLO is now held by this contract as reserve (transferred by DEX)
 
@@ -307,19 +305,6 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         users[msg.sender].totalActiveDeposit += amount;
         users[msg.sender].depositCount++;
         totalDeposited += amount;
-
-        // Mark early exit as expired if first deposit's 10-day period has passed
-        // This ensures subsequent deposits never show the early exit timer again
-        if (users[msg.sender].depositCount == 1) {
-            // First deposit - check if 10 days have already passed (edge case)
-            // This will be checked on each subsequent deposit
-        } else {
-            // Subsequent deposit - check if first deposit's period has expired
-            Deposit storage firstDep = userDeposits[msg.sender][0];
-            if (block.timestamp > firstDep.depositTime + OSLOConstants.EARLY_EXIT_PERIOD) {
-                users[msg.sender].earlyExitExpired = true;
-            }
-        }
 
         // Update referral levels — check depositor AND their referrer
         // (this deposit may qualify msg.sender as a "qualified direct" for their upline)
@@ -346,14 +331,6 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
     /// @param depositIndex Index of the deposit in user's deposits array
     function claimRewards(uint256 depositIndex) external nonReentrant {
         Deposit storage dep = _getActiveDeposit(msg.sender, depositIndex);
-
-        // Update earlyExitExpired flag if first deposit's period has passed
-        if (!users[msg.sender].earlyExitExpired && userDeposits[msg.sender].length > 0) {
-            Deposit storage firstDep = userDeposits[msg.sender][0];
-            if (block.timestamp > firstDep.depositTime + OSLOConstants.EARLY_EXIT_PERIOD) {
-                users[msg.sender].earlyExitExpired = true;
-            }
-        }
 
         uint256 pendingUSDT = _calculatePendingRewards(msg.sender, dep);
         if (pendingUSDT == 0) revert NothingToClaim();
@@ -412,150 +389,6 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
 
 
 
-    /// @notice Full early exit — 100% withdrawal. Convenience wrapper.
-    /// @param depositIndex Index of the deposit
-    function earlyExit(uint256 depositIndex) external nonReentrant {
-        _partialEarlyExit(msg.sender, depositIndex, 10000); // 100% = 10000 bp
-    }
-
-    /// @notice Partial early exit — withdraw a percentage (100%, 50%, or 25%) within 10-day window.
-    /// @dev Deducts flat 10% fee on the exited portion. Remaining balance stays active with 3X cap.
-    ///      Allowed percentages: 10000 (100%), 5000 (50%), 2500 (25%) in basis points.
-    /// @param depositIndex Index of the deposit
-    /// @param percentageBp Percentage to exit in basis points (10000=100%, 5000=50%, 2500=25%)
-    function partialEarlyExit(uint256 depositIndex, uint256 percentageBp) external nonReentrant {
-        _partialEarlyExit(msg.sender, depositIndex, percentageBp);
-    }
-
-    /// @dev Internal implementation for partial/full early exit
-    function _partialEarlyExit(address user, uint256 depositIndex, uint256 percentageBp) internal {
-        // Only allow 100%, 50%, 25%
-        if (percentageBp != 10000 && percentageBp != 5000 && percentageBp != 2500) {
-            revert InvalidExitPercentage();
-        }
-
-        Deposit storage dep = _getActiveDeposit(user, depositIndex);
-
-        // Must be within 10-day early exit window
-        if (block.timestamp > dep.depositTime + OSLOConstants.EARLY_EXIT_PERIOD) {
-            revert NotInEarlyExitPeriod();
-        }
-
-        uint256 principal = dep.amount;
-        uint256 exitAmount = (principal * percentageBp) / OSLOConstants.BASIS_POINTS;
-
-        // 10% early exit fee on the exited portion
-        uint256 exitFee = (exitAmount * OSLOConstants.EARLY_EXIT_FEE_BP) / OSLOConstants.BASIS_POINTS;
-
-        // Deduct previously claimed yield (proportional to exit percentage)
-        // Policy: investor forfeits all earnings accumulated during the period
-        uint256 earnedDeduction = (dep.totalClaimed * percentageBp) / OSLOConstants.BASIS_POINTS;
-        uint256 totalDeductions = exitFee + earnedDeduction;
-        uint256 netReturn = exitAmount > totalDeductions ? exitAmount - totalDeductions : 0;
-
-        if (percentageBp == 10000) {
-            // Full exit — mark deposit inactive
-            dep.active = false;
-        } else {
-            // Partial exit — reduce deposit amount, adjust totalClaimed proportionally, recalculate maxReturn
-            dep.amount -= exitAmount;
-            dep.totalClaimed -= earnedDeduction; // Remove proportional claimed so remaining deposit isn't double-penalized
-            dep.maxReturn = dep.amount * OSLOConstants.RETURN_CAP_MULTIPLIER;
-        }
-
-        users[user].totalActiveDeposit -= exitAmount;
-        totalWithdrawn += exitAmount;
-
-        // Update referral levels
-        if (referral != address(0)) {
-            IReferral(referral).checkAndUnlockLevels(user);
-        }
-
-        // Return net amount in USDT directly
-        if (netReturn > 0) {
-            uint256 usdtBalance = usdt.balanceOf(address(this));
-            if (usdtBalance >= netReturn) {
-                usdt.safeTransfer(user, netReturn);
-            } else {
-                if (usdtBalance > 0) {
-                    usdt.safeTransfer(user, usdtBalance);
-                    netReturn -= usdtBalance;
-                }
-                uint256 osloAmount = IOSLODEX(osloDex).getUSDTForOSLOOutput(netReturn);
-                if (osloAmount > 0 && osloToken.balanceOf(address(this)) >= osloAmount) {
-                    osloToken.forceApprove(osloDex, osloAmount);
-                    IOSLODEX(osloDex).processWithdrawal(osloAmount, user);
-                }
-            }
-        }
-
-        emit EarlyExited(user, netReturn, exitFee, earnedDeduction, depositIndex);
-    }
-
-    /// @notice Check if a deposit is within the early exit period
-    /// @param user Address of the investor
-    /// @param depositIndex Index of the deposit
-    /// @return bool True if early exit is available
-    function isInEarlyExitPeriod(address user, uint256 depositIndex) external view returns (bool) {
-        if (depositIndex >= userDeposits[user].length) return false;
-        Deposit storage dep = userDeposits[user][depositIndex];
-        if (!dep.active) return false;
-        return block.timestamp <= dep.depositTime + OSLOConstants.EARLY_EXIT_PERIOD;
-    }
-
-    /// @notice Get the early exit amount breakdown for a deposit (full exit)
-    /// @param user Address of the investor
-    /// @param depositIndex Index of the deposit
-    /// @return principal The original deposit amount
-    /// @return accruedYield Yield already claimed (will be deducted)
-    /// @return exitFee 10% early exit fee
-    /// @return netReturn Amount investor would receive in USDT
-    function getEarlyExitAmount(address user, uint256 depositIndex)
-        external view returns (uint256 principal, uint256 accruedYield, uint256 exitFee, uint256 netReturn)
-    {
-        if (depositIndex >= userDeposits[user].length) return (0, 0, 0, 0);
-        Deposit storage dep = userDeposits[user][depositIndex];
-        if (!dep.active || block.timestamp > dep.depositTime + OSLOConstants.EARLY_EXIT_PERIOD) {
-            return (0, 0, 0, 0);
-        }
-
-        principal = dep.amount;
-        accruedYield = dep.totalClaimed; // Previously earned yield to be deducted
-        exitFee = (principal * OSLOConstants.EARLY_EXIT_FEE_BP) / OSLOConstants.BASIS_POINTS;
-        uint256 totalDeductions = exitFee + accruedYield;
-        netReturn = principal > totalDeductions ? principal - totalDeductions : 0;
-    }
-
-    /// @notice Get partial early exit breakdown for a specific percentage
-    /// @param user Address of the investor
-    /// @param depositIndex Index of the deposit
-    /// @param percentageBp Percentage in basis points (10000=100%, 5000=50%, 2500=25%)
-    /// @return exitAmount The portion being exited
-    /// @return exitFee 10% fee on exit amount
-    /// @return netReturn Amount investor would receive in USDT
-    /// @return remainingBalance Deposit balance after partial exit
-    function getPartialEarlyExitAmount(address user, uint256 depositIndex, uint256 percentageBp)
-        external view returns (uint256 exitAmount, uint256 exitFee, uint256 netReturn, uint256 remainingBalance)
-    {
-        if (depositIndex >= userDeposits[user].length) return (0, 0, 0, 0);
-        Deposit storage dep = userDeposits[user][depositIndex];
-        if (!dep.active || block.timestamp > dep.depositTime + OSLOConstants.EARLY_EXIT_PERIOD) {
-            return (0, 0, 0, 0);
-        }
-        if (percentageBp != 10000 && percentageBp != 5000 && percentageBp != 2500) {
-            return (0, 0, 0, 0);
-        }
-
-        uint256 principal = dep.amount;
-        exitAmount = (principal * percentageBp) / OSLOConstants.BASIS_POINTS;
-        exitFee = (exitAmount * OSLOConstants.EARLY_EXIT_FEE_BP) / OSLOConstants.BASIS_POINTS;
-        // Deduct proportional previously earned yield
-        uint256 earnedDeduction = (dep.totalClaimed * percentageBp) / OSLOConstants.BASIS_POINTS;
-        uint256 totalDeductions = exitFee + earnedDeduction;
-        netReturn = exitAmount > totalDeductions ? exitAmount - totalDeductions : 0;
-        remainingBalance = principal - exitAmount;
-    }
-
     // ─── Cross-Contract Notifications ───────────────────────────────────
 
     /// @notice Called by OSLOReferral when distributing level income to track combined 3X cap.
@@ -598,34 +431,6 @@ contract OSLOInvestmentEngine is IInvestmentEngine, ReentrancyGuard {
         Deposit storage dep = userDeposits[user][depositIndex];
         if (!dep.active) return 0;
         return _calculatePendingRewards(user, dep);
-    }
-
-    /// @notice Check if a deposit is within the trial/early exit period
-    /// @dev Returns false if user's first 10-day period has already expired (one-time per account)
-    function isInTrialPeriod(address user, uint256 depositIndex) external view returns (bool) {
-        // If user's first early exit period has expired, no more trials
-        if (users[user].earlyExitExpired) return false;
-        
-        if (depositIndex >= userDeposits[user].length) return false;
-        Deposit storage dep = userDeposits[user][depositIndex];
-        if (!dep.active) return false;
-        
-        return block.timestamp <= dep.depositTime + OSLOConstants.EARLY_EXIT_PERIOD;
-    }
-
-    /// @notice Get remaining trial time for a deposit
-    /// @dev Returns 0 if user's first 10-day period has already expired (one-time per account)
-    function getTrialTimeRemaining(address user, uint256 depositIndex) external view returns (uint256) {
-        // If user's first early exit period has expired, no time remaining
-        if (users[user].earlyExitExpired) return 0;
-        
-        if (depositIndex >= userDeposits[user].length) return 0;
-        Deposit storage dep = userDeposits[user][depositIndex];
-        if (!dep.active) return 0;
-        
-        uint256 trialEnd = dep.depositTime + OSLOConstants.EARLY_EXIT_PERIOD;
-        if (block.timestamp >= trialEnd) return 0;
-        return trialEnd - block.timestamp;
     }
 
     // ─── Internal Functions ─────────────────────────────────────────────

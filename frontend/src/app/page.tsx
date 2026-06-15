@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useAccount, useWriteContract, usePublicClient, useReadContract } from "wagmi";
-import { parseEther, erc20Abi } from "viem";
+import { useState, useEffect, useMemo, Suspense } from "react";
+import { useAccount, useWriteContract, usePublicClient, useReadContract, useReadContracts } from "wagmi";
+import { parseEther, erc20Abi, getAddress } from "viem";
 import type { Address } from "viem";
 import { useSearchParams } from "next/navigation";
 import { GlassCard } from "@/components/ui/GlassCard";
@@ -21,6 +21,8 @@ import { useTokenReads, useUSDTReads } from "@/hooks/useToken";
 import { useLiquidityManagerReads } from "@/hooks/useLiquidityManager";
 import { useOSLODEX } from "@/hooks/useOSLODEX";
 import { useReferralReads, useReferralWrites } from "@/hooks/useReferral";
+import { useRankSystemReads } from "@/hooks/useRankSystem";
+import rankSystemAbi from "@/abis/OSLORankSystem.json";
 import { useAppStore } from "@/store/useAppStore";
 import { CONTRACTS } from "@/lib/contracts";
 import { formatToken, formatNumber, formatCompact, truncateAddress } from "@/lib/utils";
@@ -77,7 +79,7 @@ function LandingPage() {
   const { writeContractAsync: approveAsync } = useWriteContract();
 
   // Registration check
-  const { isRegistered, referrer, totalRegistered, userInfoData, directReferrals, referralRewards, allLevelIncome, unlockedLevels } = useReferralReads(address);
+  const { isRegistered, referrer, totalRegistered, userInfoData, directReferrals, referralRewards, allLevelIncome, unlockedLevels, teamSize } = useReferralReads(address);
   const { register, claimReferralRewards, isLoading: isRegistering } = useReferralWrites();
   const { claimRewards: claimYieldRewards, isLoading: isClaimingYield } = useInvestmentEngineWrites();
 
@@ -89,6 +91,27 @@ function LandingPage() {
 
   // Liquidity pool data
   const { totalLiquidityAdded } = useLiquidityManagerReads();
+
+  // Rank system — total team investment (cumulative weekly turnovers)
+  const { currentWeekId } = useRankSystemReads(address);
+  const weekId = Number(currentWeekId?.data || 0);
+  const turnoverContracts = useMemo(() => {
+    if (!weekId || !address) return [];
+    return Array.from({ length: weekId }, (_, i) => ({
+      address: CONTRACTS.rankSystem as Address,
+      abi: rankSystemAbi as any,
+      functionName: "getWeeklyTurnover" as const,
+      args: [address, BigInt(i + 1)],
+    }));
+  }, [weekId, address]);
+  const { data: turnoverData } = useReadContracts({
+    contracts: turnoverContracts,
+    query: { enabled: turnoverContracts.length > 0 },
+  });
+  const totalTeamInvestment = useMemo(() => {
+    if (!turnoverData) return 0;
+    return turnoverData.reduce((sum, d) => sum + Number((d.result as bigint) || 0n) / 1e18, 0);
+  }, [turnoverData]);
   
   // OSLODEX price and reserves
   const { price: osloPrice, usdtReserve, osloReserve } = useOSLODEX();
@@ -134,21 +157,97 @@ function LandingPage() {
 
   // Referrer from URL param
   const [referrerInput, setReferrerInput] = useState("");
+  const [isFaucetLoading, setIsFaucetLoading] = useState(false);
+  const [skipReferrerValidation, setSkipReferrerValidation] = useState(false); // For testing
   const refParam = searchParams.get("ref");
 
   useEffect(() => {
     if (refParam) setReferrerInput(refParam);
   }, [refParam]);
 
+  // USDT Faucet
+  const handleFaucet = async () => {
+    if (!address) {
+      addToast({ status: "error", title: "Wallet Not Connected", description: "Please connect your wallet first" });
+      return;
+    }
+
+    try {
+      setIsFaucetLoading(true);
+      addToast({ status: "pending", title: "Claiming USDT", description: "Please wait for transaction confirmation..." });
+
+      const mockUSDTAbi = [
+        { name: "faucet", type: "function", stateMutability: "nonpayable", inputs: [], outputs: [] }
+      ];
+
+      const txHash = await approveAsync({
+        address: "0xbC9352a7abb1Af216aC65B2efB55A9738fAdC62C" as Address,
+        abi: mockUSDTAbi,
+        functionName: "faucet",
+      });
+
+      addToast({ 
+        status: "success", 
+        title: "USDT Claimed! 🎉", 
+        description: "10,000 mock USDT has been added to your wallet",
+        txHash,
+        testnet: true
+      });
+    } catch (error: any) {
+      console.error("Faucet error:", error);
+      addToast({ 
+        status: "error", 
+        title: "Faucet Failed", 
+        description: error.message || "Failed to claim USDT from faucet" 
+      });
+    } finally {
+      setIsFaucetLoading(false);
+    }
+  };
+
   const handleRegister = async () => {
     if (!address || !publicClient) return;
-    // First user: register with zero address (root); subsequent users: require referrer
+    
     const totalReg = (totalRegistered.data as bigint) || 0n;
-    if (totalReg > 0n && !referrerInput) return;
-
-    const ref = totalReg === 0n
-      ? ("0x0000000000000000000000000000000000000000" as Address)
-      : (referrerInput as Address);
+    console.log("📊 Total registered:", totalReg.toString());
+    console.log("👤 Referrer input:", referrerInput);
+    console.log("🔧 Skip validation:", skipReferrerValidation);
+    
+    // Determine referrer address
+    let ref: Address;
+    
+    if (skipReferrerValidation) {
+      // Testing mode: use zero address
+      ref = "0x0000000000000000000000000000000000000000" as Address;
+      console.log("🔧 SKIP MODE: Using zero address as referrer");
+    } else if (totalReg === 0n) {
+      // First user: use zero address
+      ref = "0x0000000000000000000000000000000000000000" as Address;
+      console.log("👑 First user: Using zero address as referrer");
+    } else if (referrerInput) {
+      // Subsequent user with referrer - validate and checksum
+      try {
+        ref = getAddress(referrerInput) as Address;
+        console.log("👥 Using provided referrer (checksummed):", ref);
+      } catch (error) {
+        addToast({
+          status: "error",
+          title: "Invalid Referrer Address",
+          description: "Please enter a valid Ethereum address (0x...)"
+        });
+        return;
+      }
+    } else {
+      // Error: need referrer
+      addToast({
+        status: "error",
+        title: "Referrer Required",
+        description: "Please enter a referrer address or check 'Skip referrer validation' for testing."
+      });
+      return;
+    }
+    
+    console.log("🎯 Final referrer address:", ref);
 
     try {
       // ── Step 1: Approve $1 USDT for referral contract ──────────
@@ -186,9 +285,21 @@ function LandingPage() {
       setFlowStep("idle");
     } catch (err: any) {
       setFlowStep("idle");
+      console.error("Registration error:", err);
+      
+      // Decode common errors
+      let errorMsg = err?.message || "Transaction rejected";
+      if (errorMsg.includes("0xe450d38c")) {
+        errorMsg = "Invalid referrer: The referrer address has not registered yet. Please check the address or contact support.";
+      } else if (errorMsg.includes("AlreadyRegistered")) {
+        errorMsg = "This wallet is already registered.";
+      } else if (errorMsg.includes("SelfReferral")) {
+        errorMsg = "You cannot use your own address as referrer.";
+      }
+      
       addToast({
         title: "Registration Failed",
-        description: err?.message?.slice(0, 100) || "Transaction rejected",
+        description: errorMsg.slice(0, 150),
         status: "error",
       });
     }
@@ -325,16 +436,58 @@ function LandingPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-xs text-oslo-text-muted mb-1.5 text-left">Referrer Address</label>
-                <input
-                  type="text"
-                  placeholder="0x... (referrer wallet address)"
-                  value={referrerInput}
-                  onChange={(e) => setReferrerInput(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-lg bg-oslo-dark/50 border border-oslo-ice/20 text-sm text-white placeholder:text-oslo-text-muted focus:outline-none focus:border-oslo-ice/50 transition-colors"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="0x... (referrer wallet address)"
+                    value={referrerInput}
+                    onChange={(e) => setReferrerInput(e.target.value)}
+                    className="flex-1 px-4 py-2.5 rounded-lg bg-oslo-dark/50 border border-oslo-ice/20 text-sm text-white placeholder:text-oslo-text-muted focus:outline-none focus:border-oslo-ice/50 transition-colors"
+                    style={{ color: '#000000' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setReferrerInput("0x47f8160e3C854b4b4679579b99726E5E81736B7f")}
+                    className="px-3 py-2.5 rounded-lg bg-oslo-ice/10 border border-oslo-ice/20 text-xs text-oslo-ice hover:bg-oslo-ice/20 transition-colors whitespace-nowrap"
+                    title="Auto-fill test referrer"
+                  >
+                    Use Test Referrer
+                  </button>
+                </div>
                 {refParam && (
                   <p className="text-xs text-oslo-ice mt-1">Referrer set from link</p>
                 )}
+                
+                {/* Skip referrer validation for testing */}
+                <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={skipReferrerValidation}
+                    onChange={(e) => setSkipReferrerValidation(e.target.checked)}
+                    className="w-4 h-4 rounded border-oslo-ice/30 bg-oslo-dark/50 text-oslo-ice focus:ring-oslo-ice/50"
+                  />
+                  <span className="text-xs text-oslo-text-muted">Skip referrer validation (for testing)</span>
+                </label>
+              </div>
+
+              {/* USDT Faucet Button */}
+              <div>
+                <label className="block text-xs text-oslo-text-muted mb-1.5 text-left">Need USDT for testing?</label>
+                <button
+                  onClick={handleFaucet}
+                  disabled={isFaucetLoading}
+                  className="w-full px-6 py-3 rounded-lg bg-gradient-to-r from-green-500/20 to-emerald-500/20 hover:from-green-500/30 hover:to-emerald-500/30 border border-green-500/30 text-green-300 font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <Gift className="w-4 h-4" />
+                  {isFaucetLoading ? "Claiming..." : "Claim 10,000 USDT (Faucet)"}
+                </button>
+                <p className="text-xs text-oslo-text-muted mt-1">Once per 24 hours • Testnet only</p>
+              </div>
+
+              <div className="relative flex items-center gap-3 my-4">
+                <div className="flex-1 h-px bg-oslo-ice/10" />
+                <span className="text-xs text-oslo-text-muted">OR</span>
+                <div className="flex-1 h-px bg-oslo-ice/10" />
               </div>
 
               <button
@@ -440,10 +593,10 @@ function LandingPage() {
           icon={<Droplets className="w-4 h-4" />}
         />
         <StatCard
-          label="DEX Reserves"
-          value={`${formatCompact(usdtReserve)} USDT`}
-          subValue={`${formatCompact(osloReserve)} OSLO · $${Number(usdtReserve).toLocaleString()} TVL`}
-          icon={<Activity className="w-4 h-4" />}
+          label="Team Investment"
+          value={`$${formatNumber(totalTeamInvestment, 2)}`}
+          subValue={`${Number(teamSize?.data || 0)} team members`}
+          icon={<Users className="w-4 h-4" />}
         />
       </div>
 

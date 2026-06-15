@@ -60,13 +60,11 @@ export interface OSLOVaultInterface extends Interface {
       | "configure"
       | "deposit"
       | "depositsPaused"
-      | "earlyExit"
       | "getActiveDeposit"
       | "getCombinedEarnings"
       | "getPendingRewards"
       | "getUserPool"
       | "getUserTier"
-      | "isInEarlyExitPeriod"
       | "launchTimestamp"
       | "migrateCombinedEarnings"
       | "migrateConsolidated"
@@ -75,7 +73,6 @@ export interface OSLOVaultInterface extends Interface {
       | "notifyRankBonus"
       | "osloDex"
       | "osloToken"
-      | "partialEarlyExit"
       | "performanceWallet"
       | "rankSystem"
       | "referral"
@@ -99,7 +96,6 @@ export interface OSLOVaultInterface extends Interface {
       | "CombinedEarningsUpdated"
       | "Deposited"
       | "DepositsPaused"
-      | "EarlyExited"
       | "RewardsClaimed"
   ): EventFragment;
 
@@ -128,7 +124,6 @@ export interface OSLOVaultInterface extends Interface {
     functionFragment: "depositsPaused",
     values?: undefined
   ): string;
-  encodeFunctionData(functionFragment: "earlyExit", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "getActiveDeposit",
     values: [AddressLike]
@@ -147,10 +142,6 @@ export interface OSLOVaultInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "getUserTier",
-    values: [AddressLike]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "isInEarlyExitPeriod",
     values: [AddressLike]
   ): string;
   encodeFunctionData(
@@ -179,10 +170,6 @@ export interface OSLOVaultInterface extends Interface {
   ): string;
   encodeFunctionData(functionFragment: "osloDex", values?: undefined): string;
   encodeFunctionData(functionFragment: "osloToken", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "partialEarlyExit",
-    values: [BigNumberish]
-  ): string;
   encodeFunctionData(
     functionFragment: "performanceWallet",
     values?: undefined
@@ -254,7 +241,6 @@ export interface OSLOVaultInterface extends Interface {
     functionFragment: "depositsPaused",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "earlyExit", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "getActiveDeposit",
     data: BytesLike
@@ -273,10 +259,6 @@ export interface OSLOVaultInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "getUserTier",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "isInEarlyExitPeriod",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -305,10 +287,6 @@ export interface OSLOVaultInterface extends Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "osloDex", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "osloToken", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "partialEarlyExit",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(
     functionFragment: "performanceWallet",
     data: BytesLike
@@ -418,31 +396,6 @@ export namespace DepositsPausedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
-export namespace EarlyExitedEvent {
-  export type InputTuple = [
-    user: AddressLike,
-    amountReturned: BigNumberish,
-    feeDeducted: BigNumberish,
-    yieldDeducted: BigNumberish
-  ];
-  export type OutputTuple = [
-    user: string,
-    amountReturned: bigint,
-    feeDeducted: bigint,
-    yieldDeducted: bigint
-  ];
-  export interface OutputObject {
-    user: string;
-    amountReturned: bigint;
-    feeDeducted: bigint;
-    yieldDeducted: bigint;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
-
 export namespace RewardsClaimedEvent {
   export type InputTuple = [
     user: AddressLike,
@@ -531,8 +484,6 @@ export interface OSLOVault extends BaseContract {
 
   depositsPaused: TypedContractMethod<[], [boolean], "view">;
 
-  earlyExit: TypedContractMethod<[], [void], "nonpayable">;
-
   getActiveDeposit: TypedContractMethod<[user: AddressLike], [bigint], "view">;
 
   getCombinedEarnings: TypedContractMethod<
@@ -561,12 +512,6 @@ export interface OSLOVault extends BaseContract {
   >;
 
   getUserTier: TypedContractMethod<[user: AddressLike], [bigint], "view">;
-
-  isInEarlyExitPeriod: TypedContractMethod<
-    [user: AddressLike],
-    [boolean],
-    "view"
-  >;
 
   launchTimestamp: TypedContractMethod<[], [bigint], "view">;
 
@@ -599,12 +544,6 @@ export interface OSLOVault extends BaseContract {
   osloDex: TypedContractMethod<[], [string], "view">;
 
   osloToken: TypedContractMethod<[], [string], "view">;
-
-  partialEarlyExit: TypedContractMethod<
-    [percentageBp: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
 
   performanceWallet: TypedContractMethod<[], [string], "view">;
 
@@ -706,9 +645,6 @@ export interface OSLOVault extends BaseContract {
     nameOrSignature: "depositsPaused"
   ): TypedContractMethod<[], [boolean], "view">;
   getFunction(
-    nameOrSignature: "earlyExit"
-  ): TypedContractMethod<[], [void], "nonpayable">;
-  getFunction(
     nameOrSignature: "getActiveDeposit"
   ): TypedContractMethod<[user: AddressLike], [bigint], "view">;
   getFunction(
@@ -738,9 +674,6 @@ export interface OSLOVault extends BaseContract {
   getFunction(
     nameOrSignature: "getUserTier"
   ): TypedContractMethod<[user: AddressLike], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "isInEarlyExitPeriod"
-  ): TypedContractMethod<[user: AddressLike], [boolean], "view">;
   getFunction(
     nameOrSignature: "launchTimestamp"
   ): TypedContractMethod<[], [bigint], "view">;
@@ -781,9 +714,6 @@ export interface OSLOVault extends BaseContract {
   getFunction(
     nameOrSignature: "osloToken"
   ): TypedContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "partialEarlyExit"
-  ): TypedContractMethod<[percentageBp: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "performanceWallet"
   ): TypedContractMethod<[], [string], "view">;
@@ -882,13 +812,6 @@ export interface OSLOVault extends BaseContract {
     DepositsPausedEvent.OutputObject
   >;
   getEvent(
-    key: "EarlyExited"
-  ): TypedContractEvent<
-    EarlyExitedEvent.InputTuple,
-    EarlyExitedEvent.OutputTuple,
-    EarlyExitedEvent.OutputObject
-  >;
-  getEvent(
     key: "RewardsClaimed"
   ): TypedContractEvent<
     RewardsClaimedEvent.InputTuple,
@@ -939,17 +862,6 @@ export interface OSLOVault extends BaseContract {
       DepositsPausedEvent.InputTuple,
       DepositsPausedEvent.OutputTuple,
       DepositsPausedEvent.OutputObject
-    >;
-
-    "EarlyExited(address,uint256,uint256,uint256)": TypedContractEvent<
-      EarlyExitedEvent.InputTuple,
-      EarlyExitedEvent.OutputTuple,
-      EarlyExitedEvent.OutputObject
-    >;
-    EarlyExited: TypedContractEvent<
-      EarlyExitedEvent.InputTuple,
-      EarlyExitedEvent.OutputTuple,
-      EarlyExitedEvent.OutputObject
     >;
 
     "RewardsClaimed(address,uint256,uint256)": TypedContractEvent<

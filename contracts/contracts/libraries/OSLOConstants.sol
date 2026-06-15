@@ -76,8 +76,6 @@ library OSLOConstants {
     uint256 public constant MIN_REMAINING_SUPPLY = 1_110_000 * 1e18; // 10% of 11.1M — minimum tokens remaining after burn
 
     // ─── Early Exit Period ───────────────────────────────────────────────
-    uint256 public constant EARLY_EXIT_PERIOD = 10 days;           // 10-day early exit window
-    uint256 public constant EARLY_EXIT_FEE_BP = 1_000;             // 10% early exit fee
 
     // ─── Investment Package Boundaries (in USDT, 18 decimals) ──────────────
     uint256 public constant MAX_DEPOSIT_PER_TX = 5_000 * 1e18; // $5,000 max per single deposit

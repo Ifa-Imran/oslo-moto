@@ -61,7 +61,6 @@ contract OSLOVault is IOSLOVault, ReentrancyGuard {
     // ─── Events ─────────────────────────────────────────────────────────
     event Deposited(address indexed user, uint256 amount, uint256 newTotal, uint256 tier);
     event RewardsClaimed(address indexed user, uint256 usdtReward, uint256 osloAmount);
-    event EarlyExited(address indexed user, uint256 amountReturned, uint256 feeDeducted, uint256 yieldDeducted);
     event DepositsPaused(bool paused);
     event CombinedCapReached(address indexed user);
     event CombinedEarningsUpdated(address indexed user, uint256 totalCombined);
@@ -82,8 +81,6 @@ contract OSLOVault is IOSLOVault, ReentrancyGuard {
     error DEXNotPriced();
     error ZeroAddress();
     error InsufficientOsloReserve();
-    error NotInEarlyExitPeriod();
-    error InvalidExitPercentage();
     error NoBalance();
 
     modifier onlyAdmin() {
@@ -307,84 +304,6 @@ contract OSLOVault is IOSLOVault, ReentrancyGuard {
         emit CombinedEarningsUpdated(msg.sender, pool.totalCombinedEarnings);
     }
 
-    // ─── Core: Early Exit ───────────────────────────────────────────────
-
-    /// @notice Full early exit — 100% withdrawal within 10-day window from last deposit.
-    function earlyExit() external nonReentrant {
-        _partialEarlyExit(msg.sender, 10000);
-    }
-
-    /// @notice Partial early exit — 100%, 50%, or 25% within 10-day window.
-    function partialEarlyExit(uint256 percentageBp) external nonReentrant {
-        _partialEarlyExit(msg.sender, percentageBp);
-    }
-
-    function _partialEarlyExit(address user, uint256 percentageBp) internal {
-        if (percentageBp != 10000 && percentageBp != 5000 && percentageBp != 2500) {
-            revert InvalidExitPercentage();
-        }
-
-        UserPool storage pool = userPools[user];
-        if (pool.totalBalance == 0) revert NoBalance();
-        if (!pool.active) revert PoolInactive();
-
-        if (block.timestamp > pool.lastDepositTime + OSLOConstants.EARLY_EXIT_PERIOD) {
-            revert NotInEarlyExitPeriod();
-        }
-
-        uint256 exitAmount = (pool.totalBalance * percentageBp) / OSLOConstants.BASIS_POINTS;
-
-        // 10% early exit fee
-        uint256 exitFee = (exitAmount * OSLOConstants.EARLY_EXIT_FEE_BP) / OSLOConstants.BASIS_POINTS;
-
-        // Deduct previously claimed yield proportionally
-        uint256 earnedDeduction = (pool.totalClaimed * percentageBp) / OSLOConstants.BASIS_POINTS;
-        uint256 totalDeductions = exitFee + earnedDeduction;
-        uint256 netReturn = exitAmount > totalDeductions ? exitAmount - totalDeductions : 0;
-
-        if (percentageBp == 10000) {
-            pool.active = false;
-            pool.totalBalance = 0;
-            pool.accruedRewards = 0;
-            pool.maxReturn = 0;
-        } else {
-            // Checkpoint yield before reducing balance
-            uint256 pending = _calculatePendingRewards(pool);
-            pool.accruedRewards += pending;
-
-            pool.totalBalance -= exitAmount;
-            pool.totalClaimed -= earnedDeduction;
-            pool.maxReturn = pool.totalBalance * OSLOConstants.RETURN_CAP_MULTIPLIER;
-            pool.lastClaimTime = block.timestamp;
-
-            // Proportionally reduce accrued rewards
-            uint256 rewardReduction = (pool.accruedRewards * percentageBp) / OSLOConstants.BASIS_POINTS;
-            pool.accruedRewards -= rewardReduction;
-        }
-
-        totalWithdrawn += exitAmount;
-
-        // Notify referral system
-        if (referral != address(0)) {
-            IReferral(referral).checkAndUnlockLevels(user);
-        }
-
-        // Return USDT to user via DEX processWithdrawal
-        if (netReturn > 0) {
-            uint256 dexPrice = IOSLODexV2(osloDex).getPrice();
-            if (dexPrice > 0) {
-                uint256 osloNeeded = (netReturn * 1e18) / dexPrice;
-                uint256 osloBalance = osloToken.balanceOf(address(this));
-                if (osloNeeded > 0 && osloBalance >= osloNeeded) {
-                    osloToken.forceApprove(osloDex, osloNeeded);
-                    IOSLODexV2(osloDex).processWithdrawal(osloNeeded, user);
-                }
-            }
-        }
-
-        emit EarlyExited(user, netReturn, exitFee, earnedDeduction);
-    }
-
     // ─── Cross-Contract Notifications ───────────────────────────────────
 
     function notifyLevelIncome(address user, uint256 amount) external override onlyReferral {
@@ -444,13 +363,6 @@ contract OSLOVault is IOSLOVault, ReentrancyGuard {
             pool.lastDepositTime,
             pool.active
         );
-    }
-
-    /// @notice Check if early exit is available (10-day window from last deposit)
-    function isInEarlyExitPeriod(address user) external view returns (bool) {
-        UserPool storage pool = userPools[user];
-        if (pool.totalBalance == 0 || !pool.active) return false;
-        return block.timestamp <= pool.lastDepositTime + OSLOConstants.EARLY_EXIT_PERIOD;
     }
 
     // ─── Migration (Admin only, pre-setup) ──────────────────────────────

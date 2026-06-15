@@ -21,7 +21,7 @@ const config: HardhatUserConfig = {
       url: "https://data-seed-prebsc-1-s1.binance.org:8545",
       chainId: 97,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
-      gasPrice: 5000000000, // 5 gwei (reduced from 10 gwei)
+      gasPrice: 3000000000, // 3 gwei (reduced for low testnet BNB)
     } as any,
     bscMainnet: {
       url: "https://bsc-dataseed.binance.org/",

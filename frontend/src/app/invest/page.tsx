@@ -8,7 +8,6 @@ import { IceButton } from "@/components/ui/IceButton";
 import { TierBadge } from "@/components/ui/TierBadge";
 import { ProgressRing } from "@/components/ui/ProgressRing";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { CountdownTimer } from "@/components/ui/CountdownTimer";
 import { useInvestmentEngineReads, useInvestmentEngineWrites } from "@/hooks/useInvestmentEngine";
 import { useTokenReads, useUSDTReads } from "@/hooks/useToken";
 import { useReferralReads } from "@/hooks/useReferral";
@@ -31,9 +30,6 @@ import {
   LIFETIME_RATE_BP,
   LAUNCH_TIMESTAMP,
   LIFETIME_RATE_START,
-  EARLY_EXIT_PERIOD_DAYS,
-  EARLY_EXIT_FEE_PCT,
-  EARLY_EXIT_PERIOD_SECONDS,
   YIELD_SCHEDULE,
   DAY_NAMES,
 } from "@/lib/constants";
@@ -62,10 +58,9 @@ export default function InvestPage() {
     launchTimestamp,
     combinedEarnings,
     pendingRewards,
-    isInEarlyExit,
     userPool,
   } = useInvestmentEngineReads(address);
-  const { deposit, claimRewards, earlyExit, partialEarlyExit, isLoading } =
+  const { deposit, claimRewards, isLoading } =
     useInvestmentEngineWrites();
   const { usdtBalance } = useUSDTReads(address);
   const { referralRewards } = useReferralReads(address);
@@ -83,7 +78,7 @@ export default function InvestPage() {
     address: CONTRACTS.usdt,
     abi: erc20Abi,
     functionName: "allowance",
-    args: address ? [address, CONTRACTS.osloVault] : undefined,
+    args: address ? [address, CONTRACTS.investmentEngine] : undefined,
     query: { enabled: !!address },
   });
 
@@ -183,16 +178,7 @@ export default function InvestPage() {
   const osloBal = osloBalance?.data as bigint | undefined;
   const osloBalNum = osloBal ? Number(osloBal) / 1e18 : 0;
 
-  // Early exit data
-  const inEarlyExit = (isInEarlyExit?.data as boolean) || false;
-  const poolData = userPool?.data as [bigint, bigint, bigint, bigint, bigint, bigint, bigint, boolean] | undefined;
-  const lastDepositTimestamp = poolData ? Number(poolData[6]) : 0;
-  const exitDeadline = lastDepositTimestamp + EARLY_EXIT_PERIOD_SECONDS;
-  const exitFee = activeDepositNum * 0.1;
-  const exitNetReturn = activeDepositNum - exitFee;
-
   const [convertingOslo, setConvertingOslo] = useState(false);
-  const [earlyExiting, setEarlyExiting] = useState(false);
 
   const handleDeposit = async () => {
     if (!amountNum || !address || !publicClient) return;
@@ -209,7 +195,7 @@ export default function InvestPage() {
           address: CONTRACTS.usdt,
           abi: erc20Abi,
           functionName: "approve",
-          args: [CONTRACTS.osloVault, maxUint256],
+          args: [CONTRACTS.investmentEngine, maxUint256],
         });
 
         addToast({
@@ -263,23 +249,6 @@ export default function InvestPage() {
         description: err?.message?.slice(0, 100) || "Transaction rejected",
         status: "error",
       });
-    }
-  };
-
-  const handleEarlyExit = async (percentageBp: number = 10000) => {
-    setEarlyExiting(true);
-    try {
-      addToast({ title: `Early Exit ${percentageBp / 100}% — Returning USDT...`, status: "pending" });
-      const tx = await partialEarlyExit(percentageBp);
-      addToast({ title: "Early Exit Complete — USDT Returned", status: "success", txHash: tx });
-    } catch (err: any) {
-      addToast({
-        title: "Early Exit Failed",
-        description: err?.message?.slice(0, 100) || "Transaction rejected",
-        status: "error",
-      });
-    } finally {
-      setEarlyExiting(false);
     }
   };
 
@@ -728,130 +697,9 @@ export default function InvestPage() {
               </div>
             )}
 
-            {/* Early Exit Section */}
-            {poolActive && inEarlyExit && activeDepositNum > 0 && (
-              <div className="mt-8 pt-6 border-t-2 border-oslo-danger/20">
-                <div className="mb-3 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-oslo-danger" />
-                  <span className="text-[11px] font-semibold text-oslo-danger uppercase tracking-wider">
-                    Early Exit Zone
-                  </span>
-                </div>
-
-                <div className="mb-3 flex items-center gap-1.5">
-                  <ShieldCheck className="w-3 h-3 text-oslo-aurora" />
-                  <span className="text-[10px] text-oslo-aurora font-medium">
-                    Early Exit Available —{" "}
-                    <CountdownTimer
-                      targetTimestamp={exitDeadline}
-                      className="text-[10px] text-oslo-aurora font-medium"
-                    />
-                  </span>
-                </div>
-
-                <p className="text-[10px] text-oslo-text-muted mb-3 leading-relaxed">
-                  Exiting early incurs a {EARLY_EXIT_FEE_PCT}% fee. Choose how much of your pool to exit:
-                </p>
-                <div className="mb-3 p-2.5 rounded-lg bg-oslo-danger/5 border border-oslo-danger/10">
-                  <p className="text-[10px] text-oslo-text-secondary leading-relaxed">
-                    <strong className="text-oslo-danger">Important:</strong> Upon taking an early exit, any income already received will be deducted, and a {EARLY_EXIT_FEE_PCT}% processing fee will also apply.
-                  </p>
-                </div>
-                <EarlyExitOptions
-                  principal={activeDepositNum}
-                  fee={exitFee}
-                  netReturn={exitNetReturn}
-                  onExit={handleEarlyExit}
-                  loading={earlyExiting}
-                />
-              </div>
-            )}
           </GlassCard>
         </div>
       )}
-    </div>
-  );
-}
-
-// ─── Early Exit Options Component ─────────────────────────────────────────
-
-function EarlyExitOptions({
-  principal,
-  fee,
-  netReturn,
-  onExit,
-  loading,
-}: {
-  principal: number;
-  fee: number;
-  netReturn: number;
-  onExit: (percentageBp: number) => void | Promise<void>;
-  loading: boolean;
-}) {
-  const [selectedPct, setSelectedPct] = useState(100);
-  const exitOptions = [100, 50, 25] as const;
-
-  const selectedPrincipal = principal * (selectedPct / 100);
-  const selectedFee = fee * (selectedPct / 100);
-  const selectedNet = netReturn * (selectedPct / 100);
-  const remainingBalance = principal - selectedPrincipal;
-  const remaining3X = remainingBalance * RETURN_CAP_MULTIPLIER;
-
-  return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-2">
-        {exitOptions.map((pct) => (
-          <button
-            key={pct}
-            onClick={() => setSelectedPct(pct)}
-            className={`py-2 px-3 rounded-btn text-xs font-medium border transition-all ${
-              selectedPct === pct
-                ? "bg-oslo-aurora/20 border-oslo-aurora/50 text-oslo-aurora"
-                : "bg-white/[0.03] border-white/10 text-oslo-text-muted hover:border-white/20"
-            }`}
-          >
-            {pct}%
-          </button>
-        ))}
-      </div>
-
-      <div className="p-3 rounded-lg bg-white/[0.03] border border-white/5 space-y-1.5">
-        <div className="flex justify-between text-[10px]">
-          <span className="text-oslo-text-muted">Exit Amount ({selectedPct}%)</span>
-          <span className="font-mono text-oslo-text-primary">${formatNumber(selectedPrincipal)}</span>
-        </div>
-        <div className="flex justify-between text-[10px]">
-          <span className="text-oslo-text-muted">{EARLY_EXIT_FEE_PCT}% Fee</span>
-          <span className="font-mono text-oslo-danger">-${formatNumber(selectedFee)}</span>
-        </div>
-        <div className="flex justify-between text-[10px] pt-1 border-t border-white/5">
-          <span className="text-oslo-text-muted font-medium">You Receive (USDT)</span>
-          <span className="font-mono text-oslo-ice font-medium">${formatNumber(selectedNet)}</span>
-        </div>
-        {selectedPct < 100 && (
-          <div className="flex justify-between text-[10px] pt-1 border-t border-white/5">
-            <span className="text-oslo-text-muted">Remaining Pool</span>
-            <span className="font-mono text-oslo-success">${formatNumber(remainingBalance)}</span>
-          </div>
-        )}
-        {selectedPct < 100 && (
-          <div className="flex justify-between text-[10px]">
-            <span className="text-oslo-text-muted">3X on Remaining</span>
-            <span className="font-mono text-oslo-success">${formatNumber(remaining3X)}</span>
-          </div>
-        )}
-      </div>
-
-      <IceButton
-        size="sm"
-        variant="primary"
-        className="w-full bg-oslo-aurora hover:bg-oslo-aurora/80"
-        onClick={() => onExit(selectedPct * 100)}
-        loading={loading}
-        disabled={loading}
-      >
-        Early Exit {selectedPct}% — Get ${formatNumber(selectedNet)} USDT
-      </IceButton>
     </div>
   );
 }

@@ -157,9 +157,10 @@ contract OSLOReferral is IReferral, ReentrancyGuard {
     /// @dev $1 USDT is sent straight to DEX reserves — no OSLO is removed or burned.
     function register(address user, address referrer) external override {
         if (user == address(0)) revert ZeroAddress();
+        if (referrer == address(0)) revert InvalidReferrer(); // Sponsor is mandatory
         if (userInfo[user].registered) revert AlreadyRegistered();
         if (user == referrer) revert SelfReferral();
-        if (referrer != address(0) && !userInfo[referrer].registered) revert InvalidReferrer();
+        if (!userInfo[referrer].registered) revert InvalidReferrer();
 
         // Charge $1 USDT registration fee
         usdt.safeTransferFrom(user, address(this), REGISTRATION_FEE);
@@ -167,7 +168,7 @@ contract OSLOReferral is IReferral, ReentrancyGuard {
 
         // Route fee to DEX as pure liquidity injection — no OSLO removed
         if (osloDex != address(0)) {
-            usdt.forceApprove(osloDex, REGISTRATION_FEE);
+            usdt.approve(osloDex, REGISTRATION_FEE);
             try IOSLODEX(osloDex).injectUSDTLiquidity(REGISTRATION_FEE) {
                 emit RegistrationFeeProcessed(user, REGISTRATION_FEE, 0);
             } catch {
@@ -223,6 +224,10 @@ contract OSLOReferral is IReferral, ReentrancyGuard {
             address upline = userInfo[current].referrer;
             if (upline == address(0)) break;
 
+            // Unsponsored accounts (referrer == address(0)) must NOT receive level income.
+            // If the upline has no sponsor, it is an orphan/root account — skip and stop.
+            if (userInfo[upline].referrer == address(0)) break;
+
             // Check if upline has this level unlocked
             if (userInfo[upline].unlockedLevels >= level) {
                 uint256 commissionRate = _getCommissionRate(level);
@@ -251,6 +256,9 @@ contract OSLOReferral is IReferral, ReentrancyGuard {
     /// @notice Claim accumulated referral rewards. Income tracked in USDT, paid in equivalent OSLO.
     /// @dev Converts USDT-denominated commission to OSLO at current DEX rate.
     function claimReferralRewards() external override nonReentrant {
+        // Unsponsored accounts cannot claim level income
+        if (userInfo[msg.sender].referrer == address(0)) revert NotRegistered();
+
         uint256 amount = referralRewards[msg.sender];
         if (amount == 0) revert NothingToClaim();
 

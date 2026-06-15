@@ -66,17 +66,11 @@ export interface OSLOInvestmentEngineInterface extends Interface {
       | "configure"
       | "deposit"
       | "depositsPaused"
-      | "earlyExit"
       | "getActiveDeposit"
       | "getCombinedEarnings"
       | "getDepositCount"
-      | "getEarlyExitAmount"
-      | "getPartialEarlyExitAmount"
       | "getPendingRewards"
-      | "getTrialTimeRemaining"
       | "getUserTier"
-      | "isInEarlyExitPeriod"
-      | "isInTrialPeriod"
       | "launchTimestamp"
       | "migrateCombinedEarnings"
       | "migrateDeposits"
@@ -85,7 +79,6 @@ export interface OSLOInvestmentEngineInterface extends Interface {
       | "notifyRankBonus"
       | "osloDex"
       | "osloToken"
-      | "partialEarlyExit"
       | "performanceWallet"
       | "rankSystem"
       | "referral"
@@ -111,7 +104,6 @@ export interface OSLOInvestmentEngineInterface extends Interface {
       | "CombinedEarningsUpdated"
       | "Deposited"
       | "DepositsPaused"
-      | "EarlyExited"
       | "PrincipalWithdrawn"
       | "ReferralUpdated"
       | "RewardsClaimed"
@@ -143,10 +135,6 @@ export interface OSLOInvestmentEngineInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "earlyExit",
-    values: [BigNumberish]
-  ): string;
-  encodeFunctionData(
     functionFragment: "getActiveDeposit",
     values: [AddressLike]
   ): string;
@@ -159,32 +147,12 @@ export interface OSLOInvestmentEngineInterface extends Interface {
     values: [AddressLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "getEarlyExitAmount",
-    values: [AddressLike, BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getPartialEarlyExitAmount",
-    values: [AddressLike, BigNumberish, BigNumberish]
-  ): string;
-  encodeFunctionData(
     functionFragment: "getPendingRewards",
-    values: [AddressLike, BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getTrialTimeRemaining",
     values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "getUserTier",
     values: [AddressLike]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "isInEarlyExitPeriod",
-    values: [AddressLike, BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "isInTrialPeriod",
-    values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "launchTimestamp",
@@ -212,10 +180,6 @@ export interface OSLOInvestmentEngineInterface extends Interface {
   ): string;
   encodeFunctionData(functionFragment: "osloDex", values?: undefined): string;
   encodeFunctionData(functionFragment: "osloToken", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "partialEarlyExit",
-    values: [BigNumberish, BigNumberish]
-  ): string;
   encodeFunctionData(
     functionFragment: "performanceWallet",
     values?: undefined
@@ -289,7 +253,6 @@ export interface OSLOInvestmentEngineInterface extends Interface {
     functionFragment: "depositsPaused",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "earlyExit", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "getActiveDeposit",
     data: BytesLike
@@ -303,31 +266,11 @@ export interface OSLOInvestmentEngineInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "getEarlyExitAmount",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getPartialEarlyExitAmount",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "getPendingRewards",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "getTrialTimeRemaining",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "getUserTier",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "isInEarlyExitPeriod",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "isInTrialPeriod",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -356,10 +299,6 @@ export interface OSLOInvestmentEngineInterface extends Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "osloDex", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "osloToken", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "partialEarlyExit",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(
     functionFragment: "performanceWallet",
     data: BytesLike
@@ -470,34 +409,6 @@ export namespace DepositsPausedEvent {
   export type OutputTuple = [paused: boolean];
   export interface OutputObject {
     paused: boolean;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
-
-export namespace EarlyExitedEvent {
-  export type InputTuple = [
-    user: AddressLike,
-    amountReturned: BigNumberish,
-    feeDeducted: BigNumberish,
-    yieldDeducted: BigNumberish,
-    depositIndex: BigNumberish
-  ];
-  export type OutputTuple = [
-    user: string,
-    amountReturned: bigint,
-    feeDeducted: bigint,
-    yieldDeducted: bigint,
-    depositIndex: bigint
-  ];
-  export interface OutputObject {
-    user: string;
-    amountReturned: bigint;
-    feeDeducted: bigint;
-    yieldDeducted: bigint;
-    depositIndex: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -636,12 +547,6 @@ export interface OSLOInvestmentEngine extends BaseContract {
 
   depositsPaused: TypedContractMethod<[], [boolean], "view">;
 
-  earlyExit: TypedContractMethod<
-    [depositIndex: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-
   getActiveDeposit: TypedContractMethod<[user: AddressLike], [bigint], "view">;
 
   getCombinedEarnings: TypedContractMethod<
@@ -652,57 +557,13 @@ export interface OSLOInvestmentEngine extends BaseContract {
 
   getDepositCount: TypedContractMethod<[user: AddressLike], [bigint], "view">;
 
-  getEarlyExitAmount: TypedContractMethod<
-    [user: AddressLike, depositIndex: BigNumberish],
-    [
-      [bigint, bigint, bigint, bigint] & {
-        principal: bigint;
-        accruedYield: bigint;
-        exitFee: bigint;
-        netReturn: bigint;
-      }
-    ],
-    "view"
-  >;
-
-  getPartialEarlyExitAmount: TypedContractMethod<
-    [user: AddressLike, depositIndex: BigNumberish, percentageBp: BigNumberish],
-    [
-      [bigint, bigint, bigint, bigint] & {
-        exitAmount: bigint;
-        exitFee: bigint;
-        netReturn: bigint;
-        remainingBalance: bigint;
-      }
-    ],
-    "view"
-  >;
-
   getPendingRewards: TypedContractMethod<
     [user: AddressLike, depositIndex: BigNumberish],
     [bigint],
     "view"
   >;
 
-  getTrialTimeRemaining: TypedContractMethod<
-    [user: AddressLike, depositIndex: BigNumberish],
-    [bigint],
-    "view"
-  >;
-
   getUserTier: TypedContractMethod<[user: AddressLike], [bigint], "view">;
-
-  isInEarlyExitPeriod: TypedContractMethod<
-    [user: AddressLike, depositIndex: BigNumberish],
-    [boolean],
-    "view"
-  >;
-
-  isInTrialPeriod: TypedContractMethod<
-    [user: AddressLike, depositIndex: BigNumberish],
-    [boolean],
-    "view"
-  >;
 
   launchTimestamp: TypedContractMethod<[], [bigint], "view">;
 
@@ -735,12 +596,6 @@ export interface OSLOInvestmentEngine extends BaseContract {
   osloDex: TypedContractMethod<[], [string], "view">;
 
   osloToken: TypedContractMethod<[], [string], "view">;
-
-  partialEarlyExit: TypedContractMethod<
-    [depositIndex: BigNumberish, percentageBp: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
 
   performanceWallet: TypedContractMethod<[], [string], "view">;
 
@@ -812,11 +667,10 @@ export interface OSLOInvestmentEngine extends BaseContract {
   users: TypedContractMethod<
     [arg0: AddressLike],
     [
-      [bigint, bigint, bigint, boolean] & {
+      [bigint, bigint, bigint] & {
         totalActiveDeposit: bigint;
         depositCount: bigint;
         totalCombinedEarnings: bigint;
-        earlyExitExpired: boolean;
       }
     ],
     "view"
@@ -858,9 +712,6 @@ export interface OSLOInvestmentEngine extends BaseContract {
     nameOrSignature: "depositsPaused"
   ): TypedContractMethod<[], [boolean], "view">;
   getFunction(
-    nameOrSignature: "earlyExit"
-  ): TypedContractMethod<[depositIndex: BigNumberish], [void], "nonpayable">;
-  getFunction(
     nameOrSignature: "getActiveDeposit"
   ): TypedContractMethod<[user: AddressLike], [bigint], "view">;
   getFunction(
@@ -870,42 +721,7 @@ export interface OSLOInvestmentEngine extends BaseContract {
     nameOrSignature: "getDepositCount"
   ): TypedContractMethod<[user: AddressLike], [bigint], "view">;
   getFunction(
-    nameOrSignature: "getEarlyExitAmount"
-  ): TypedContractMethod<
-    [user: AddressLike, depositIndex: BigNumberish],
-    [
-      [bigint, bigint, bigint, bigint] & {
-        principal: bigint;
-        accruedYield: bigint;
-        exitFee: bigint;
-        netReturn: bigint;
-      }
-    ],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "getPartialEarlyExitAmount"
-  ): TypedContractMethod<
-    [user: AddressLike, depositIndex: BigNumberish, percentageBp: BigNumberish],
-    [
-      [bigint, bigint, bigint, bigint] & {
-        exitAmount: bigint;
-        exitFee: bigint;
-        netReturn: bigint;
-        remainingBalance: bigint;
-      }
-    ],
-    "view"
-  >;
-  getFunction(
     nameOrSignature: "getPendingRewards"
-  ): TypedContractMethod<
-    [user: AddressLike, depositIndex: BigNumberish],
-    [bigint],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "getTrialTimeRemaining"
   ): TypedContractMethod<
     [user: AddressLike, depositIndex: BigNumberish],
     [bigint],
@@ -914,20 +730,6 @@ export interface OSLOInvestmentEngine extends BaseContract {
   getFunction(
     nameOrSignature: "getUserTier"
   ): TypedContractMethod<[user: AddressLike], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "isInEarlyExitPeriod"
-  ): TypedContractMethod<
-    [user: AddressLike, depositIndex: BigNumberish],
-    [boolean],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "isInTrialPeriod"
-  ): TypedContractMethod<
-    [user: AddressLike, depositIndex: BigNumberish],
-    [boolean],
-    "view"
-  >;
   getFunction(
     nameOrSignature: "launchTimestamp"
   ): TypedContractMethod<[], [bigint], "view">;
@@ -968,13 +770,6 @@ export interface OSLOInvestmentEngine extends BaseContract {
   getFunction(
     nameOrSignature: "osloToken"
   ): TypedContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "partialEarlyExit"
-  ): TypedContractMethod<
-    [depositIndex: BigNumberish, percentageBp: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
   getFunction(
     nameOrSignature: "performanceWallet"
   ): TypedContractMethod<[], [string], "view">;
@@ -1051,11 +846,10 @@ export interface OSLOInvestmentEngine extends BaseContract {
   ): TypedContractMethod<
     [arg0: AddressLike],
     [
-      [bigint, bigint, bigint, boolean] & {
+      [bigint, bigint, bigint] & {
         totalActiveDeposit: bigint;
         depositCount: bigint;
         totalCombinedEarnings: bigint;
-        earlyExitExpired: boolean;
       }
     ],
     "view"
@@ -1088,13 +882,6 @@ export interface OSLOInvestmentEngine extends BaseContract {
     DepositsPausedEvent.InputTuple,
     DepositsPausedEvent.OutputTuple,
     DepositsPausedEvent.OutputObject
-  >;
-  getEvent(
-    key: "EarlyExited"
-  ): TypedContractEvent<
-    EarlyExitedEvent.InputTuple,
-    EarlyExitedEvent.OutputTuple,
-    EarlyExitedEvent.OutputObject
   >;
   getEvent(
     key: "PrincipalWithdrawn"
@@ -1161,17 +948,6 @@ export interface OSLOInvestmentEngine extends BaseContract {
       DepositsPausedEvent.InputTuple,
       DepositsPausedEvent.OutputTuple,
       DepositsPausedEvent.OutputObject
-    >;
-
-    "EarlyExited(address,uint256,uint256,uint256,uint256)": TypedContractEvent<
-      EarlyExitedEvent.InputTuple,
-      EarlyExitedEvent.OutputTuple,
-      EarlyExitedEvent.OutputObject
-    >;
-    EarlyExited: TypedContractEvent<
-      EarlyExitedEvent.InputTuple,
-      EarlyExitedEvent.OutputTuple,
-      EarlyExitedEvent.OutputObject
     >;
 
     "PrincipalWithdrawn(address,uint256,uint256)": TypedContractEvent<

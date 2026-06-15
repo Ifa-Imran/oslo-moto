@@ -1,5 +1,6 @@
 import { CONTRACTS } from "@/lib/contracts";
 import vaultAbi from "@/abis/OSLOVault.json";
+import investmentEngineAbi from "@/abis/OSLOInvestmentEngine.json";
 
 import { useReadContract, useWriteContract, useWatchContractEvent } from "wagmi";
 import { type Address } from "viem";
@@ -67,14 +68,6 @@ export function useInvestmentEngineReads(userAddress?: Address) {
     query: { enabled: !!userAddress, refetchInterval: 15000 },
   });
 
-  const isInEarlyExit = useReadContract({
-    address: CONTRACTS.osloVault,
-    abi: vaultAbi,
-    functionName: "isInEarlyExitPeriod",
-    args: userAddress ? [userAddress] : undefined,
-    query: { enabled: !!userAddress },
-  });
-
   const userPool = useReadContract({
     address: CONTRACTS.osloVault,
     abi: vaultAbi,
@@ -93,7 +86,6 @@ export function useInvestmentEngineReads(userAddress?: Address) {
     launchTimestamp,
     combinedEarnings,
     pendingRewards,
-    isInEarlyExit,
     userPool,
   };
 }
@@ -101,13 +93,11 @@ export function useInvestmentEngineReads(userAddress?: Address) {
 export function useInvestmentEngineWrites() {
   const { writeContractAsync, ...depositWrite } = useWriteContract();
   const { writeContractAsync: claimAsync, ...claimWrite } = useWriteContract();
-  const { writeContractAsync: earlyExitAsync, ...earlyExitWrite } = useWriteContract();
-  const { writeContractAsync: partialExitAsync, ...partialExitWrite } = useWriteContract();
 
   const deposit = async (amount: bigint) => {
     return writeContractAsync({
-      address: CONTRACTS.osloVault,
-      abi: vaultAbi,
+      address: CONTRACTS.investmentEngine,
+      abi: investmentEngineAbi,
       functionName: "deposit",
       args: [amount],
     });
@@ -122,34 +112,12 @@ export function useInvestmentEngineWrites() {
     });
   };
 
-  const earlyExit = async () => {
-    return earlyExitAsync({
-      address: CONTRACTS.osloVault,
-      abi: vaultAbi,
-      functionName: "earlyExit",
-      args: [],
-    });
-  };
-
-  const partialEarlyExit = async (percentageBp: number) => {
-    return partialExitAsync({
-      address: CONTRACTS.osloVault,
-      abi: vaultAbi,
-      functionName: "partialEarlyExit",
-      args: [BigInt(percentageBp)],
-    });
-  };
-
   return {
     deposit,
     claimRewards,
-    earlyExit,
-    partialEarlyExit,
     isLoading:
       depositWrite.isPending ||
-      claimWrite.isPending ||
-      earlyExitWrite.isPending ||
-      partialExitWrite.isPending,
+      claimWrite.isPending,
   };
 }
 

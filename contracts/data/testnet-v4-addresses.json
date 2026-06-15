@@ -1,0 +1,16 @@
+{
+  "network": "bsc-testnet",
+  "chainId": 97,
+  "deployedAt": "2026-06-15T05:01:58.476Z",
+  "deployer": "0x47f8160e3C854b4b4679579b99726E5E81736B7f",
+  "contracts": {
+    "MockUSDT": "0xbC9352a7abb1Af216aC65B2efB55A9738fAdC62C",
+    "OSLOToken": "0x3191BBd57A21725E4Bf1eE9EC3C9d475b43b3DE6",
+    "OSLODEX": "0x5a6920Bb151d7A8Df9E2d11Cb1Ec2ce6A4A0Ee5F",
+    "OSLOInvestmentEngine": "0x154B8211CE98B3d9B8068396b8E85DEEA8B667EC",
+    "OSLOReferralV2": "0x0D584e91182a91e0500db20a603D0f732bE01B12",
+    "OSLOReferralOld": "0x77e81eE198d93b16FFA7784540d2FEeE3cD25274"
+  },
+  "testWallet": "0x7f4f8C1D7DA3141737c242B4055EE6c4d005014c",
+  "status": "deployed"
+}

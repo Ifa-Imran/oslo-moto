@@ -32,8 +32,6 @@ export interface OSLOConstantsInterface extends Interface {
       | "DEPOSIT_TO_PERFORMANCE_BP"
       | "DEPOSIT_TO_REWARD_BP"
       | "DEX_ALLOCATION"
-      | "EARLY_EXIT_FEE_BP"
-      | "EARLY_EXIT_PERIOD"
       | "INITIAL_DEX_OSLO"
       | "INITIAL_DEX_USDT"
       | "LAUNCH_TIMESTAMP"
@@ -141,14 +139,6 @@ export interface OSLOConstantsInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "DEX_ALLOCATION",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "EARLY_EXIT_FEE_BP",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "EARLY_EXIT_PERIOD",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -410,14 +400,6 @@ export interface OSLOConstantsInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "DEX_ALLOCATION",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "EARLY_EXIT_FEE_BP",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "EARLY_EXIT_PERIOD",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -705,10 +687,6 @@ export interface OSLOConstants extends BaseContract {
 
   DEX_ALLOCATION: TypedContractMethod<[], [bigint], "view">;
 
-  EARLY_EXIT_FEE_BP: TypedContractMethod<[], [bigint], "view">;
-
-  EARLY_EXIT_PERIOD: TypedContractMethod<[], [bigint], "view">;
-
   INITIAL_DEX_OSLO: TypedContractMethod<[], [bigint], "view">;
 
   INITIAL_DEX_USDT: TypedContractMethod<[], [bigint], "view">;
@@ -876,12 +854,6 @@ export interface OSLOConstants extends BaseContract {
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "DEX_ALLOCATION"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "EARLY_EXIT_FEE_BP"
-  ): TypedContractMethod<[], [bigint], "view">;
-  getFunction(
-    nameOrSignature: "EARLY_EXIT_PERIOD"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "INITIAL_DEX_OSLO"

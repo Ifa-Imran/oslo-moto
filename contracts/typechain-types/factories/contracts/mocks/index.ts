@@ -3,3 +3,4 @@
 /* eslint-disable */
 export * as mockBusdSol from "./MockBUSD.sol";
 export { MockPancakeRouter__factory } from "./MockPancakeRouter__factory";
+export { MockUSDT__factory } from "./MockUSDT__factory";

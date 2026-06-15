@@ -4,3 +4,4 @@
 import type * as mockBusdSol from "./MockBUSD.sol";
 export type { mockBusdSol };
 export type { MockPancakeRouter } from "./MockPancakeRouter";
+export type { MockUSDT } from "./MockUSDT";
