@@ -470,7 +470,8 @@ function LandingPage() {
                 </label>
               </div>
 
-              {/* USDT Faucet Button */}
+              {/* USDT Faucet Button - Testnet Only */}
+              {process.env.NEXT_PUBLIC_NETWORK === 'testnet' && (
               <div>
                 <label className="block text-xs text-oslo-text-muted mb-1.5 text-left">Need USDT for testing?</label>
                 <button
@@ -483,6 +484,7 @@ function LandingPage() {
                 </button>
                 <p className="text-xs text-oslo-text-muted mt-1">Once per 24 hours • Testnet only</p>
               </div>
+              )}
 
               <div className="relative flex items-center gap-3 my-4">
                 <div className="flex-1 h-px bg-oslo-ice/10" />
