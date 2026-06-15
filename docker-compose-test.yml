@@ -13,8 +13,8 @@ services:
           cp -a /tmp/repo/. /app/ &&
           cd /app/frontend &&
           rm -rf /app/frontend/.next /app/frontend/node_modules/.cache &&
-          printf 'NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=%s\n' "$${NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID}" > /app/frontend/.env.local &&
-          printf 'NEXT_PUBLIC_SITE_URL=%s\n' "$${NEXT_PUBLIC_SITE_URL}" >> /app/frontend/.env.local &&
+          printf 'NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=%s\n' \"$${NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID}\" > /app/frontend/.env.local &&
+          printf 'NEXT_PUBLIC_SITE_URL=%s\n' \"$${NEXT_PUBLIC_SITE_URL}\" >> /app/frontend/.env.local &&
           npm ci --include=dev --legacy-peer-deps &&
           NODE_OPTIONS=--max-old-space-size=2048 npm run build &&
           rm -rf /app/frontend/.next/standalone/.next/static /app/frontend/.next/standalone/public &&
