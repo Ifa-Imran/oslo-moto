@@ -147,6 +147,7 @@ function LandingPage() {
   });
 
   const [flowStep, setFlowStep] = useState<"idle" | "approving" | "registering">("idle");
+  const [showLaunchPopup, setShowLaunchPopup] = useState(true);
 
   // Check on-chain registration status
   const registered = isRegistered.isLoading ? undefined : (isRegistered.data as boolean | undefined);
@@ -309,6 +310,69 @@ function LandingPage() {
   if (!isConnected) {
     return (
       <div className="space-y-12">
+        {/* Going Live Tomorrow Popup - Production Only */}
+        {process.env.NEXT_PUBLIC_NETWORK !== 'testnet' && showLaunchPopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+              className="relative max-w-md w-full bg-gradient-to-br from-oslo-ice/10 to-white/5 border border-oslo-ice/20 rounded-3xl p-8 shadow-2xl"
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setShowLaunchPopup(false)}
+                className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-oslo-text-secondary hover:text-oslo-text-primary transition-all"
+              >
+                ×
+              </button>
+
+              {/* Content */}
+              <div className="text-center">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                  className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30 flex items-center justify-center"
+                >
+                  <span className="text-4xl">🚀</span>
+                </motion.div>
+
+                <h2 className="text-3xl font-light text-oslo-text-primary mb-3">
+                  We're Going Live Tomorrow!
+                </h2>
+
+                <p className="text-oslo-text-secondary mb-6 leading-relaxed">
+                  OSLO Protocol is launching tomorrow. Get ready to experience
+                  the future of DeFi investment ecosystems.
+                </p>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-center gap-2 text-sm text-oslo-ice/80">
+                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span>Smart Contracts Audited</span>
+                  </div>
+                  <div className="flex items-center justify-center gap-2 text-sm text-oslo-ice/80">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                    <span>Multi-Tier Referral System</span>
+                  </div>
+                  <div className="flex items-center justify-center gap-2 text-sm text-oslo-ice/80">
+                    <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+                    <span>Daily Yield Rewards</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowLaunchPopup(false)}
+                  className="mt-8 w-full px-6 py-3 rounded-xl bg-gradient-to-r from-oslo-ice/20 to-white/10 border border-oslo-ice/30 text-oslo-ice font-medium hover:from-oslo-ice/30 hover:to-white/20 transition-all"
+                >
+                  Got it!
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {/* Hero */}
         <div className="text-center py-12 md:py-20">
           <motion.div
