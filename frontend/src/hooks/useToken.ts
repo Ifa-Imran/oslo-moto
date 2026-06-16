@@ -52,7 +52,7 @@ export function useTokenEvents(onEvent?: (event: any) => void) {
   });
 }
 
-// ─── MockUSDT Mint (Testnet only) ───────────────────────────────────
+// ─── MockUSDT Mint (disabled on mainnet) ───────────────────────
 const MINT_AMOUNT = parseEther("10000"); // 10,000 USDT
 
 export function useMintUSDT() {

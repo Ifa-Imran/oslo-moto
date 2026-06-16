@@ -205,7 +205,7 @@ function LandingPage() {
           >
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-oslo-ice/10 border border-oslo-ice/20 text-xs text-oslo-ice mb-6">
               <span className="w-1.5 h-1.5 rounded-full bg-oslo-ice animate-pulse" />
-              BNB Smart Chain Testnet
+              BNB Smart Chain
             </div>
             <h1 className="text-4xl md:text-6xl font-light tracking-tight text-oslo-text-primary leading-tight">
               OSLO Protocol
@@ -229,7 +229,7 @@ function LandingPage() {
               </p>
               <p className="text-xs text-oslo-text-muted max-w-sm">
                 Use the &quot;Connect Wallet&quot; button in the top-right corner.
-                BSC Testnet supported via MetaMask, Trust Wallet, and WalletConnect.
+                BSC supported via MetaMask, Trust Wallet, and WalletConnect.
               </p>
             </div>
           </motion.div>
@@ -274,9 +274,9 @@ function LandingPage() {
         {/* Contract Links */}
         <div className="text-center">
           <p className="text-xs text-oslo-text-muted">
-            Verified on BSC Testnet ·{" "}
+            Verified on BSC ·{" "}
             <a
-              href={`https://testnet.bscscan.com/address/${CONTRACTS.investmentEngine}`}
+              href={`https://bscscan.com/address/${CONTRACTS.investmentEngine}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-oslo-ice hover:underline inline-flex items-center gap-1"

@@ -12,7 +12,6 @@ export interface TxToastData {
   description?: string;
   txHash?: string;
   status: TxStatus;
-  testnet?: boolean;
 }
 
 interface TxToastProps {
@@ -69,7 +68,7 @@ export function TxToast({ toast, onDismiss }: TxToastProps) {
         )}
         {toast.txHash && (
           <a
-            href={bscScanUrl(toast.txHash, "tx", toast.testnet)}
+            href={bscScanUrl(toast.txHash, "tx")}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 mt-1 text-xs text-oslo-ice hover:underline"

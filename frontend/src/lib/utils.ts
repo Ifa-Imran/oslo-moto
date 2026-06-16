@@ -129,11 +129,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
  */
 export function bscScanUrl(
   hash: string,
-  type: "address" | "tx" = "address",
-  testnet = false
+  type: "address" | "tx" = "address"
 ): string {
-  const base = testnet
-    ? "https://testnet.bscscan.com"
-    : "https://bscscan.com";
-  return `${base}/${type}/${hash}`;
+  return `https://bscscan.com/${type}/${hash}`;
 }
