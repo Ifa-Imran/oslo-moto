@@ -17,12 +17,20 @@ export function useOSLODEX() {
   const [swapInput, setSwapInput] = useState("");
   const [slippage, setSlippage] = useState(1); // 1% default slippage
 
-  // Read OSLO price
-  const { data: price, refetch: refetchPrice } = useReadContract({
+  // Read OSLO price (live from getPrice)
+  const { data: livePrice, refetch: refetchPrice } = useReadContract({
     address: CONTRACTS.osloDEX,
     abi: osloDEXABI,
     functionName: "getPrice",
     query: { refetchInterval: 10000 }, // Refetch every 10 seconds
+  });
+
+  // Read lastPrice (fallback when DEX reserves are 0, e.g. after admin drain)
+  const { data: lastPriceData } = useReadContract({
+    address: CONTRACTS.osloDEX,
+    abi: osloDEXABI,
+    functionName: "lastPrice",
+    query: { refetchInterval: 30000 },
   });
 
   // Read reserves
@@ -35,6 +43,12 @@ export function useOSLODEX() {
 
   const usdtReserve = reserves ? formatEther((reserves as [bigint, bigint])[0]) : "0";
   const osloReserve = reserves ? formatEther((reserves as [bigint, bigint])[1]) : "0";
+
+  // Use live price from getPrice(); fall back to lastPrice when DEX reserves are empty
+  const resolvedPrice: bigint =
+    (livePrice as bigint) && (livePrice as bigint) > 0n
+      ? (livePrice as bigint)
+      : (lastPriceData as bigint) || 0n;
 
   // Swap USDT for OSLO
   const { data: swapUSDTData, writeContract: swapUSDTForOSLO, isPending: isSwapPending } = useWriteContract();
@@ -92,7 +106,7 @@ export function useOSLODEX() {
 
   return {
     // State
-    price: price ? formatEther(price as bigint) : "0",
+    price: resolvedPrice > 0n ? formatEther(resolvedPrice) : "0",
     usdtReserve,
     osloReserve,
     swapInput,
