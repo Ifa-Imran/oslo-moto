@@ -1,6 +1,7 @@
 "use client";
 
 import { http } from "wagmi";
+import { fallback } from "viem";
 import { bsc, bscTestnet } from "wagmi/chains";
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 import {
@@ -84,7 +85,12 @@ export const config = getDefaultConfig({
   transports: {
     [bscTestnet.id]: http("https://data-seed-prebsc-1-s1.binance.org:8545/"),
     [localhost.id]: http("http://127.0.0.1:8545"),
-    [bsc.id]: http("https://bsc-dataseed.binance.org/"),
+    [bsc.id]: fallback([
+      http("https://bsc-dataseed.binance.org/"),
+      http("https://bsc.publicnode.com/"),
+      http("https://bsc.drpc.org/"),
+      http("https://bsc-rpc.publicnode.com/"),
+    ]),
   },
   walletConnectParameters: {
     metadata: {
