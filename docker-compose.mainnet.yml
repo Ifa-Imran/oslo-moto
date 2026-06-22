@@ -1,0 +1,64 @@
+services:
+  app:
+    image: node:20-alpine
+    restart: unless-stopped
+    working_dir: /app/frontend
+    command: >
+      sh -c "
+        apk add --no-cache git &&
+        if [ ! -f /app/.bootstrap-done ]; then
+          rm -rf /tmp/repo &&
+          git clone --depth 1 --branch master https://github.com/Ifa-Imran/oslo-moto.git /tmp/repo &&
+          find /app -mindepth 1 -maxdepth 1 ! -name node_modules -exec rm -rf {} + &&
+          cp -a /tmp/repo/. /app/ &&
+          cd /app/frontend &&
+          rm -rf /app/frontend/.next /app/frontend/node_modules/.cache &&
+          printf 'NEXT_PUBLIC_WC_PROJECT_ID=de1938e67e453d4ff13d1689f2262e43\n' > /app/frontend/.env.local &&
+          printf 'NEXT_PUBLIC_APP_URL=https://www.oslomoto.com\n' >> /app/frontend/.env.local &&
+          printf 'NEXT_PUBLIC_CHAIN_ID=56\n' >> /app/frontend/.env.local &&
+          printf 'NEXT_PUBLIC_USDT_ADDRESS=0x55d398326f99059fF775485246999027B3197955\n' >> /app/frontend/.env.local &&
+          printf 'NEXT_PUBLIC_OSLO_TOKEN_ADDRESS=0xCAACC067BD389597BD95A762436Feb723616Cab3\n' >> /app/frontend/.env.local &&
+          printf 'NEXT_PUBLIC_OSLO_DEX_ADDRESS=0x03bD43d3268BC584aDcB142a0fBAeda7987e38b1\n' >> /app/frontend/.env.local &&
+          printf 'NEXT_PUBLIC_INVESTMENT_ENGINE_ADDRESS=0x55bD08872d55fa6ac405fB3580c27740474cc4D9\n' >> /app/frontend/.env.local &&
+          printf 'NEXT_PUBLIC_REFERRAL_REGISTRY_ADDRESS=0x06cd1ADc500098f5cc65225D712CBF46939B2ee1\n' >> /app/frontend/.env.local &&
+          printf 'NEXT_PUBLIC_REWARD_VAULT_ADDRESS=0x3A49898f23e610894F13F3D65484f557E627557f\n' >> /app/frontend/.env.local &&
+          printf 'NEXT_PUBLIC_OSLO_DAO_ADDRESS=0xBA572D3204D126Cf3A5f1FaA1643b60c057206C4\n' >> /app/frontend/.env.local &&
+          printf 'NEXT_PUBLIC_LEADERSHIP_BONUS_ADDRESS=0xA56e83e375FC6b62CE633759836f5D32785cfe9C\n' >> /app/frontend/.env.local &&
+          printf 'NEXT_PUBLIC_LEVEL_INCOME_SYSTEM_ADDRESS=0xDcC54b0D776A89C0F2033867a815754C2bf49aE3\n' >> /app/frontend/.env.local &&
+          printf 'NEXT_PUBLIC_REWARD_WALLET=0x1d8896b5A50F720e7ab811dCbfc68b6fE5FcF2b4\n' >> /app/frontend/.env.local &&
+          printf 'NEXT_PUBLIC_COMPANY_WALLET=0xBAc7A17Fb7a60751629D19Cf4700730d232D0c56\n' >> /app/frontend/.env.local &&
+          printf 'NEXT_PUBLIC_PERF_WALLET=0xf2E281Af319a51066d3428A5Ffda46dAf0f1f5a4\n' >> /app/frontend/.env.local &&
+          npm ci --include=dev --legacy-peer-deps &&
+          NODE_OPTIONS=--max-old-space-size=2048 npm run build &&
+          rm -rf /app/frontend/.next/standalone/.next/static /app/frontend/.next/standalone/public &&
+          cp -r .next/static .next/standalone/.next/static &&
+          cp -r public .next/standalone/public &&
+          touch /app/.bootstrap-done ;
+        fi &&
+        NODE_ENV=production HOSTNAME=0.0.0.0 PORT=3000 node .next/standalone/server.js
+      "
+    environment:
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NEXT_TELEMETRY_DISABLED=1
+    volumes:
+      - oslo_mainnet_app:/app
+    networks:
+      - traefik_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=kairo-dev_kairo_network"
+      - "traefik.http.routers.oslomoto-mainnet.rule=Host(`www.oslomoto.com`) || Host(`oslomoto.com`)"
+      - "traefik.http.routers.oslomoto-mainnet.entrypoints=websecure"
+      - "traefik.http.routers.oslomoto-mainnet.tls=true"
+      - "traefik.http.routers.oslomoto-mainnet.tls.certresolver=letsencrypt"
+      - "traefik.http.services.oslomoto-mainnet.loadbalancer.server.port=3000"
+      - "traefik.http.routers.oslomoto-mainnet.priority=10"
+
+volumes:
+  oslo_mainnet_app:
+
+networks:
+  traefik_net:
+    external: true
+    name: kairo-dev_kairo_network
