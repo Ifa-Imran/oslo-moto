@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment files (contain private keys, API tokens)
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+frontend/.next/
+frontend/out/
+artifacts/
+cache/
+typechain-types/
+
+# Backup/snapshot files (contain user data)
+*-backup-*.json
+mainnet-snapshot-*.json
+mainnet-users-*.json
+mainnet-full-backup-*.json
+deployments-*.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Lock files (keep package-lock.json)
+# yarn.lock
+# pnpm-lock.yaml
+
+# Misc
+*.tgz
+.env
+node_modules/
+dist/
+cache/
+artifacts/
+typechain-types/
+coverage/
+coverage.json
+deployments-*.json
+.env
+.env.local
+frontend/.next/
+frontend/node_modules/
