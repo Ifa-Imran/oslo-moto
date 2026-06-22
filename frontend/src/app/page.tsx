@@ -3,7 +3,7 @@
 import { StakingCard } from "@/components/dashboard/StakingCard";
 import { ProtocolStats } from "@/components/dashboard/ProtocolStats";
 import { useAccount, useReadContract } from "wagmi";
-import { investmentEngineABI, osloDexABI, osloTokenABI, usdtABI, referralRegistryABI, CONTRACTS } from "@/lib/contracts";
+import { investmentEngineABI, osloDexABI, osloTokenABI, usdtABI, referralRegistryABI, levelIncomeSystemABI, CONTRACTS } from "@/lib/contracts";
 import { formatUSDT, formatOSLO, formatPrice } from "@/lib/utils/format";
 import { useState } from "react";
 import Link from "next/link";
@@ -31,6 +31,21 @@ export default function DashboardPage() {
   const { data: maxTotalStake } = useReadContract({ address: CONTRACTS.INVESTMENT_ENGINE, abi: investmentEngineABI, functionName: "MAX_TOTAL_STAKE_PER_USER", chainId: bsc.id });
 
   const fmtUSD = (val: bigint | undefined) => val ? `$${Number(val) / 1e6}` : "$0";
+  const fmtPct = (bps: bigint | undefined) => bps ? `${Number(bps) / 100}%` : "0%";
+
+  // Level commission rates (read from LevelIncomeSystem contract)
+  // levels[0] = Level 1, levels[1] = Level 2, levels[2] = Level 3, etc.
+  const { data: lvl1Data } = useReadContract({ address: CONTRACTS.LEVEL_INCOME_SYSTEM, abi: levelIncomeSystemABI, functionName: "levels", args: [0n], chainId: bsc.id });
+  const { data: lvl2Data } = useReadContract({ address: CONTRACTS.LEVEL_INCOME_SYSTEM, abi: levelIncomeSystemABI, functionName: "levels", args: [1n], chainId: bsc.id });
+  const { data: lvl3Data } = useReadContract({ address: CONTRACTS.LEVEL_INCOME_SYSTEM, abi: levelIncomeSystemABI, functionName: "levels", args: [2n], chainId: bsc.id });
+  const { data: lvl6Data } = useReadContract({ address: CONTRACTS.LEVEL_INCOME_SYSTEM, abi: levelIncomeSystemABI, functionName: "levels", args: [5n], chainId: bsc.id });
+  const { data: lvl11Data } = useReadContract({ address: CONTRACTS.LEVEL_INCOME_SYSTEM, abi: levelIncomeSystemABI, functionName: "levels", args: [10n], chainId: bsc.id });
+
+  const lvl1Rate = (lvl1Data as { rate: bigint } | undefined)?.rate;
+  const lvl2Rate = (lvl2Data as { rate: bigint } | undefined)?.rate;
+  const lvl3Rate = (lvl3Data as { rate: bigint } | undefined)?.rate;
+  const lvl6Rate = (lvl6Data as { rate: bigint } | undefined)?.rate;
+  const lvl11Rate = (lvl11Data as { rate: bigint } | undefined)?.rate;
 
   // Check if user has staked (referral link only shown after staking)
   const { data: hasStaked } = useReadContract({
@@ -255,18 +270,26 @@ export default function DashboardPage() {
               {copied ? "Copied!" : "Copy"}
             </button>
           </div>
-          <div className="mt-3 grid grid-cols-3 gap-3 text-center">
+          <div className="mt-3 grid grid-cols-5 gap-2 text-center">
             <div className="bg-gray-800 rounded-lg p-2">
-              <p className="text-xs text-gray-400">Level 1</p>
-              <p className="text-sm font-bold text-green-400">30%</p>
+              <p className="text-xs text-gray-400">L1</p>
+              <p className="text-sm font-bold text-green-400">{fmtPct(lvl1Rate)}</p>
             </div>
             <div className="bg-gray-800 rounded-lg p-2">
-              <p className="text-xs text-gray-400">Level 2</p>
-              <p className="text-sm font-bold text-green-400">15%</p>
+              <p className="text-xs text-gray-400">L2</p>
+              <p className="text-sm font-bold text-green-400">{fmtPct(lvl2Rate)}</p>
             </div>
             <div className="bg-gray-800 rounded-lg p-2">
-              <p className="text-xs text-gray-400">Level 3-20</p>
-              <p className="text-sm font-bold text-green-400">1-10%</p>
+              <p className="text-xs text-gray-400">L3-5</p>
+              <p className="text-sm font-bold text-green-400">{fmtPct(lvl3Rate)}</p>
+            </div>
+            <div className="bg-gray-800 rounded-lg p-2">
+              <p className="text-xs text-gray-400">L6-10</p>
+              <p className="text-sm font-bold text-green-400">{fmtPct(lvl6Rate)}</p>
+            </div>
+            <div className="bg-gray-800 rounded-lg p-2">
+              <p className="text-xs text-gray-400">L11-20</p>
+              <p className="text-sm font-bold text-green-400">{fmtPct(lvl11Rate)}</p>
             </div>
           </div>
         </div>

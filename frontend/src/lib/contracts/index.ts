@@ -267,6 +267,17 @@ export const levelIncomeSystemABI = [
     stateMutability: "view",
     type: "function",
   },
+  {
+    inputs: [{ name: "index", type: "uint256" }],
+    name: "levels",
+    outputs: [
+      { name: "level", type: "uint256" },
+      { name: "rate", type: "uint256" },
+      { name: "directsRequired", type: "uint256" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
 ] as const;
 
 export const osloDexABI = [
