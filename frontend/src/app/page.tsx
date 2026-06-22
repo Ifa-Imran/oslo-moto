@@ -3,7 +3,7 @@
 import { StakingCard } from "@/components/dashboard/StakingCard";
 import { ProtocolStats } from "@/components/dashboard/ProtocolStats";
 import { useAccount, useReadContract } from "wagmi";
-import { investmentEngineABI, osloDexABI, osloTokenABI, usdtABI, CONTRACTS } from "@/lib/contracts";
+import { investmentEngineABI, osloDexABI, osloTokenABI, usdtABI, referralRegistryABI, CONTRACTS } from "@/lib/contracts";
 import { formatUSDT, formatOSLO, formatPrice } from "@/lib/utils/format";
 import { useState } from "react";
 import Link from "next/link";
@@ -13,22 +13,14 @@ export default function DashboardPage() {
   const { address } = useAccount();
   const [copied, setCopied] = useState(false);
 
-  const { data: totalTurnover } = useReadContract({
-    address: CONTRACTS.INVESTMENT_ENGINE,
-    abi: investmentEngineABI,
-    functionName: "totalProtocolTurnover",
-  });
-
-  const { data: totalActiveStakes } = useReadContract({
-    address: CONTRACTS.INVESTMENT_ENGINE,
-    abi: investmentEngineABI,
-    functionName: "totalActiveStakes",
-  });
-
-  const { data: totalUsers } = useReadContract({
-    address: CONTRACTS.INVESTMENT_ENGINE,
-    abi: investmentEngineABI,
-    functionName: "totalUsers",
+  // My Team Size (all downlines up to 20 levels)
+  const { data: teamSize } = useReadContract({
+    address: CONTRACTS.REFERRAL_REGISTRY,
+    abi: referralRegistryABI,
+    functionName: "getTeamSize",
+    args: address ? [address] : undefined,
+    chainId: bsc.id,
+    query: { enabled: !!address },
   });
 
   // Check if user has staked (referral link only shown after staking)
@@ -178,20 +170,10 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Protocol Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <p className="text-sm text-gray-400">Total Value Locked</p>
-          <p className="text-2xl font-bold text-white">${formatUSDT(totalActiveStakes)}</p>
-        </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <p className="text-sm text-gray-400">Total Protocol Turnover</p>
-          <p className="text-2xl font-bold text-white">${formatUSDT(totalTurnover)}</p>
-        </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <p className="text-sm text-gray-400">Total Users</p>
-          <p className="text-2xl font-bold text-white">{totalUsers?.toString() || "0"}</p>
-        </div>
+      {/* My Team Size */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <p className="text-sm text-gray-400">My Team Size</p>
+        <p className="text-2xl font-bold text-white">{teamSize?.toString() || "0"}</p>
       </div>
 
       {/* Personal Stake Card */}
