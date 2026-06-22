@@ -6,6 +6,10 @@ import { BottomNav } from "@/components/web3/BottomNav";
 import { AuthGuard } from "@/components/web3/AuthGuard";
 import { Toaster } from "react-hot-toast";
 
+// Force dynamic rendering to prevent ISR caching (s-maxage=31536000)
+// This ensures users always get fresh HTML, not a year-old cached version
+export const dynamic = "force-dynamic";
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
