@@ -23,6 +23,15 @@ export default function DashboardPage() {
     query: { enabled: !!address },
   });
 
+  // Contract parameters for How It Works section (read from chain)
+  const { data: tier1Min } = useReadContract({ address: CONTRACTS.INVESTMENT_ENGINE, abi: investmentEngineABI, functionName: "TIER1_MIN", chainId: bsc.id });
+  const { data: tier1Max } = useReadContract({ address: CONTRACTS.INVESTMENT_ENGINE, abi: investmentEngineABI, functionName: "TIER1_MAX", chainId: bsc.id });
+  const { data: tier2Min } = useReadContract({ address: CONTRACTS.INVESTMENT_ENGINE, abi: investmentEngineABI, functionName: "TIER2_MIN", chainId: bsc.id });
+  const { data: tier2Max } = useReadContract({ address: CONTRACTS.INVESTMENT_ENGINE, abi: investmentEngineABI, functionName: "TIER2_MAX", chainId: bsc.id });
+  const { data: maxTotalStake } = useReadContract({ address: CONTRACTS.INVESTMENT_ENGINE, abi: investmentEngineABI, functionName: "MAX_TOTAL_STAKE_PER_USER", chainId: bsc.id });
+
+  const fmtUSD = (val: bigint | undefined) => val ? `$${Number(val) / 1e6}` : "$0";
+
   // Check if user has staked (referral link only shown after staking)
   const { data: hasStaked } = useReadContract({
     address: CONTRACTS.INVESTMENT_ENGINE,
@@ -184,7 +193,7 @@ export default function DashboardPage() {
           <div className="space-y-3 text-sm text-gray-400">
             <div className="flex gap-3">
               <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs">1</span>
-              <p>Stake USDT (Tier 1: $10-$2,499 or Tier 2: $2,500-$5,000). Max $5,000 total per wallet.</p>
+              <p>Stake USDT (Tier 1: {fmtUSD(tier1Min)}-{fmtUSD(tier1Max)} or Tier 2: {fmtUSD(tier2Min)}-{fmtUSD(tier2Max)}). Max {fmtUSD(maxTotalStake)} total per wallet.</p>
             </div>
             <div className="flex gap-3">
               <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs">2</span>
@@ -196,7 +205,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex gap-3">
               <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs">4</span>
-              <p>Earnings capped at 3X your stake. Max $5,000 total investment per wallet.</p>
+              <p>Earnings capped at 3X your stake. Max {fmtUSD(maxTotalStake)} total investment per wallet.</p>
             </div>
           </div>
         </div>
