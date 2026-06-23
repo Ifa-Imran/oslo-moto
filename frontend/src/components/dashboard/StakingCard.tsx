@@ -55,7 +55,7 @@ export function StakingCard() {
           <span className="text-green-600">{formatUSDT(totalEarnings)} USDT</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-slate-500">Accrued Yield (unclaimed)</span>
+          <span className="text-slate-500">Total Yield Generated</span>
           <span className="text-amber-600">{formatUSDT(accruedYield)} USDT</span>
         </div>
         <div className="flex justify-between">

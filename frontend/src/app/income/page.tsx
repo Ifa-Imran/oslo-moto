@@ -197,7 +197,7 @@ export default function IncomePage() {
               <p className="text-sm font-bold text-green-600">${formatUSDT(stakeTotalEarnings)}</p>
             </div>
             <div className="bg-slate-100 rounded-lg p-3">
-              <p className="text-xs text-slate-500">Accrued (pending)</p>
+              <p className="text-xs text-slate-500">Total Yield Generated</p>
               <p className="text-sm font-bold text-amber-600">${formatUSDT(accruedYield)}</p>
             </div>
             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
