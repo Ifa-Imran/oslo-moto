@@ -20,37 +20,37 @@ export function SellInterface() {
 
   if (!address) {
     return (
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Sell OSLO</h3>
-        <p className="text-gray-400">Connect your wallet to sell</p>
+      <div className="bg-white border border-slate-200 rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-slate-900 mb-4">Sell OSLO</h3>
+        <p className="text-slate-500">Connect your wallet to sell</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+    <div className="bg-white border border-slate-200 rounded-xl p-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-white">Sell OSLO</h3>
-        <span className="text-xs bg-red-900/30 text-red-400 px-2 py-1 rounded">Sell Only DEX</span>
+        <h3 className="text-lg font-semibold text-slate-900">Sell OSLO</h3>
+        <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">Sell Only DEX</span>
       </div>
 
       <div className="space-y-4">
         {/* Balance */}
         <div className="flex justify-between text-sm">
-          <span className="text-gray-400">Your OSLO Balance</span>
-          <span className="text-white">{formatOSLO(osloBalance)} OSLO</span>
+          <span className="text-slate-500">Your OSLO Balance</span>
+          <span className="text-slate-900">{formatOSLO(osloBalance)} OSLO</span>
         </div>
 
         {/* Amount Input */}
         <div>
-          <label className="block text-sm text-gray-400 mb-2">OSLO Amount</label>
+          <label className="block text-sm text-slate-500 mb-2">OSLO Amount</label>
           <div className="relative">
             <input
               type="number"
               value={osloAmount}
               onChange={(e) => setOsloAmount(e.target.value)}
               placeholder="0.00"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none pr-16"
+              className="w-full bg-slate-100 border border-slate-300 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none pr-16"
             />
             <button
               onClick={() => osloBalance && setOsloAmount((Number(osloBalance) / 1e18).toString())}
@@ -62,27 +62,27 @@ export function SellInterface() {
         </div>
 
         {/* Price Breakdown */}
-        <div className="space-y-2 bg-gray-800/50 rounded-lg p-4 text-sm">
+        <div className="space-y-2 bg-slate-100 rounded-lg p-4 text-sm">
           <div className="flex justify-between">
-            <span className="text-gray-400">Current Price</span>
-            <span className="text-white">${formatPrice(price)} /OSLO</span>
+            <span className="text-slate-500">Current Price</span>
+            <span className="text-slate-900">${formatPrice(price)} /OSLO</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-400">Gross USDT</span>
-            <span className="text-white">${formatUSDT(estimatedUsdt)}</span>
+            <span className="text-slate-500">Gross USDT</span>
+            <span className="text-slate-900">${formatUSDT(estimatedUsdt)}</span>
           </div>
-          <div className="flex justify-between text-red-400">
+          <div className="flex justify-between text-red-600">
             <span>10% Tax (stays in LP)</span>
             <span>-${formatUSDT(tax)}</span>
           </div>
-          <div className="border-t border-gray-700 pt-2 flex justify-between font-bold">
-            <span className="text-gray-300">You Receive</span>
-            <span className="text-green-400">${formatUSDT(afterTax)} USDT</span>
+          <div className="border-t border-slate-300 pt-2 flex justify-between font-bold">
+            <span className="text-slate-600">You Receive</span>
+            <span className="text-green-600">${formatUSDT(afterTax)} USDT</span>
           </div>
         </div>
 
         {/* Burn Info */}
-        <div className="bg-orange-900/20 border border-orange-800/30 rounded-lg p-3 text-xs text-orange-300">
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-xs text-orange-700">
           50% of your OSLO will be burned, 50% retained in DEX. This increases the price floor.
         </div>
 
@@ -92,7 +92,7 @@ export function SellInterface() {
             <button
               onClick={() => setStep("approve")}
               disabled={!osloAmount || Number(osloAmount) <= 0}
-              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors"
             >
               Sell OSLO
             </button>
@@ -101,7 +101,7 @@ export function SellInterface() {
             <button
               onClick={() => { approveOsloForDex(osloAmount); setStep("sell"); }}
               disabled={isApproving}
-              className="w-full bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              className="w-full bg-yellow-600 hover:bg-yellow-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors"
             >
               {isApproving ? "Approving..." : "Step 1: Approve OSLO"}
             </button>
@@ -110,7 +110,7 @@ export function SellInterface() {
             <button
               onClick={() => sellOslo(osloAmount)}
               disabled={isSelling}
-              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors"
+              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors"
             >
               {isSelling ? "Selling..." : "Step 2: Confirm Sell"}
             </button>

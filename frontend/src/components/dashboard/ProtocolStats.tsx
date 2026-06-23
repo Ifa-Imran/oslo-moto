@@ -52,17 +52,17 @@ function StatCard({
   color: "blue" | "green" | "red" | "purple";
 }) {
   const colorMap = {
-    blue: "border-blue-800/50 bg-blue-950/30",
-    green: "border-green-800/50 bg-green-950/30",
-    red: "border-red-800/50 bg-red-950/30",
-    purple: "border-purple-800/50 bg-purple-950/30",
+    blue: "border-blue-200 bg-blue-50",
+    green: "border-green-200 bg-green-50",
+    red: "border-red-200 bg-red-50",
+    purple: "border-purple-200 bg-purple-50",
   };
 
   return (
     <div className={`border rounded-xl p-4 ${colorMap[color]}`}>
-      <p className="text-sm text-gray-400">{title}</p>
-      <p className="text-xl font-bold text-white mt-1">{value}</p>
-      <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
+      <p className="text-sm text-slate-500">{title}</p>
+      <p className="text-xl font-bold text-slate-900 mt-1">{value}</p>
+      <p className="text-xs text-slate-400 mt-1">{subtitle}</p>
     </div>
   );
 }

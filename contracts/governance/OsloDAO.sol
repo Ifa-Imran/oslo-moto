@@ -78,7 +78,7 @@ contract OsloDAO is AccessControl {
     /// @notice Update team stats for a member (called by keeper)
     /// @param user The member address
     /// @param teamSize Total team size
-    /// @param teamVolume Total team volume in USDT (6 decimals)
+    /// @param teamVolume Total team volume in USDT (18 decimals on BSC)
     /// @param legCount Number of legs
     function updateTeamStats(
         address user,
@@ -101,7 +101,7 @@ contract OsloDAO is AccessControl {
         if (qualifiedMembers.length >= MAX_MEMBERS && !m.isQualified) revert DAOFull();
         if (m.teamSize < 250) revert TeamSizeInsufficient();
         if (m.legCount < 3) revert LegCountInsufficient();
-        if (m.teamVolume < 25000 * 1e6) revert VolumeInsufficient(); // $25K USDT
+        if (m.teamVolume < 25000 * 1e18) revert VolumeInsufficient(); // $25K USDT
 
         if (!m.isQualified) {
             m.slotNumber = qualifiedMembers.length + 1;
@@ -136,7 +136,7 @@ contract OsloDAO is AccessControl {
         // Check qualification criteria
         if (teamSize < 250) revert TeamSizeInsufficient();
         if (legCount < 3) revert LegCountInsufficient();
-        if (teamVolume < 25000 * 1e6) revert VolumeInsufficient(); // $25K USDT
+        if (teamVolume < 25000 * 1e18) revert VolumeInsufficient(); // $25K USDT
 
         if (!m.isQualified) {
             m.slotNumber = qualifiedMembers.length + 1;

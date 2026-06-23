@@ -102,8 +102,8 @@ contract LevelIncomeSystem is AccessControl {
                 unchecked { ++i; }
                 continue;
             }
-            // commission is in USDT (6 decimals), osloPrice is in 18 decimals
-            // osloAmount (18 decimals) = usdtAmount (6 decimals) * 1e18 / price
+            // commission is in USDT (18 decimals on BSC), osloPrice is in 18 decimals
+            // osloAmount (18 decimals) = usdtAmount (18 decimals) * 1e18 / price
             uint256 osloCommission = (commission * 1e18) / osloPrice;
 
             // Record earning against 3X cap

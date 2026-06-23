@@ -17,7 +17,7 @@ export function useStaking(
   referrer: string = "0x0000000000000000000000000000000000000000"
 ) {
   const { address } = useAccount();
-  const amountParsed = amount && !isNaN(Number(amount)) ? parseUnits(amount, 6) : 0n;
+  const amountParsed = amount && !isNaN(Number(amount)) ? parseUnits(amount, 18) : 0n;
 
   // Ref to track whether we've already auto-staked for the current approval
   // This prevents double-staking from a single approval while allowing multiple stakes

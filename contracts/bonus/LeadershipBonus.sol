@@ -29,7 +29,7 @@ contract LeadershipBonus is AccessControl, ReentrancyGuard {
     IInvestmentEngine public investmentEngine;
 
     struct RankConfig {
-        uint256 requiredTurnover; // USDT 6 decimals
+        uint256 requiredTurnover; // USDT 18 decimals on BSC
         uint256 bonusRateBps;     // Basis points (100 = 1%)
     }
 
@@ -44,7 +44,7 @@ contract LeadershipBonus is AccessControl, ReentrancyGuard {
     mapping(address => mapping(uint256 => address)) public weeklyPowerLeg;
     // Bonus claimed tracking
     mapping(address => mapping(uint256 => bool)) public bonusClaimed;
-    // Total bonus paid per user (USDT equivalent, 6 decimals)
+    // Total bonus paid per user (USDT equivalent, 18 decimals)
     mapping(address => uint256) public totalBonusPaid;
 
     event StakeVolumeRecorded(address indexed staker, address indexed upline, address indexed legRoot, uint256 amount, uint256 week);
@@ -86,7 +86,7 @@ contract LeadershipBonus is AccessControl, ReentrancyGuard {
 
     /// @notice Record staking volume up the referral tree for the current week
     /// @param staker The user who staked
-    /// @param amount The stake amount in USDT (6 decimals)
+    /// @param amount The stake amount in USDT (18 decimals on BSC)
     function recordStakeVolume(address staker, uint256 amount) external onlyRole(ENGINE_ROLE) {
         uint256 week = block.timestamp / WEEKLY_CYCLE_DURATION;
 
@@ -193,9 +193,9 @@ contract LeadershipBonus is AccessControl, ReentrancyGuard {
         uint256 osloPrice = osloDEX.getPrice();
         if (osloPrice == 0) revert DEXPriceZero();
 
-        // USDT (6 decimals) → OSLO (18 decimals)
+        // USDT (18 decimals) → OSLO (18 decimals)
         // osloPrice is in 1e18 precision (USDT per OSLO scaled to 18 decimals)
-        // bonusUSDT is in 1e6 (USDT), so: osloAmount = bonusUSDT * 1e18 / osloPrice
+        // bonusUSDT is in 1e18 (USDT), so: osloAmount = bonusUSDT * 1e18 / osloPrice
         uint256 osloAmount = (bonusUSDT * 1e18) / osloPrice;
 
         // Release OSLO from vault
@@ -218,12 +218,12 @@ contract LeadershipBonus is AccessControl, ReentrancyGuard {
 
     /// @notice Initialize the 7 rank configurations
     function _initRanks() internal {
-        ranks[0] = RankConfig(10_000 * 1e6, 100);    // OSLO 1: $10K, 1.00%
-        ranks[1] = RankConfig(25_000 * 1e6, 50);     // OSLO 2: $25K, 0.50%
-        ranks[2] = RankConfig(75_000 * 1e6, 30);     // OSLO 3: $75K, 0.30%
-        ranks[3] = RankConfig(200_000 * 1e6, 20);    // OSLO 4: $200K, 0.20%
-        ranks[4] = RankConfig(500_000 * 1e6, 15);    // OSLO 5: $500K, 0.15%
-        ranks[5] = RankConfig(1_200_000 * 1e6, 10);  // OSLO 6: $1.2M, 0.10%
-        ranks[6] = RankConfig(2_500_000 * 1e6, 5);   // OSLO 7: $2.5M, 0.05%
+        ranks[0] = RankConfig(10_000 * 1e18, 100);    // OSLO 1: $10K, 1.00%
+        ranks[1] = RankConfig(25_000 * 1e18, 50);     // OSLO 2: $25K, 0.50%
+        ranks[2] = RankConfig(75_000 * 1e18, 30);     // OSLO 3: $75K, 0.30%
+        ranks[3] = RankConfig(200_000 * 1e18, 20);    // OSLO 4: $200K, 0.20%
+        ranks[4] = RankConfig(500_000 * 1e18, 15);    // OSLO 5: $500K, 0.15%
+        ranks[5] = RankConfig(1_200_000 * 1e18, 10);  // OSLO 6: $1.2M, 0.10%
+        ranks[6] = RankConfig(2_500_000 * 1e18, 5);   // OSLO 7: $2.5M, 0.05%
     }
 }

@@ -44,7 +44,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
     <>
       {/* Backdrop overlay */}
       <div
-        className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${
+        className={`fixed inset-0 z-50 bg-slate-900/30 backdrop-blur-sm transition-opacity duration-300 ${
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={onClose}
@@ -53,23 +53,23 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
       {/* Sidebar drawer */}
       <aside
-        className={`fixed top-0 left-0 bottom-0 z-50 w-72 max-w-[85vw] bg-gray-950 border-r border-gray-800 transform transition-transform duration-300 ease-in-out flex flex-col ${
+        className={`fixed top-0 left-0 bottom-0 z-50 w-72 max-w-[85vw] bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out flex flex-col ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         aria-label="Navigation menu"
       >
         {/* Header with logo + close button */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-800">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200">
           <Link
             href="/"
             onClick={onClose}
-            className="text-xl font-bold text-white whitespace-nowrap"
+            className="text-xl font-bold text-slate-900 whitespace-nowrap"
           >
-            OSLO <span className="text-blue-500">Protocol</span>
+            OSLO <span className="text-blue-600">Protocol</span>
           </Link>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+            className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
             aria-label="Close menu"
           >
             <svg
@@ -89,11 +89,11 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         </div>
 
         {/* Wallet connect — disabled in production, enabled on localhost */}
-        <div className="p-4 border-b border-gray-800">
+        <div className="p-4 border-b border-slate-200">
           {isLocalhost ? (
             <ConnectButton chainStatus="icon" accountStatus="avatar" showBalance={false} />
           ) : (
-            <p className="text-xs text-gray-500 text-center">Login Temporarily Disabled</p>
+            <p className="text-xs text-slate-400 text-center">Login Temporarily Disabled</p>
           )}
         </div>
 
@@ -109,7 +109,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors mb-1 ${
                   isActive
                     ? "bg-blue-600 text-white"
-                    : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                 }`}
               >
                 <svg
@@ -132,10 +132,10 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-800">
-          <div className="bg-gray-900 rounded-lg p-3 text-center">
-            <p className="text-xs text-gray-500">BSC Mainnet</p>
-            <p className="text-xs text-gray-600 mt-1">Chain ID 56</p>
+        <div className="p-4 border-t border-slate-200">
+          <div className="bg-slate-100 rounded-lg p-3 text-center">
+            <p className="text-xs text-slate-400">BSC Mainnet</p>
+            <p className="text-xs text-slate-400 mt-1">Chain ID 56</p>
           </div>
         </div>
       </aside>

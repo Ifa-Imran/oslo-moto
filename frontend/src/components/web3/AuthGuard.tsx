@@ -177,10 +177,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   if (!isConnected && !isConnecting && !isLocalhost) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 max-w-md w-full text-center">
+        <div className="bg-white border border-slate-200 rounded-xl p-8 max-w-md w-full text-center">
           <div className="text-6xl mb-4">🚧</div>
-          <h2 className="text-2xl font-bold text-white mb-2">Login Temporarily Disabled</h2>
-          <p className="text-gray-400 mb-6">
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Login Temporarily Disabled</h2>
+          <p className="text-slate-500 mb-6">
             We are performing maintenance. Please check back soon.
           </p>
         </div>
@@ -192,10 +192,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   if (!isConnected && !isConnecting && !isPublicPath && isLocalhost) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 max-w-md w-full text-center">
+        <div className="bg-white border border-slate-200 rounded-xl p-8 max-w-md w-full text-center">
           <div className="text-6xl mb-4">🔗</div>
-          <h2 className="text-2xl font-bold text-white mb-2">Connect Your Wallet</h2>
-          <p className="text-gray-400 mb-6">
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Connect Your Wallet</h2>
+          <p className="text-slate-500 mb-6">
             Choose a wallet to access Oslo Protocol. Connect to BSC Mainnet (Chain ID 56).
           </p>
           <div className="flex flex-col items-center gap-3">
@@ -203,12 +203,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
             <button
               onClick={fallbackConnect}
               disabled={isConnectPending}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
             >
               {isConnectPending ? "Connecting..." : "Connect with Dapp Browser Wallet"}
             </button>
             {isClient && (
-              <p className="text-[10px] text-gray-500">
+              <p className="text-[10px] text-slate-400">
                 Provider detected: {injectedProvider ? "YES" : "NO"}
               </p>
             )}
@@ -227,20 +227,20 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   if (onWrongChain) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="bg-gray-900 border border-yellow-800/30 rounded-xl p-8 max-w-md w-full text-center">
+        <div className="bg-white border border-amber-300 rounded-xl p-8 max-w-md w-full text-center">
           <div className="text-6xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-white mb-2">Wrong Network</h2>
-          <p className="text-gray-400 mb-2">
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Wrong Network</h2>
+          <p className="text-slate-500 mb-2">
             You are connected to chain ID:{" "}
-            <span className="font-mono text-yellow-400">{wagmiChainId ?? "?"}</span>
+            <span className="font-mono text-amber-600">{wagmiChainId ?? "?"}</span>
           </p>
-          <p className="text-gray-400 mb-6">
+          <p className="text-slate-500 mb-6">
             Please switch to BSC Mainnet (Chain ID 56) to use Oslo Protocol.
           </p>
           <button
             onClick={switchToBSCMainnet}
             disabled={!switchChain}
-            className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium py-3 px-6 rounded-lg transition-colors"
+            className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium py-3 px-6 rounded-lg transition-colors"
           >
             Switch to BSC Mainnet
           </button>
@@ -257,7 +257,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         <div className="min-h-[60vh] flex items-center justify-center">
           <div className="text-center">
             <div className="text-4xl mb-4">⚠️</div>
-            <p className="text-gray-400 mb-4">Unable to verify registration status.</p>
+            <p className="text-slate-500 mb-4">Unable to verify registration status.</p>
             <button
               onClick={() => refetchRegistration()}
               className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
@@ -265,7 +265,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
               Retry
             </button>
             {isClient && address && (
-              <p className="text-xs text-gray-500 mt-2 font-mono break-all px-4">{address}</p>
+              <p className="text-xs text-slate-400 mt-2 font-mono break-all px-4">{address}</p>
             )}
           </div>
         </div>
@@ -274,10 +274,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-400">Checking registration status...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-500">Checking registration status...</p>
           {isClient && address && (
-            <p className="text-xs text-gray-500 mt-2 font-mono break-all px-4">{address}</p>
+            <p className="text-xs text-slate-400 mt-2 font-mono break-all px-4">{address}</p>
           )}
         </div>
       </div>
@@ -290,8 +290,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-400">Redirecting to registration...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-500">Redirecting to registration...</p>
         </div>
       </div>
     );

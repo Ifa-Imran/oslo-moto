@@ -15,7 +15,7 @@ contract ReferralRegistry is AccessControl {
     IERC20 public immutable usdt;
     address public immutable osloDEX;
 
-    uint256 public constant REGISTRATION_FEE = 1 * 1e6; // $1.00 USDT (6 decimals)
+    uint256 public constant REGISTRATION_FEE = 1 * 1e18; // $1.00 USDT (18 decimals on BSC)
 
     mapping(address => address) public directReferrer;
     mapping(address => address[]) private _directDownlines;

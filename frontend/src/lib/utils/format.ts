@@ -1,9 +1,9 @@
 /**
- * Format USDT amount (6 decimals) to readable string
+ * Format USDT amount (18 decimals on BSC) to readable string
  */
 export function formatUSDT(amount: bigint | undefined): string {
   if (!amount) return "0.00";
-  const value = Number(amount) / 1e6;
+  const value = Number(amount) / 1e18;
   return value.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -28,8 +28,8 @@ export function formatOSLO(amount: bigint | undefined): string {
 export function formatPrice(price: bigint | undefined): string {
   if (!price) return "0.000000";
   // Price is stored as (usdtReserve * 1e18) / osloReserve
-  // usdtReserve is in 6 decimal USDT units
-  const value = Number(price) / 1e6;
+  // BSC USDT uses 18 decimals, so price is scaled by 1e18
+  const value = Number(price) / 1e18;
   return value.toLocaleString("en-US", {
     minimumFractionDigits: 6,
     maximumFractionDigits: 6,

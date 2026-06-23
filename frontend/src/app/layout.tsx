@@ -15,7 +15,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#030712",
+  themeColor: "#f8fafc",
 };
 
 export const metadata: Metadata = {
@@ -34,8 +34,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body className="bg-gray-950 text-white min-h-screen">
+    <html lang="en">
+      <body className="bg-slate-50 text-slate-900 min-h-screen">
         <Web3Provider>
           <Navbar />
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
@@ -46,9 +46,9 @@ export default function RootLayout({
             position="bottom-right"
             toastOptions={{
               style: {
-                background: "#1f2937",
-                color: "#fff",
-                border: "1px solid #374151",
+                background: "#ffffff",
+                color: "#0f172a",
+                border: "1px solid #e2e8f0",
               },
             }}
           />

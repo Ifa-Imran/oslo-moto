@@ -22,8 +22,8 @@ contract InvestmentEngine is AccessControl, ReentrancyGuard, Pausable {
     bytes32 public constant LEVEL_SYSTEM_ROLE = keccak256("LEVEL_SYSTEM_ROLE");
 
     struct UserStake {
-        uint256 activeStake;       // USDT amount (6 decimals)
-        uint256 totalEarnings;     // Lifetime earnings tracking (6 decimals)
+        uint256 activeStake;       // USDT amount (18 decimals on BSC)
+        uint256 totalEarnings;     // Lifetime earnings tracking (18 decimals)
         uint256 stakeStartTime;    // Unix timestamp
         uint8 stakeDayIndex;       // 0-6 rotation
         uint8 tier;                // 1 or 2
@@ -55,12 +55,12 @@ contract InvestmentEngine is AccessControl, ReentrancyGuard, Pausable {
     uint16[7] public tier1Rates = [100, 75, 95, 65, 100, 85, 55]; // 5.75% weekly
     uint16[7] public tier2Rates = [115, 100, 115, 110, 105, 100, 125]; // 7.70% weekly
 
-    // Tier thresholds (USDT 6 decimals)
-    uint256 public constant TIER1_MIN = 10 * 1e6;    // $10
-    uint256 public constant TIER1_MAX = 2499 * 1e6;  // $2,499
-    uint256 public constant TIER2_MIN = 2500 * 1e6;  // $2,500
-    uint256 public constant TIER2_MAX = 5000 * 1e6;  // $5,000
-    uint256 public constant MAX_TOTAL_STAKE_PER_USER = 5000 * 1e6; // $5,000 max total per wallet
+    // Tier thresholds (USDT 18 decimals on BSC)
+    uint256 public constant TIER1_MIN = 10 * 1e18;    // $10
+    uint256 public constant TIER1_MAX = 2499 * 1e18;  // $2,499
+    uint256 public constant TIER2_MIN = 2500 * 1e18;  // $2,500
+    uint256 public constant TIER2_MAX = 5000 * 1e18;  // $5,000
+    uint256 public constant MAX_TOTAL_STAKE_PER_USER = 5000 * 1e18; // $5,000 max total per wallet
 
     event Staked(address indexed user, uint256 amount, uint8 tier, address referrer, uint256 timestamp);
     event YieldClaimed(address indexed user, uint256 usdtValue, uint256 osloAmount, uint256 osloPrice);
@@ -105,7 +105,7 @@ contract InvestmentEngine is AccessControl, ReentrancyGuard, Pausable {
     }
 
     /// @notice Stake USDT into the protocol
-    /// @param amount USDT amount to stake (6 decimals)
+    /// @param amount USDT amount to stake (18 decimals on BSC)
     /// @param tier Staking tier (1 or 2)
     /// @param referrer Referrer address (use address(0) if no referrer)
     function stake(uint256 amount, uint8 tier, address referrer) external nonReentrant whenNotPaused {
@@ -164,9 +164,9 @@ contract InvestmentEngine is AccessControl, ReentrancyGuard, Pausable {
 
     /// @notice Admin-only: seed a stake for a user during migration (no USDT transfer)
     /// @param user The user address to seed the stake for
-    /// @param amount USDT amount to stake (6 decimals)
+    /// @param amount USDT amount to stake (18 decimals on BSC)
     /// @param tier Staking tier (1 or 2)
-    /// @param earnings Lifetime earnings to preserve (6 decimals)
+    /// @param earnings Lifetime earnings to preserve (18 decimals)
     function adminSeedStake(address user, uint256 amount, uint8 tier, uint256 earnings) external onlyRole(ADMIN_ROLE) {
         if (user == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
@@ -201,7 +201,7 @@ contract InvestmentEngine is AccessControl, ReentrancyGuard, Pausable {
 
     /// @notice Admin-only: seed totalClaimed for a user during migration
     /// @param user The user address
-    /// @param amount Total claimed amount to set (6 decimals)
+    /// @param amount Total claimed amount to set (18 decimals)
     function adminSeedClaimed(address user, uint256 amount) external onlyRole(ADMIN_ROLE) {
         if (user == address(0)) revert ZeroAddress();
         totalClaimed[user] = amount;
@@ -240,7 +240,7 @@ contract InvestmentEngine is AccessControl, ReentrancyGuard, Pausable {
 
     /// @notice Calculate accrued yield for a user across all active stakes
     /// @param user The user address
-    /// @return yield The total accrued yield in USDT (6 decimals)
+    /// @return yield The total accrued yield in USDT (18 decimals)
     function calculateAccruedYield(address user) public view returns (uint256) {
         UserStake[] memory userStakes = _userStakes[user];
         uint256 totalYield = 0;
@@ -304,8 +304,8 @@ contract InvestmentEngine is AccessControl, ReentrancyGuard, Pausable {
         uint256 osloPrice = osloDEX.getPrice();
         require(osloPrice > 0, "DEX price is zero");
 
-        // totalClaimable is USDT (6 decimals), osloPrice is 18 decimals
-        // osloAmount (18 decimals) = usdtAmount (6 decimals) * 1e18 / price
+        // totalClaimable is USDT (18 decimals), osloPrice is 18 decimals
+        // osloAmount (18 decimals) = usdtAmount (18 decimals) * 1e18 / price
         uint256 osloAmount = (totalClaimable * 1e18) / osloPrice;
 
         // Release OSLO from vault to user
@@ -538,7 +538,7 @@ contract InvestmentEngine is AccessControl, ReentrancyGuard, Pausable {
 
     /// @notice Get total active stake volume from a user's entire team (20 levels)
     /// @param user The team leader address
-    /// @return Total active stake volume in USDT (6 decimals)
+    /// @return Total active stake volume in USDT (18 decimals)
     function getTeamVolume(address user) external view returns (uint256) {
         return _sumTeamVolume(user, 20);
     }

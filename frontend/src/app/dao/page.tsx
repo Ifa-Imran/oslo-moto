@@ -24,7 +24,7 @@ export default function DAOPage() {
   const allRequirementsMet =
     Number(teamSize) >= 250 &&
     Number(legCount) >= 3 &&
-    Number(teamVolume) / 1e6 >= 25000;
+    Number(teamVolume) / 1e18 >= 25000;
 
   // Auto-refetch page data after successful qualification or claim
   useEffect(() => {
@@ -37,47 +37,47 @@ export default function DAOPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-white">DAO</h1>
-        <p className="text-gray-400 mt-1">Elite governance with monthly royalty distribution</p>
+        <p className="text-slate-500 mt-1">Elite governance with monthly royalty distribution</p>
       </div>
 
       {/* DAO Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <p className="text-sm text-gray-400">Qualified Members</p>
-          <p className="text-2xl font-bold text-white">
+        <div className="bg-white border border-slate-200 rounded-xl p-4">
+          <p className="text-sm text-slate-500">Qualified Members</p>
+          <p className="text-2xl font-bold text-slate-900">
             {qualifiedCount?.toString() || "0"} / {maxMembers?.toString() || "200"}
           </p>
         </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <p className="text-sm text-gray-400">Monthly Pool (0.5%)</p>
-          <p className="text-2xl font-bold text-green-400">
+        <div className="bg-white border border-slate-200 rounded-xl p-4">
+          <p className="text-sm text-slate-500">Monthly Pool (0.5%)</p>
+          <p className="text-2xl font-bold text-green-600">
             ${formatUSDT(totalTurnover ? (totalTurnover * 50n) / 10000n : 0n)}
           </p>
         </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <p className="text-sm text-gray-400">Per Member Share</p>
-          <p className="text-2xl font-bold text-white">
+        <div className="bg-white border border-slate-200 rounded-xl p-4">
+          <p className="text-sm text-slate-500">Per Member Share</p>
+          <p className="text-2xl font-bold text-slate-900">
             ${qualifiedCount && qualifiedCount > 0n
               ? formatUSDT((totalTurnover ? (totalTurnover * 50n) / 10000n : 0n) / qualifiedCount)
               : "0.00"}
           </p>
         </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <p className="text-sm text-gray-400">Next Distribution</p>
+        <div className="bg-white border border-slate-200 rounded-xl p-4">
+          <p className="text-sm text-slate-500">Next Distribution</p>
           <p className="text-lg font-bold text-white">{nextDistribution}</p>
         </div>
       </div>
 
       {/* Your Status */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Your DAO Status</h3>
+      <div className="bg-white border border-slate-200 rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-slate-900 mb-4">Your DAO Status</h3>
         {!address ? (
-          <p className="text-gray-400">Connect your wallet to view your DAO status</p>
+          <p className="text-slate-500">Connect your wallet to view your DAO status</p>
         ) : (
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <span className={`w-3 h-3 rounded-full ${isQualified ? "bg-green-500" : "bg-red-500"}`} />
-              <span className="text-white font-medium">
+              <span className="text-slate-900 font-medium">
                 {isQualified ? `Qualified (Slot #${slotNumber.toString()})` : "Not Qualified"}
               </span>
             </div>
@@ -92,7 +92,7 @@ export default function DAOPage() {
               />
               <QualificationItem
                 label="Team Volume"
-                current={Number(teamVolume) / 1e6}
+                current={Number(teamVolume) / 1e18}
                 required={25000}
                 unit="USDT"
               />
@@ -106,23 +106,23 @@ export default function DAOPage() {
             
             {/* Summary of what's needed */}
             {!isQualified && address && (
-              <div className="mt-4 bg-gray-800 rounded-lg p-4">
-                <p className="text-sm text-gray-300 font-medium mb-2">What you need to qualify:</p>
-                <ul className="space-y-1 text-xs text-gray-400">
+              <div className="mt-4 bg-slate-100 rounded-lg p-4">
+                <p className="text-sm text-slate-600 font-medium mb-2">What you need to qualify:</p>
+                <ul className="space-y-1 text-xs text-slate-500">
                   {allRequirementsMet ? (
                     <div className="space-y-3">
                       <li className="flex items-center gap-2">
-                        <span className="text-green-400">✓</span>
-                        <span className="text-green-400">All requirements met! Click below to qualify.</span>
+                        <span className="text-green-600">✓</span>
+                        <span className="text-green-600">All requirements met! Click below to qualify.</span>
                       </li>
                       <button
                         onClick={() => selfQualify()}
                         disabled={isSelfQualifying}
-                        className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                        className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
                       >
                         {isSelfQualifying ? "Qualifying..." : "Qualify Now"}
                       </button>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-slate-400">
                         This will verify your team stats on-chain and add you to the DAO.
                       </p>
                     </div>
@@ -130,20 +130,20 @@ export default function DAOPage() {
                     <>
                       {Number(teamSize) < 250 && (
                         <li className="flex items-center gap-2">
-                          <span className="text-yellow-400">•</span>
-                          <span>Build <span className="text-white font-bold">{(250 - Number(teamSize)).toLocaleString()}</span> more team members ({Number(teamSize).toLocaleString()}/250)</span>
+                          <span className="text-amber-600">•</span>
+                          <span>Build <span className="text-slate-900 font-bold">{(250 - Number(teamSize)).toLocaleString()}</span> more team members ({Number(teamSize).toLocaleString()}/250)</span>
                         </li>
                       )}
                       {Number(legCount) < 3 && (
                         <li className="flex items-center gap-2">
-                          <span className="text-yellow-400">•</span>
-                          <span>Add <span className="text-white font-bold">{3 - Number(legCount)}</span> more active leg(s) ({Number(legCount)}/3)</span>
+                          <span className="text-amber-600">•</span>
+                          <span>Add <span className="text-slate-900 font-bold">{3 - Number(legCount)}</span> more active leg(s) ({Number(legCount)}/3)</span>
                         </li>
                       )}
-                      {Number(teamVolume) / 1e6 < 25000 && (
+                      {Number(teamVolume) / 1e18 < 25000 && (
                         <li className="flex items-center gap-2">
-                          <span className="text-yellow-400">•</span>
-                          <span>Increase team volume by <span className="text-white font-bold">${(25000 - Number(teamVolume) / 1e6).toLocaleString()}</span> USDT (${(Number(teamVolume) / 1e6).toLocaleString()}/$25,000)</span>
+                          <span className="text-amber-600">•</span>
+                          <span>Increase team volume by <span className="text-slate-900 font-bold">${(25000 - Number(teamVolume) / 1e18).toLocaleString()}</span> USDT (${(Number(teamVolume) / 1e18).toLocaleString()}/$25,000)</span>
                         </li>
                       )}
                     </>
@@ -157,28 +157,28 @@ export default function DAOPage() {
 
       {/* Royalty Income Section — only for qualified members */}
       {address && isQualified && (
-        <div className="bg-gradient-to-br from-green-900/30 to-gray-900 border border-green-700/50 rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">DAO Royalty Income</h3>
+        <div className="bg-gradient-to-br from-green-50 to-white border border-green-200 rounded-xl p-6">
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">DAO Royalty Income</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div className="bg-gray-800 rounded-lg p-4">
-              <p className="text-sm text-gray-400">Your Pending Share</p>
-              <p className="text-2xl font-bold text-green-400">
+            <div className="bg-slate-100 rounded-lg p-4">
+              <p className="text-sm text-slate-500">Your Pending Share</p>
+              <p className="text-2xl font-bold text-green-600">
                 ${formatUSDT(pendingRoyalty ?? 0n)}
               </p>
             </div>
-            <div className="bg-gray-800 rounded-lg p-4">
-              <p className="text-sm text-gray-400">Current Cycle Pool</p>
-              <p className="text-2xl font-bold text-white">
+            <div className="bg-slate-100 rounded-lg p-4">
+              <p className="text-sm text-slate-500">Current Cycle Pool</p>
+              <p className="text-2xl font-bold text-slate-900">
                 ${formatUSDT(cyclePool ?? 0n)}
               </p>
-              <p className="text-xs text-gray-500">Cycle #{currentCycle?.toString() || "0"}</p>
+              <p className="text-xs text-slate-400">Cycle #{currentCycle?.toString() || "0"}</p>
             </div>
-            <div className="bg-gray-800 rounded-lg p-4">
-              <p className="text-sm text-gray-400">Qualified Members</p>
-              <p className="text-2xl font-bold text-white">
+            <div className="bg-slate-100 rounded-lg p-4">
+              <p className="text-sm text-slate-500">Qualified Members</p>
+              <p className="text-2xl font-bold text-slate-900">
                 {cycleMemberCount?.toString() || "0"}
               </p>
-              <p className="text-xs text-gray-500">Sharing the pool</p>
+              <p className="text-xs text-slate-400">Sharing the pool</p>
             </div>
           </div>
 
@@ -186,25 +186,25 @@ export default function DAOPage() {
             <button
               onClick={() => claimRoyalty()}
               disabled={isClaimingRoyalty || (pendingRoyalty ?? 0n) === 0n}
-              className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+              className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
             >
               {isClaimingRoyalty ? "Claiming..." : "Claim My Royalty"}
             </button>
             <button
               onClick={() => distributeRoyalties()}
               disabled={isDistributing}
-              className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+              className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
             >
               {isDistributing ? "Distributing..." : "Distribute to All Members"}
             </button>
           </div>
 
           {newCycleAvailable && (
-            <p className="text-xs text-yellow-400 mt-2">
+            <p className="text-xs text-amber-600 mt-2">
               A new distribution cycle is available. Claim or distribute to start the new cycle.
             </p>
           )}
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="text-xs text-slate-400 mt-2">
             Royalty = 0.5% of total protocol turnover, split equally among all qualified DAO members.
             New cycle every 30 days.
           </p>
@@ -212,9 +212,9 @@ export default function DAOPage() {
       )}
 
       {/* Requirements */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">DAO Qualification Requirements</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-400">
+      <div className="bg-white border border-slate-200 rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-slate-900 mb-4">DAO Qualification Requirements</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-500">
           <div className="space-y-2">
             <p className="text-white font-medium">Team Requirements</p>
             <ul className="list-disc list-inside space-y-1">
@@ -253,17 +253,17 @@ function QualificationItem({
   const met = current >= required;
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4">
+    <div className="bg-slate-100 rounded-lg p-4">
       <div className="flex justify-between items-center mb-2">
-        <span className="text-sm text-gray-400">{label}</span>
-        <span className={`text-xs px-2 py-0.5 rounded ${met ? "bg-green-900 text-green-400" : "bg-red-900 text-red-400"}`}>
+        <span className="text-sm text-slate-500">{label}</span>
+        <span className={`text-xs px-2 py-0.5 rounded ${met ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
           {met ? "Met" : "Not Met"}
         </span>
       </div>
-      <p className="text-white font-medium">
+      <p className="text-slate-900 font-medium">
         {current.toLocaleString()} / {required.toLocaleString()} {unit}
       </p>
-      <div className="w-full bg-gray-700 rounded-full h-1.5 mt-2">
+      <div className="w-full bg-slate-200 rounded-full h-1.5 mt-2">
         <div
           className={`h-1.5 rounded-full ${met ? "bg-green-500" : "bg-blue-500"}`}
           style={{ width: `${progress}%` }}

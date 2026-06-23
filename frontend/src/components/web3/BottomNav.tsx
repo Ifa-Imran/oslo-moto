@@ -17,7 +17,7 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-gray-950 border-t border-gray-800 safe-area-inset-bottom">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 safe-area-inset-bottom">
       <div className="flex items-stretch justify-around px-1 py-1">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
@@ -27,8 +27,8 @@ export function BottomNav() {
               href={item.href}
               className={`flex flex-col items-center justify-center gap-0.5 py-1.5 px-1 rounded-lg min-w-[44px] min-h-[48px] transition-colors ${
                 isActive
-                  ? "text-blue-500"
-                  : "text-gray-400 hover:text-white"
+                  ? "text-blue-600"
+                  : "text-slate-500 hover:text-slate-900"
               }`}
             >
               <svg
@@ -46,7 +46,7 @@ export function BottomNav() {
               </svg>
               <span
                 className={`text-[9px] sm:text-[10px] font-medium leading-tight ${
-                  isActive ? "text-blue-500" : ""
+                  isActive ? "text-blue-600" : ""
                 }`}
               >
                 {item.label}
