@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: "M3 12l9-9 9 9M5 10v10h14V10" },
@@ -17,6 +17,13 @@ const navItems = [
 
 export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const pathname = usePathname();
+  const isLocalhost = useSyncExternalStore(
+    () => () => {},
+    () =>
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1",
+    () => false
+  );
 
   // Close on Escape key + lock body scroll when open
   useEffect(() => {
@@ -81,9 +88,13 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
           </button>
         </div>
 
-        {/* Wallet connect — temporarily disabled */}
+        {/* Wallet connect — disabled in production, enabled on localhost */}
         <div className="p-4 border-b border-gray-800">
-          <p className="text-xs text-gray-500 text-center">Login Temporarily Disabled</p>
+          {isLocalhost ? (
+            <ConnectButton chainStatus="icon" accountStatus="avatar" showBalance={false} />
+          ) : (
+            <p className="text-xs text-gray-500 text-center">Login Temporarily Disabled</p>
+          )}
         </div>
 
         {/* Navigation links */}

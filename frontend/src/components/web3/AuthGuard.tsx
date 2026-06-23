@@ -168,9 +168,13 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [isConnected, address, isRegistered, isPublicPath, pathname, router, justRegistered, regCheckError]);
 
-  // ⛔ LOGIN TEMPORARILY DISABLED
-  // Show maintenance message for all unauthenticated users
-  if (!isConnected && !isConnecting) {
+  // Check if running on localhost (login enabled locally, disabled in production)
+  const isLocalhost = isClient &&
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+
+  // ⛔ LOGIN TEMPORARILY DISABLED in production
+  // Show maintenance message for unauthenticated users on production only
+  if (!isConnected && !isConnecting && !isLocalhost) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 max-w-md w-full text-center">
@@ -182,6 +186,41 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     );
+  }
+
+  // Not connected on a protected path - show RainbowKit connect button (localhost only)
+  if (!isConnected && !isConnecting && !isPublicPath && isLocalhost) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 max-w-md w-full text-center">
+          <div className="text-6xl mb-4">🔗</div>
+          <h2 className="text-2xl font-bold text-white mb-2">Connect Your Wallet</h2>
+          <p className="text-gray-400 mb-6">
+            Choose a wallet to access Oslo Protocol. Connect to BSC Mainnet (Chain ID 56).
+          </p>
+          <div className="flex flex-col items-center gap-3">
+            <ConnectButton showBalance={false} />
+            <button
+              onClick={fallbackConnect}
+              disabled={isConnectPending}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+            >
+              {isConnectPending ? "Connecting..." : "Connect with Dapp Browser Wallet"}
+            </button>
+            {isClient && (
+              <p className="text-[10px] text-gray-500">
+                Provider detected: {injectedProvider ? "YES" : "NO"}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // On public paths, allow unconnected users to see the page content (e.g., /register)
+  if (!isConnected && !isConnecting && isPublicPath) {
+    return <>{children}</>;
   }
 
   // Connected but wrong chain
