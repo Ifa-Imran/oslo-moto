@@ -75,11 +75,7 @@ export function Navbar() {
             </div>
 
             <div className="flex-shrink-0">
-              <ConnectButton
-                chainStatus="icon"
-                accountStatus="avatar"
-                showBalance={false}
-              />
+              <span className="text-xs text-gray-500 px-3 py-2">Login Disabled</span>
             </div>
           </div>
         </div>

@@ -81,9 +81,9 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
           </button>
         </div>
 
-        {/* Wallet connect */}
+        {/* Wallet connect — temporarily disabled */}
         <div className="p-4 border-b border-gray-800">
-          <ConnectButton chainStatus="icon" accountStatus="avatar" showBalance={false} />
+          <p className="text-xs text-gray-500 text-center">Login Temporarily Disabled</p>
         </div>
 
         {/* Navigation links */}

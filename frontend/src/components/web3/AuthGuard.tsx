@@ -168,65 +168,20 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [isConnected, address, isRegistered, isPublicPath, pathname, router, justRegistered, regCheckError]);
 
-  // During SSR and initial client render, show the connect screen on protected paths only
-  // Public paths like /register render their own content even when wallet is not connected
-  if (!isClient && !isPublicPath) {
+  // ⛔ LOGIN TEMPORARILY DISABLED
+  // Show maintenance message for all unauthenticated users
+  if (!isConnected && !isConnecting) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 max-w-md w-full text-center">
-          <div className="text-6xl mb-4">🔗</div>
-          <h2 className="text-2xl font-bold text-white mb-2">Connect Your Wallet</h2>
+          <div className="text-6xl mb-4">🚧</div>
+          <h2 className="text-2xl font-bold text-white mb-2">Login Temporarily Disabled</h2>
           <p className="text-gray-400 mb-6">
-            Choose a wallet to access Oslo Protocol. Connect to BSC Mainnet (Chain ID 56).
+            We are performing maintenance. Please check back soon.
           </p>
-          <div className="flex flex-col items-center gap-3">
-            <ConnectButton showBalance={false} />
-            <button
-              onClick={fallbackConnect}
-              disabled={isConnectPending}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
-            >
-              {isConnectPending ? "Connecting..." : "Connect with Dapp Browser Wallet"}
-            </button>
-          </div>
         </div>
       </div>
     );
-  }
-
-  // Not connected on a protected path - show RainbowKit connect button
-  if (!isConnected && !isConnecting && !isPublicPath) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 max-w-md w-full text-center">
-          <div className="text-6xl mb-4">🔗</div>
-          <h2 className="text-2xl font-bold text-white mb-2">Connect Your Wallet</h2>
-          <p className="text-gray-400 mb-6">
-            Choose a wallet to access Oslo Protocol. Connect to BSC Mainnet (Chain ID 56).
-          </p>
-          <div className="flex flex-col items-center gap-3">
-            <ConnectButton showBalance={false} />
-            <button
-              onClick={fallbackConnect}
-              disabled={isConnectPending}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
-            >
-              {isConnectPending ? "Connecting..." : "Connect with Dapp Browser Wallet"}
-            </button>
-            {isClient && (
-              <p className="text-[10px] text-gray-500">
-                Provider detected: {injectedProvider ? "YES" : "NO"}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // On public paths, allow unconnected users to see the page content (e.g., /register)
-  if (!isConnected && !isConnecting && isPublicPath) {
-    return <>{children}</>;
   }
 
   // Connected but wrong chain
