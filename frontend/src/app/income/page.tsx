@@ -11,6 +11,7 @@ import { useStaking } from "@/hooks/useStaking";
 import { useLeadershipBonus } from "@/hooks/useLeadershipBonus";
 import { formatUSDT, formatOSLO } from "@/lib/utils/format";
 import { useEffect } from "react";
+import toast from "react-hot-toast";
 
 const RANK_NAMES = ["OSLO 1", "OSLO 2", "OSLO 3", "OSLO 4", "OSLO 5", "OSLO 6", "OSLO 7"];
 
@@ -22,10 +23,12 @@ export default function IncomePage() {
     claimableYield,
     claimYield,
     isClaiming: isStakeClaiming,
+    isClaimSuccess,
+    claimError,
+    resetClaim,
     totalClaimed,
     accruedYield,
     userStake,
-    isStakeSuccess,
     refetchYield,
   } = useStaking();
 
@@ -61,12 +64,29 @@ export default function IncomePage() {
     query: { enabled: !!address, refetchInterval: 15000 },
   });
 
-  // Refetch yield after successful stake claim
+  // Show toast on claim success
   useEffect(() => {
-    if (isStakeSuccess) {
+    if (isClaimSuccess) {
+      toast.success("Yield claimed successfully! OSLO tokens sent to your wallet.", {
+        duration: 6000,
+        icon: "✅",
+      });
       refetchYield();
+      const timer = setTimeout(() => resetClaim(), 6000);
+      return () => clearTimeout(timer);
     }
-  }, [isStakeSuccess, refetchYield]);
+  }, [isClaimSuccess, refetchYield, resetClaim]);
+
+  // Show toast on claim error
+  useEffect(() => {
+    if (claimError) {
+      toast.error(`Claim failed: ${claimError.message?.slice(0, 100) || "Unknown error"}`, {
+        duration: 8000,
+      });
+      const timer = setTimeout(() => resetClaim(), 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [claimError, resetClaim]);
 
   // Refetch bonus data after claim completes
   useEffect(() => {
@@ -182,7 +202,7 @@ export default function IncomePage() {
                 <p className="text-xs text-slate-500">Daily yield from your active stakes</p>
               </div>
             </div>
-            {isStakeSuccess && (
+            {isClaimSuccess && (
               <span className="text-green-600 text-sm font-medium animate-pulse">Claimed!</span>
             )}
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useReadContract, useWriteContract, useAccount, useWaitForTransactionReceipt } from "wagmi";
+import { useEffect } from "react";
 import { parseUnits } from "viem";
 import { osloDexABI, osloTokenABI, usdtABI, CONTRACTS } from "@/lib/contracts";
 import { bsc } from "wagmi/chains";
@@ -66,12 +67,19 @@ export function useDEX() {
   });
 
   // Approve OSLO for DEX
-  const { writeContract: approveOslo, data: approveTxHash, isPending: isApproving } = useWriteContract();
-  const { isLoading: isApproveConfirming } = useWaitForTransactionReceipt({ hash: approveTxHash });
+  const { writeContract: approveOslo, data: approveTxHash, isPending: isApproving, error: approveWriteError, reset: resetApprove } = useWriteContract();
+  const { isLoading: isApproveConfirming, isSuccess: isApproveSuccess, error: approveConfirmError } = useWaitForTransactionReceipt({ hash: approveTxHash, chainId: bsc.id });
 
   // Sell OSLO
-  const { writeContract: sellWrite, data: sellTxHash, isPending: isSelling } = useWriteContract();
-  const { isLoading: isSellConfirming } = useWaitForTransactionReceipt({ hash: sellTxHash });
+  const { writeContract: sellWrite, data: sellTxHash, isPending: isSelling, error: sellWriteError, reset: resetSell } = useWriteContract();
+  const { isLoading: isSellConfirming, isSuccess: isSellSuccess, error: sellConfirmError } = useWaitForTransactionReceipt({ hash: sellTxHash, chainId: bsc.id });
+
+  // Refetch price after sell success
+  useEffect(() => {
+    if (isSellSuccess) {
+      refetchPrice();
+    }
+  }, [isSellSuccess, refetchPrice]);
 
   const approveOsloForDex = (amount: string) => {
     approveOslo({
@@ -101,7 +109,13 @@ export function useDEX() {
     approveOsloForDex,
     sellOslo,
     isApproving: isApproving || isApproveConfirming,
+    isApproveSuccess,
     isSelling: isSelling || isSellConfirming,
+    isSellSuccess,
+    approveError: approveWriteError || approveConfirmError,
+    sellError: sellWriteError || sellConfirmError,
+    resetApprove,
+    resetSell,
     refetchPrice,
   };
 }

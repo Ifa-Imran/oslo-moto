@@ -3,6 +3,8 @@
 import { useStaking } from "@/hooks/useStaking";
 import { useAccount } from "wagmi";
 import { formatUSDT, calcProgress } from "@/lib/utils/format";
+import { useEffect } from "react";
+import toast from "react-hot-toast";
 
 export function StakingCard() {
   const {
@@ -13,9 +15,36 @@ export function StakingCard() {
     claimableYield,
     claimYield,
     isClaiming,
+    isClaimSuccess,
+    claimError,
+    resetClaim,
     remainingCapacity,
   } = useStaking();
   const { address } = useAccount();
+
+  // Show toast on claim success
+  useEffect(() => {
+    if (isClaimSuccess) {
+      toast.success("Yield claimed successfully! OSLO tokens sent to your wallet.", {
+        duration: 6000,
+        icon: "✅",
+      });
+      // Reset claim state after showing toast
+      const timer = setTimeout(() => resetClaim(), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [isClaimSuccess, resetClaim]);
+
+  // Show toast on claim error
+  useEffect(() => {
+    if (claimError) {
+      toast.error(`Claim failed: ${claimError.message?.slice(0, 100) || "Unknown error"}`, {
+        duration: 8000,
+      });
+      const timer = setTimeout(() => resetClaim(), 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [claimError, resetClaim]);
 
   if (!address) {
     return (
@@ -98,6 +127,30 @@ export function StakingCard() {
             Claimable Yield: {formatUSDT(claimableYield)} USDT
           </p>
         </div>
+
+        {/* Success message */}
+        {isClaimSuccess && (
+          <div className="bg-green-50 border border-green-300 p-3 rounded-lg mt-3 flex items-center gap-2">
+            <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm text-green-700 font-medium">
+              Yield claimed! OSLO tokens have been sent to your wallet.
+            </p>
+          </div>
+        )}
+
+        {/* Error message */}
+        {claimError && (
+          <div className="bg-red-50 border border-red-300 p-3 rounded-lg mt-3 flex items-center gap-2">
+            <svg className="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <p className="text-sm text-red-700 font-medium">
+              Claim failed. Please try again.
+            </p>
+          </div>
+        )}
 
         <button
           onClick={claimYield}

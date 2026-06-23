@@ -145,8 +145,12 @@ export function useStaking(
   } = useWaitForTransactionReceipt({ hash: stakeTxHash, chainId: bsc.id });
 
   // Claim
-  const { writeContract: claimWrite, data: claimTxHash, isPending: isClaiming } = useWriteContract();
-  const { isLoading: isClaimConfirming } = useWaitForTransactionReceipt({
+  const { writeContract: claimWrite, data: claimTxHash, isPending: isClaiming, error: claimWriteError, reset: resetClaim } = useWriteContract();
+  const {
+    isLoading: isClaimConfirming,
+    isSuccess: isClaimSuccess,
+    error: claimConfirmError,
+  } = useWaitForTransactionReceipt({
     hash: claimTxHash,
     chainId: bsc.id,
   });
@@ -201,6 +205,15 @@ export function useStaking(
     }
   }, [isStakeSuccess, refetchStake, refetchStakes, refetchYield, refetchAllowance, refetchRemaining]);
 
+  // Refetch data after claim success
+  useEffect(() => {
+    if (isClaimSuccess) {
+      refetchStake();
+      refetchStakes();
+      refetchYield();
+    }
+  }, [isClaimSuccess, refetchStake, refetchStakes, refetchYield]);
+
   const claimYield = () => {
     claimWrite({
       address: CONTRACTS.INVESTMENT_ENGINE,
@@ -241,6 +254,9 @@ export function useStaking(
     isStaking: isStaking || isStakeConfirming,
     isClaiming: isClaiming || isClaimConfirming,
     isStakeSuccess,
+    isClaimSuccess,
+    claimError: claimWriteError || claimConfirmError,
+    resetClaim,
     approveError,
     approveConfirmError,
     stakeError,
