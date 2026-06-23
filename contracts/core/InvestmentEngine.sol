@@ -46,6 +46,7 @@ contract InvestmentEngine is AccessControl, ReentrancyGuard, Pausable {
 
     mapping(address => UserStake[]) private _userStakes;
     mapping(address => uint256) public totalClaimed;
+    mapping(address => uint256) public seededEarnings; // Historical earnings from migration (for 3X cap + display)
     mapping(address => bool) public hasStaked;
     uint256 public totalProtocolTurnover;
     uint256 public totalActiveStakes;
@@ -173,15 +174,18 @@ contract InvestmentEngine is AccessControl, ReentrancyGuard, Pausable {
         if (tier != 1 && tier != 2) revert InvalidTier();
 
         // Create stake entry (no USDT transfer, no split, no cap check — migration only)
+        // totalEarnings starts at 0 — yield accrues fresh from stakeStartTime.
+        // Historical earnings tracked separately in seededEarnings for 3X cap enforcement.
         _userStakes[user].push(UserStake({
             activeStake: amount,
-            totalEarnings: earnings,
+            totalEarnings: 0,
             stakeStartTime: block.timestamp,
             stakeDayIndex: uint8(block.timestamp / 1 days) % 7,
             tier: tier,
             referrer: address(0),
             isActive: true
         }));
+        seededEarnings[user] += earnings;
 
         if (!hasStaked[user]) {
             hasStaked[user] = true;
@@ -205,6 +209,14 @@ contract InvestmentEngine is AccessControl, ReentrancyGuard, Pausable {
     function adminSeedClaimed(address user, uint256 amount) external onlyRole(ADMIN_ROLE) {
         if (user == address(0)) revert ZeroAddress();
         totalClaimed[user] = amount;
+    }
+
+    /// @notice Admin-only: set seeded earnings for a user (historical earnings from old system)
+    /// @param user The user address
+    /// @param amount Total historical earnings to set (18 decimals)
+    function adminSetSeededEarnings(address user, uint256 amount) external onlyRole(ADMIN_ROLE) {
+        if (user == address(0)) revert ZeroAddress();
+        seededEarnings[user] = amount;
     }
 
     /// @notice Calculate accrued yield for a single stake (accrues per second)
@@ -277,12 +289,17 @@ contract InvestmentEngine is AccessControl, ReentrancyGuard, Pausable {
                 continue;
             }
 
-            // Check 3X cap per stake
+            // Check 3X cap per stake (includes seeded historical earnings)
             uint256 cap = s.activeStake * 3;
-            uint256 projectedTotal = s.totalEarnings + claimableForStake;
+            uint256 effectiveEarnings = s.totalEarnings + seededEarnings[msg.sender];
+            if (effectiveEarnings >= cap) {
+                unchecked { ++i; }
+                continue;
+            }
+            uint256 projectedTotal = effectiveEarnings + claimableForStake;
 
             if (projectedTotal >= cap) {
-                claimableForStake = cap - s.totalEarnings;
+                claimableForStake = cap - effectiveEarnings;
                 s.isActive = false;
                 totalActiveStakes -= s.activeStake;
                 emit ThreeXCapReached(msg.sender, cap, cap);
@@ -332,10 +349,15 @@ contract InvestmentEngine is AccessControl, ReentrancyGuard, Pausable {
             }
 
             uint256 cap = s.activeStake * 3;
-            uint256 available = cap - s.totalEarnings;
+            uint256 effectiveEarnings = s.totalEarnings + seededEarnings[user];
+            if (effectiveEarnings >= cap) {
+                unchecked { ++i; }
+                continue;
+            }
+            uint256 available = cap - effectiveEarnings;
 
             if (available <= remaining) {
-                s.totalEarnings = cap;
+                s.totalEarnings = cap - seededEarnings[user];
                 s.isActive = false;
                 totalActiveStakes -= s.activeStake;
                 remaining -= available;
@@ -495,7 +517,7 @@ contract InvestmentEngine is AccessControl, ReentrancyGuard, Pausable {
 
         return UserStake({
             activeStake: totalActive,
-            totalEarnings: totalEarnings,
+            totalEarnings: totalEarnings + seededEarnings[user],
             stakeStartTime: earliestStart == type(uint256).max ? 0 : earliestStart,
             stakeDayIndex: 0,
             tier: latestTier,
@@ -524,9 +546,15 @@ contract InvestmentEngine is AccessControl, ReentrancyGuard, Pausable {
 
             uint256 claimableForStake = accrued - s.totalEarnings;
             uint256 cap = s.activeStake * 3;
+            uint256 effectiveEarnings = s.totalEarnings + seededEarnings[user];
 
-            if (s.totalEarnings + claimableForStake > cap) {
-                claimableForStake = cap - s.totalEarnings;
+            if (effectiveEarnings >= cap) {
+                unchecked { ++i; }
+                continue;
+            }
+
+            if (effectiveEarnings + claimableForStake > cap) {
+                claimableForStake = cap - effectiveEarnings;
             }
 
             totalClaimable += claimableForStake;
