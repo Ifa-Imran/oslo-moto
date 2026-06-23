@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
@@ -19,13 +19,6 @@ const navItems = [
 export function Navbar() {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const isLocalhost = useSyncExternalStore(
-    () => () => {},
-    () =>
-      window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1",
-    () => false
-  );
 
   return (
     <>
@@ -82,15 +75,11 @@ export function Navbar() {
             </div>
 
             <div className="flex-shrink-0">
-              {isLocalhost ? (
-                <ConnectButton
-                  chainStatus="icon"
-                  accountStatus="avatar"
-                  showBalance={false}
-                />
-              ) : (
-                <span className="text-xs text-slate-400 px-3 py-2">Login Disabled</span>
-              )}
+              <ConnectButton
+                chainStatus="icon"
+                accountStatus="avatar"
+                showBalance={false}
+              />
             </div>
           </div>
         </div>

@@ -168,28 +168,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [isConnected, address, isRegistered, isPublicPath, pathname, router, justRegistered, regCheckError]);
 
-  // Check if running on localhost (login enabled locally, disabled in production)
-  const isLocalhost = isClient &&
-    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
-
-  // ⛔ LOGIN TEMPORARILY DISABLED in production
-  // Show maintenance message for unauthenticated users on production only
-  if (!isConnected && !isConnecting && !isLocalhost) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="bg-white border border-slate-200 rounded-xl p-8 max-w-md w-full text-center">
-          <div className="text-6xl mb-4">🚧</div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Login Temporarily Disabled</h2>
-          <p className="text-slate-500 mb-6">
-            We are performing maintenance. Please check back soon.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Not connected on a protected path - show RainbowKit connect button (localhost only)
-  if (!isConnected && !isConnecting && !isPublicPath && isLocalhost) {
+  // Not connected on a protected path - show RainbowKit connect button
+  if (!isConnected && !isConnecting && !isPublicPath) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="bg-white border border-slate-200 rounded-xl p-8 max-w-md w-full text-center">
