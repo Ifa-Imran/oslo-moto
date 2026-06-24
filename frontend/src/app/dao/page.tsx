@@ -3,7 +3,7 @@
 import { useDAO } from "@/hooks/useDAO";
 import { useAccount } from "wagmi";
 import { formatUSDT } from "@/lib/utils/format";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { CountdownTimer } from "@/components/ui/CountdownTimer";
 
 export default function DAOPage() {
@@ -18,10 +18,23 @@ export default function DAOPage() {
   const legCount = realLegCount ?? 0n;
 
   const cooldownSecs = distributionCooldown ? Number(distributionCooldown) : 30 * 24 * 60 * 60; // fallback to 30 days
+
+  // Fallback timestamp for when no distribution has happened yet (lastDistribution === 0)
+  const [fallbackTimestamp, setFallbackTimestamp] = useState(0);
+
+  useEffect(() => {
+    if (!lastDistribution || Number(lastDistribution) === 0) {
+      const now = Math.floor(Date.now() / 1000);
+      const cycleNum = Math.floor(now / cooldownSecs);
+      const timer = setTimeout(() => setFallbackTimestamp((cycleNum + 1) * cooldownSecs), 0);
+      return () => clearTimeout(timer);
+    }
+  }, [lastDistribution, cooldownSecs]);
+
   // Calculate next distribution timestamp (in seconds)
   const nextDistributionTimestamp = lastDistribution && Number(lastDistribution) > 0
     ? Number(lastDistribution) + cooldownSecs
-    : 0;
+    : fallbackTimestamp;
 
   const allRequirementsMet =
     Number(teamSize) >= 250 &&
@@ -66,21 +79,18 @@ export default function DAOPage() {
         </div>
         <div className="bg-gradient-to-br from-blue-600 to-purple-700 rounded-xl p-4">
           <p className="text-sm text-blue-100">Next Distribution</p>
-          {nextDistributionTimestamp > 0 ? (
-            <div className="mt-2">
-              <CountdownTimer
-                targetTimestamp={nextDistributionTimestamp}
-                label=""
-                expiredText="Available now!"
-                compact
-              />
-              <p className="text-[10px] text-blue-200 mt-1">
-                {new Date(nextDistributionTimestamp * 1000).toLocaleDateString()}
+          <div className="mt-3">
+            <CountdownTimer
+              targetTimestamp={nextDistributionTimestamp}
+              label=""
+              expiredText="Available now!"
+            />
+            {nextDistributionTimestamp > 0 && (
+              <p className="text-[10px] text-blue-200 mt-2 text-center">
+                {new Date(nextDistributionTimestamp * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
               </p>
-            </div>
-          ) : (
-            <p className="text-lg font-bold text-white mt-1">Not yet distributed</p>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
