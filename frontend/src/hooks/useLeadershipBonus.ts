@@ -29,6 +29,14 @@ export function useLeadershipBonus() {
     query: { refetchInterval: 60000 },
   });
 
+  // Read weekly cycle duration (1 week = 604800 seconds)
+  const { data: weeklyCycleDuration } = useReadContract({
+    address: CONTRACTS.LEADERSHIP_BONUS,
+    abi: leadershipBonusABI,
+    functionName: "WEEKLY_CYCLE_DURATION",
+    chainId: bsc.id,
+  });
+
   // Read all rank configurations
   const { data: allRanks } = useReadContract({
     address: CONTRACTS.LEADERSHIP_BONUS,
@@ -125,6 +133,7 @@ export function useLeadershipBonus() {
   return {
     currentWeek: currentWeekNum,
     currentWeekBig: currentWeek ?? 0n,
+    weeklyCycleDuration: weeklyCycleDuration ?? 604800n,
     lastWeekBig: lastWeek,
     ranks,
     totalBonusPaid,

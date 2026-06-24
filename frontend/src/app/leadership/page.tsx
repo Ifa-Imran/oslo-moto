@@ -4,6 +4,7 @@ import { useLeadershipBonus } from "@/hooks/useLeadershipBonus";
 import { useReferral } from "@/hooks/useReferral";
 import { useAccount } from "wagmi";
 import { formatUSDT, shortenAddress } from "@/lib/utils/format";
+import { CountdownTimer } from "@/components/ui/CountdownTimer";
 
 const RANK_NAMES = ["OSLO 1", "OSLO 2", "OSLO 3", "OSLO 4", "OSLO 5", "OSLO 6", "OSLO 7"];
 const RANK_COLORS = [
@@ -21,6 +22,8 @@ export default function LeadershipBonusPage() {
   const { downlineCount, teamSize } = useReferral();
   const {
     currentWeek,
+    currentWeekBig,
+    weeklyCycleDuration,
     lastWeekBig,
     ranks,
     totalBonusPaid,
@@ -30,6 +33,12 @@ export default function LeadershipBonusPage() {
     claimWeeklyBonus,
     isClaiming,
   } = useLeadershipBonus();
+
+  // Calculate when the current week ends (next week starts)
+  // Week end timestamp = (currentWeek + 1) * WEEKLY_CYCLE_DURATION
+  const weekEndTimestamp = currentWeekBig > 0n && weeklyCycleDuration > 0n
+    ? Number((currentWeekBig + 1n) * weeklyCycleDuration)
+    : 0;
 
   const currentRank = currentStats?.rank ?? 0;
   const lastWeekRank = lastStats?.rank ?? 0;
@@ -66,6 +75,17 @@ export default function LeadershipBonusPage() {
             </p>
           </div>
         </div>
+
+        {/* Weekly Countdown Timer */}
+        {weekEndTimestamp > 0 && (
+          <div className="mt-4 bg-white/10 rounded-lg p-4">
+            <CountdownTimer
+              targetTimestamp={weekEndTimestamp}
+              label="Next week starts in"
+              expiredText="New week available — refresh to update!"
+            />
+          </div>
+        )}
         {currentStats && currentStats.totalVolume > 0n && (
           <div className="mt-4 grid grid-cols-3 gap-4">
             <div className="bg-white/10 rounded-lg p-3">

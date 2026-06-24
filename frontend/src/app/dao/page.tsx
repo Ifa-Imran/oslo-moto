@@ -4,6 +4,7 @@ import { useDAO } from "@/hooks/useDAO";
 import { useAccount } from "wagmi";
 import { formatUSDT } from "@/lib/utils/format";
 import { useEffect } from "react";
+import { CountdownTimer } from "@/components/ui/CountdownTimer";
 
 export default function DAOPage() {
   const { address } = useAccount();
@@ -17,9 +18,10 @@ export default function DAOPage() {
   const legCount = realLegCount ?? 0n;
 
   const cooldownSecs = distributionCooldown ? Number(distributionCooldown) : 30 * 24 * 60 * 60; // fallback to 30 days
-  const nextDistribution = lastDistribution
-    ? new Date(Number(lastDistribution) * 1000 + cooldownSecs * 1000).toLocaleString()
-    : "N/A";
+  // Calculate next distribution timestamp (in seconds)
+  const nextDistributionTimestamp = lastDistribution && Number(lastDistribution) > 0
+    ? Number(lastDistribution) + cooldownSecs
+    : 0;
 
   const allRequirementsMet =
     Number(teamSize) >= 250 &&
@@ -62,9 +64,23 @@ export default function DAOPage() {
               : "0.00"}
           </p>
         </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <p className="text-sm text-slate-500">Next Distribution</p>
-          <p className="text-lg font-bold text-white">{nextDistribution}</p>
+        <div className="bg-gradient-to-br from-blue-600 to-purple-700 rounded-xl p-4">
+          <p className="text-sm text-blue-100">Next Distribution</p>
+          {nextDistributionTimestamp > 0 ? (
+            <div className="mt-2">
+              <CountdownTimer
+                targetTimestamp={nextDistributionTimestamp}
+                label=""
+                expiredText="Available now!"
+                compact
+              />
+              <p className="text-[10px] text-blue-200 mt-1">
+                {new Date(nextDistributionTimestamp * 1000).toLocaleDateString()}
+              </p>
+            </div>
+          ) : (
+            <p className="text-lg font-bold text-white mt-1">Not yet distributed</p>
+          )}
         </div>
       </div>
 
