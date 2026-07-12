@@ -13,6 +13,7 @@ export function StakingCard() {
     stakeCount,
     accruedYield,
     claimableYield,
+    totalClaimed,
     claimYield,
     isClaiming,
     isClaimSuccess,
@@ -86,6 +87,10 @@ export function StakingCard() {
         <div className="flex justify-between">
           <span className="text-slate-500">Total Yield Generated</span>
           <span className="text-amber-600">{formatUSDT(accruedYield)} USDT</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-slate-500">Total Claimed</span>
+          <span className="text-green-600">{formatUSDT(totalClaimed)} USDT</span>
         </div>
         <div className="flex justify-between">
           <span className="text-slate-500">3X Cap</span>

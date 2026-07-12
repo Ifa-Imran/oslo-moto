@@ -164,7 +164,14 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       router.replace("/");
     } else if (isRegistered === false && !isPublicPath && !regCheckError) {
       // Only redirect to register if we're SURE they're not registered
-      router.replace("/register");
+      // Preserve the ref query param so the referrer address auto-fills on /register
+      let registerUrl = "/register";
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const ref = params.get("ref");
+        if (ref) registerUrl = `/register?ref=${ref}`;
+      }
+      router.replace(registerUrl);
     }
   }, [isConnected, address, isRegistered, isPublicPath, pathname, router, justRegistered, regCheckError]);
 

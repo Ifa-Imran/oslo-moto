@@ -42,9 +42,9 @@ export function useReferral() {
     query: { enabled: !!address },
   });
 
-  // Generate referral link
+  // Generate referral link — points to /register so unregistered users keep the ref param
   const referralLink = address
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/stake?ref=${address}`
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/register?ref=${address}`
     : "";
 
   return {

@@ -73,6 +73,18 @@ function RegisterForm() {
   const [error, setError] = useState("");
   const [errorDismissed, setErrorDismissed] = useState(false);
 
+  // Sync ref param from URL to state.
+  // useState only captures the initial value — if useSearchParams() resolves
+  // after the first render (client-side navigation from AuthGuard redirect,
+  // hydration timing), the referrer would stay empty. This pattern adjusts
+  // state during render (React-recommended) instead of using useEffect.
+  const urlRef = searchParams.get("ref") || "";
+  const [prevUrlRef, setPrevUrlRef] = useState(urlRef);
+  if (urlRef && urlRef !== prevUrlRef) {
+    setPrevUrlRef(urlRef);
+    setReferrer(urlRef);
+  }
+
   // USDT balance & allowance checks
   const { data: usdtBalance } = useReadContract({
     address: CONTRACTS.USDT,
