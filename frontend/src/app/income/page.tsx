@@ -5,15 +5,41 @@ import { bsc } from "wagmi/chains";
 import {
   levelIncomeSystemABI,
   osloTokenABI,
+  referralRegistryABI,
   CONTRACTS,
 } from "@/lib/contracts";
 import { useStaking } from "@/hooks/useStaking";
 import { useLeadershipBonus } from "@/hooks/useLeadershipBonus";
+import { useTodayStats } from "@/hooks/useTodayStats";
 import { formatUSDT, formatOSLO } from "@/lib/utils/format";
 import { useEffect } from "react";
 import toast from "react-hot-toast";
 
 const RANK_NAMES = ["OSLO 1", "OSLO 2", "OSLO 3", "OSLO 4", "OSLO 5", "OSLO 6", "OSLO 7"];
+
+// Level configuration from LevelIncomeSystem contract (immutable, set in constructor)
+const LEVEL_CONFIG = [
+  { level: 1, rate: 3000, directsRequired: 1 },
+  { level: 2, rate: 1000, directsRequired: 1 },
+  { level: 3, rate: 500, directsRequired: 1 },
+  { level: 4, rate: 500, directsRequired: 2 },
+  { level: 5, rate: 500, directsRequired: 2 },
+  { level: 6, rate: 250, directsRequired: 2 },
+  { level: 7, rate: 250, directsRequired: 3 },
+  { level: 8, rate: 250, directsRequired: 3 },
+  { level: 9, rate: 250, directsRequired: 3 },
+  { level: 10, rate: 250, directsRequired: 5 },
+  { level: 11, rate: 100, directsRequired: 5 },
+  { level: 12, rate: 100, directsRequired: 5 },
+  { level: 13, rate: 100, directsRequired: 5 },
+  { level: 14, rate: 100, directsRequired: 5 },
+  { level: 15, rate: 100, directsRequired: 7 },
+  { level: 16, rate: 100, directsRequired: 7 },
+  { level: 17, rate: 100, directsRequired: 7 },
+  { level: 18, rate: 100, directsRequired: 7 },
+  { level: 19, rate: 100, directsRequired: 7 },
+  { level: 20, rate: 100, directsRequired: 7 },
+];
 
 export default function IncomePage() {
   const { address } = useAccount();
@@ -32,6 +58,19 @@ export default function IncomePage() {
     refetchYield,
   } = useStaking();
 
+  // Today's stats
+  const { todayClaim, todayLevelIncome, totalCommissions: totalLevelIncome } = useTodayStats();
+
+  // Direct downline count (to show which levels are unlocked)
+  const { data: directCount } = useReadContract({
+    address: CONTRACTS.REFERRAL_REGISTRY,
+    abi: referralRegistryABI,
+    functionName: "getDirectDownlineCount",
+    args: address ? [address] : undefined,
+    chainId: bsc.id,
+    query: { enabled: !!address },
+  });
+
   // Leadership bonus data
   const {
     lastWeekBig,
@@ -44,7 +83,7 @@ export default function IncomePage() {
     refetchAll,
   } = useLeadershipBonus();
 
-  // Level commissions earned (auto-distributed as OSLO)
+  // Level commissions earned (auto-distributed as OSLO) — also from useTodayStats
   const { data: commissionsEarned } = useReadContract({
     address: CONTRACTS.LEVEL_INCOME_SYSTEM,
     abi: levelIncomeSystemABI,
@@ -123,8 +162,8 @@ export default function IncomePage() {
       ? (lastStats.totalVolume * ranks[lastWeekRank - 1].bonusRateBps) / 10000n
       : 0n;
 
-  // Totals
-  const totalCommissions = commissionsEarned ?? 0n;
+  // Totals — prefer useTodayStats value (auto-refreshing), fall back to direct read
+  const totalCommissions = totalLevelIncome > 0n ? totalLevelIncome : (commissionsEarned ?? 0n);
   const totalBonus = totalBonusPaid ?? 0n;
   const totalAllEarnings = totalClaimedYield + totalCommissions + totalBonus;
 
@@ -145,26 +184,36 @@ export default function IncomePage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <div className="bg-gradient-to-br from-green-50 to-white border border-green-200 rounded-xl p-4">
-          <p className="text-xs text-green-600">Total Staking Yield Claimed</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">${formatUSDT(totalClaimedYield)}</p>
-          <p className="text-[10px] text-slate-400 mt-1">Claimed as OSLO tokens</p>
+          <p className="text-xs text-green-600">Today&apos;s Claim</p>
+          <p className="text-xl font-bold text-slate-900 mt-1">${formatUSDT(todayClaim)}</p>
+          <p className="text-[10px] text-slate-400 mt-1">Claimed today</p>
         </div>
         <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-200 rounded-xl p-4">
-          <p className="text-xs text-blue-600">Level Commissions Earned</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">${formatUSDT(totalCommissions)}</p>
-          <p className="text-[10px] text-slate-400 mt-1">Auto-distributed as OSLO</p>
+          <p className="text-xs text-blue-600">Total Staking Claimed</p>
+          <p className="text-xl font-bold text-slate-900 mt-1">${formatUSDT(totalClaimedYield)}</p>
+          <p className="text-[10px] text-slate-400 mt-1">As OSLO tokens</p>
         </div>
-        <div className="bg-gradient-to-br from-purple-50 to-white border border-purple-200 rounded-xl p-4">
-          <p className="text-xs text-purple-600">Leadership Bonus Earned</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">${formatUSDT(totalBonus)}</p>
-          <p className="text-[10px] text-slate-400 mt-1">Claimed as OSLO tokens</p>
+        <div className="bg-gradient-to-br from-purple-50 to-white border border-purple-200 rounded-xl p-4 ring-2 ring-purple-200">
+          <p className="text-xs text-purple-600 font-semibold">Level Income Total</p>
+          <p className="text-xl font-bold text-purple-700 mt-1">${formatUSDT(totalCommissions)}</p>
+          <p className="text-[10px] text-slate-400 mt-1">From 20-level commissions</p>
+        </div>
+        <div className="bg-gradient-to-br from-pink-50 to-white border border-pink-200 rounded-xl p-4">
+          <p className="text-xs text-pink-600">Today&apos;s Level Income</p>
+          <p className="text-xl font-bold text-slate-900 mt-1">${formatUSDT(todayLevelIncome)}</p>
+          <p className="text-[10px] text-slate-400 mt-1">Earned today</p>
+        </div>
+        <div className="bg-gradient-to-br from-orange-50 to-white border border-orange-200 rounded-xl p-4">
+          <p className="text-xs text-orange-600">Leadership Bonus</p>
+          <p className="text-xl font-bold text-slate-900 mt-1">${formatUSDT(totalBonus)}</p>
+          <p className="text-[10px] text-slate-400 mt-1">As OSLO tokens</p>
         </div>
         <div className="bg-gradient-to-br from-amber-50 to-white border border-amber-200 rounded-xl p-4">
-          <p className="text-xs text-amber-600">Total Earnings (All Sources)</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">${formatUSDT(totalAllEarnings)}</p>
-          <p className="text-[10px] text-slate-400 mt-1">USDT value across all incomes</p>
+          <p className="text-xs text-amber-600">Total Income</p>
+          <p className="text-xl font-bold text-slate-900 mt-1">${formatUSDT(totalAllEarnings)}</p>
+          <p className="text-[10px] text-slate-400 mt-1">All sources</p>
         </div>
       </div>
 
@@ -344,6 +393,61 @@ export default function IncomePage() {
           <p className="text-xs text-slate-400 mt-3">
             When your downline members claim their staking yield, you automatically receive level commissions
             (up to 20 levels deep) as OSLO tokens in your wallet.
+          </p>
+        </div>
+
+        {/* Level Income Breakdown Table */}
+        <div className="bg-white border border-slate-200 rounded-xl p-6">
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">Level Income Breakdown</h3>
+          <div className="mb-4 flex items-center gap-4">
+            <div className="bg-slate-100 rounded-lg px-4 py-2">
+              <p className="text-xs text-slate-500">Your Direct Referrals</p>
+              <p className="text-lg font-bold text-slate-900">{directCount?.toString() || "0"}</p>
+            </div>
+            <div className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-2">
+              <p className="text-xs text-purple-600">Total Level Income</p>
+              <p className="text-lg font-bold text-purple-700">${formatUSDT(totalCommissions)}</p>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200">
+                  <th className="text-left py-2 px-3 text-slate-500 font-medium">Level</th>
+                  <th className="text-left py-2 px-3 text-slate-500 font-medium">Rate</th>
+                  <th className="text-left py-2 px-3 text-slate-500 font-medium">Directs Required</th>
+                  <th className="text-left py-2 px-3 text-slate-500 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {LEVEL_CONFIG.map((cfg) => {
+                  const userDirects = Number(directCount ?? 0n);
+                  const unlocked = userDirects >= cfg.directsRequired;
+                  return (
+                    <tr key={cfg.level} className="border-b border-slate-100">
+                      <td className="py-2 px-3 font-medium text-slate-900">L{cfg.level}</td>
+                      <td className="py-2 px-3 text-green-600 font-medium">{(cfg.rate / 100).toFixed(cfg.rate % 100 === 0 ? 0 : 1)}%</td>
+                      <td className="py-2 px-3 text-slate-600">{cfg.directsRequired}</td>
+                      <td className="py-2 px-3">
+                        {unlocked ? (
+                          <span className="inline-flex items-center gap-1 text-xs text-green-600 font-medium">
+                            <span className="w-2 h-2 rounded-full bg-green-500" /> Unlocked
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+                            <span className="w-2 h-2 rounded-full bg-slate-300" /> Need {cfg.directsRequired - userDirects} more
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-slate-400 mt-3">
+            Level commissions are auto-distributed as OSLO tokens when your downline members claim their staking yield.
+            Unlock more levels by increasing your direct referrals.
           </p>
         </div>
 

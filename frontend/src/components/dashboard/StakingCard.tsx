@@ -20,6 +20,8 @@ export function StakingCard() {
     claimError,
     resetClaim,
     remainingCapacity,
+    refetchYield,
+    refetchClaimable,
   } = useStaking();
   const { address } = useAccount();
 
@@ -30,16 +32,31 @@ export function StakingCard() {
         duration: 6000,
         icon: "✅",
       });
-      // Reset claim state after showing toast
+      // Force refetch all related data
+      refetchYield();
+      refetchClaimable();
       const timer = setTimeout(() => resetClaim(), 6000);
       return () => clearTimeout(timer);
     }
-  }, [isClaimSuccess, resetClaim]);
+  }, [isClaimSuccess, resetClaim, refetchYield, refetchClaimable]);
 
   // Show toast on claim error
   useEffect(() => {
     if (claimError) {
-      toast.error(`Claim failed: ${claimError.message?.slice(0, 100) || "Unknown error"}`, {
+      let errorMsg = "Unknown error";
+      const msg = claimError.message || "";
+      if (msg.includes("NoYieldToClaim") || msg.includes("No yield to claim")) {
+        errorMsg = "No yield available to claim yet. Yield accrues daily.";
+      } else if (msg.includes("NoActiveStake")) {
+        errorMsg = "No active stake found. Please stake first.";
+      } else if (msg.includes("DEX price is zero")) {
+        errorMsg = "DEX price is currently zero. Please try again later.";
+      } else if (msg.includes("3X") || msg.includes("cap")) {
+        errorMsg = "Your stake has reached the 3X cap. No more yield to claim.";
+      } else {
+        errorMsg = msg.slice(0, 120) || "Claim failed. Please try again.";
+      }
+      toast.error(`Claim failed: ${errorMsg}`, {
         duration: 8000,
       });
       const timer = setTimeout(() => resetClaim(), 8000);
@@ -62,6 +79,21 @@ export function StakingCard() {
   const cap = activeStake * 3n;
   const progress = calcProgress(totalEarnings, activeStake);
   const isActive = stake?.isActive ?? false;
+  const claimable = claimableYield ?? 0n;
+  const hasClaimable = claimable > 0n;
+
+  // Determine button state
+  const buttonDisabled = isClaiming || !isActive || !hasClaimable;
+  let buttonText = "Claim Yield (Convert to OSLO)";
+  if (isClaiming) {
+    buttonText = "Claiming...";
+  } else if (!isActive) {
+    buttonText = activeStake > 0n ? "Stake Capped (3X Reached)" : "No Active Stake";
+  } else if (!hasClaimable) {
+    buttonText = "No Yield to Claim Yet";
+  } else {
+    buttonText = `Claim $${formatUSDT(claimable)} USDT Yield (→ OSLO)`;
+  }
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-6">
@@ -127,11 +159,13 @@ export function StakingCard() {
         </div>
 
         {/* Claimable yield */}
-        <div className="bg-green-50 border border-green-200 p-3 rounded-lg mt-4">
-          <p className="text-sm text-green-700">
-            Claimable Yield: {formatUSDT(claimableYield)} USDT
-          </p>
-        </div>
+        {hasClaimable && (
+          <div className="bg-green-50 border border-green-200 p-3 rounded-lg mt-4">
+            <p className="text-sm text-green-700">
+              Claimable Yield: <span className="font-bold">${formatUSDT(claimable)} USDT</span>
+            </p>
+          </div>
+        )}
 
         {/* Success message */}
         {isClaimSuccess && (
@@ -159,10 +193,14 @@ export function StakingCard() {
 
         <button
           onClick={claimYield}
-          disabled={!claimableYield || claimableYield === 0n || isClaiming || !isActive}
-          className="w-full mt-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-lg transition-colors"
+          disabled={buttonDisabled}
+          className={`w-full mt-4 font-medium py-2.5 px-4 rounded-lg transition-colors ${
+            buttonDisabled
+              ? "bg-slate-300 cursor-not-allowed text-slate-500"
+              : "bg-blue-600 hover:bg-blue-700 text-white"
+          }`}
         >
-          {isClaiming ? "Claiming..." : "Claim Yield (Convert to OSLO)"}
+          {buttonText}
         </button>
       </div>
     </div>

@@ -5,10 +5,11 @@ import { useAccount } from "wagmi";
 import { formatUSDT } from "@/lib/utils/format";
 import { useEffect, useState } from "react";
 import { CountdownTimer } from "@/components/ui/CountdownTimer";
+import toast from "react-hot-toast";
 
 export default function DAOPage() {
   const { address } = useAccount();
-  const { memberData, qualifiedCount, maxMembers, totalTurnover, lastDistribution, distributionCooldown, realTeamSize, realTeamVolume, realLegCount, selfQualify, isSelfQualifying, isSelfQualifySuccess, claimRoyalty, isClaimingRoyalty, isClaimRoyaltySuccess, distributeRoyalties, isDistributing, isDistributeSuccess, pendingRoyalty, newCycleAvailable, currentCycle, cyclePool, cycleMemberCount } = useDAO();
+  const { memberData, qualifiedCount, maxMembers, totalTurnover, lastDistribution, distributionCooldown, realTeamSize, realTeamVolume, realLegCount, selfQualify, isSelfQualifying, isSelfQualifySuccess, claimRoyalty, isClaimingRoyalty, isClaimRoyaltySuccess, distributeRoyalties, isDistributing, isDistributeSuccess, syncTurnover, isSyncingTurnover, isSyncSuccess, pendingRoyalty, newCycleAvailable, currentCycle, cyclePool, cycleMemberCount, refetchAll } = useDAO();
 
   const isQualified = memberData?.[0] ?? false;
   const slotNumber = memberData?.[1] ?? 0n;
@@ -41,12 +42,34 @@ export default function DAOPage() {
     Number(legCount) >= 3 &&
     Number(teamVolume) / 1e18 >= 25000;
 
-  // Auto-refetch page data after successful qualification or claim
+  // Refetch DAO data after successful qualification, claim, or sync
   useEffect(() => {
-    if (isSelfQualifySuccess || isClaimRoyaltySuccess || isDistributeSuccess) {
-      window.location.reload();
+    if (isSelfQualifySuccess) {
+      toast.success("Successfully qualified for DAO!", { duration: 5000, icon: "✅" });
+      refetchAll();
     }
-  }, [isSelfQualifySuccess, isClaimRoyaltySuccess, isDistributeSuccess]);
+  }, [isSelfQualifySuccess, refetchAll]);
+
+  useEffect(() => {
+    if (isClaimRoyaltySuccess) {
+      toast.success("Royalty claimed successfully!", { duration: 5000, icon: "✅" });
+      refetchAll();
+    }
+  }, [isClaimRoyaltySuccess, refetchAll]);
+
+  useEffect(() => {
+    if (isDistributeSuccess) {
+      toast.success("Royalties distributed to all members!", { duration: 5000, icon: "✅" });
+      refetchAll();
+    }
+  }, [isDistributeSuccess, refetchAll]);
+
+  useEffect(() => {
+    if (isSyncSuccess) {
+      toast.success("Protocol turnover synced!", { duration: 5000, icon: "✅" });
+      refetchAll();
+    }
+  }, [isSyncSuccess, refetchAll]);
 
   return (
     <div className="space-y-8">
@@ -64,18 +87,18 @@ export default function DAOPage() {
           </p>
         </div>
         <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <p className="text-sm text-slate-500">Monthly Pool (0.5%)</p>
+          <p className="text-sm text-slate-500">Protocol Turnover</p>
+          <p className="text-2xl font-bold text-blue-600">
+            ${formatUSDT(totalTurnover ?? 0n)}
+          </p>
+          <p className="text-xs text-slate-400 mt-1">Total investment volume</p>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-xl p-4">
+          <p className="text-sm text-slate-500">Royalty Pool (0.5%)</p>
           <p className="text-2xl font-bold text-green-600">
             ${formatUSDT(totalTurnover ? (totalTurnover * 50n) / 10000n : 0n)}
           </p>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <p className="text-sm text-slate-500">Per Member Share</p>
-          <p className="text-2xl font-bold text-slate-900">
-            ${qualifiedCount && qualifiedCount > 0n
-              ? formatUSDT((totalTurnover ? (totalTurnover * 50n) / 10000n : 0n) / qualifiedCount)
-              : "0.00"}
-          </p>
+          <p className="text-xs text-slate-400 mt-1">Per distribution cycle</p>
         </div>
         <div className="bg-gradient-to-br from-blue-600 to-purple-700 rounded-xl p-4">
           <p className="text-sm text-blue-100">Next Distribution</p>
@@ -93,6 +116,25 @@ export default function DAOPage() {
           </div>
         </div>
       </div>
+
+      {/* Sync Turnover Button */}
+      {address && (
+        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <svg className="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <p className="text-sm text-amber-700 flex-1">
+            Sync protocol turnover to update the DAO investment counting before qualifying.
+          </p>
+          <button
+            onClick={() => syncTurnover()}
+            disabled={isSyncingTurnover}
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+          >
+            {isSyncingTurnover ? "Syncing..." : "Sync Turnover"}
+          </button>
+        </div>
+      )}
 
       {/* Your Status */}
       <div className="bg-white border border-slate-200 rounded-xl p-6">
@@ -117,7 +159,7 @@ export default function DAOPage() {
                 unit="members"
               />
               <QualificationItem
-                label="Team Volume"
+                label="Team Investment"
                 current={Number(teamVolume) / 1e18}
                 required={25000}
                 unit="USDT"
@@ -169,7 +211,7 @@ export default function DAOPage() {
                       {Number(teamVolume) / 1e18 < 25000 && (
                         <li className="flex items-center gap-2">
                           <span className="text-amber-600">•</span>
-                          <span>Increase team volume by <span className="text-slate-900 font-bold">${(25000 - Number(teamVolume) / 1e18).toLocaleString()}</span> USDT (${(Number(teamVolume) / 1e18).toLocaleString()}/$25,000)</span>
+                          <span>Increase team investment by <span className="text-slate-900 font-bold">${(25000 - Number(teamVolume) / 1e18).toLocaleString()}</span> USDT (${(Number(teamVolume) / 1e18).toLocaleString()}/$25,000)</span>
                         </li>
                       )}
                     </>

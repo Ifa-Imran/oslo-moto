@@ -54,7 +54,7 @@ export function useStaking(
   });
 
   // Read claimable yield (aggregated across all stakes)
-  const { data: claimableYield } = useReadContract({
+  const { data: claimableYield, refetch: refetchClaimable } = useReadContract({
     address: CONTRACTS.INVESTMENT_ENGINE,
     abi: investmentEngineABI,
     functionName: "getClaimableYield",
@@ -64,7 +64,7 @@ export function useStaking(
   });
 
   // Read total claimed
-  const { data: totalClaimed } = useReadContract({
+  const { data: totalClaimed, refetch: refetchTotalClaimed } = useReadContract({
     address: CONTRACTS.INVESTMENT_ENGINE,
     abi: investmentEngineABI,
     functionName: "totalClaimed",
@@ -211,8 +211,11 @@ export function useStaking(
       refetchStake();
       refetchStakes();
       refetchYield();
+      refetchTotalClaimed();
+      refetchClaimable();
+      refetchRemaining();
     }
-  }, [isClaimSuccess, refetchStake, refetchStakes, refetchYield]);
+  }, [isClaimSuccess, refetchStake, refetchStakes, refetchYield, refetchTotalClaimed, refetchClaimable, refetchRemaining]);
 
   const claimYield = () => {
     claimWrite({
@@ -266,6 +269,8 @@ export function useStaking(
     refetchStakes,
     refetchYield,
     refetchRemaining,
+    refetchTotalClaimed,
+    refetchClaimable,
     resetStakeFlow,
   };
 }

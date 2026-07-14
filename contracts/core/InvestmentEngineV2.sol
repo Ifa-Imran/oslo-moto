@@ -263,7 +263,7 @@ contract InvestmentEngineV2 is AccessControl, ReentrancyGuard, Pausable {
         emit Staked(user, activeStake, tier, referrer, stakeStartTime);
     }
 
-    /// @notice Calculate accrued yield for a single stake
+                /// @notice Calculate accrued yield for a single stake
     function _calculateStakeYield(UserStake memory s) internal view returns (uint256) {
         if (!s.isActive) return 0;
 

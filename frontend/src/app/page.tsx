@@ -1,39 +1,20 @@
 "use client";
 
 import { StakingCard } from "@/components/dashboard/StakingCard";
-import { ProtocolStats } from "@/components/dashboard/ProtocolStats";
 import { useAccount, useReadContract } from "wagmi";
-import { investmentEngineABI, osloDexABI, osloTokenABI, usdtABI, referralRegistryABI, CONTRACTS } from "@/lib/contracts";
+import { investmentEngineABI, osloDexABI, osloTokenABI, usdtABI, referralRegistryABI, levelIncomeSystemABI, leadershipBonusABI, CONTRACTS } from "@/lib/contracts";
 import { formatUSDT, formatOSLO, formatPrice } from "@/lib/utils/format";
 import { useState } from "react";
 import Link from "next/link";
 import { bsc } from "wagmi/chains";
+import { useTodayStats } from "@/hooks/useTodayStats";
 
 export default function DashboardPage() {
   const { address } = useAccount();
   const [copied, setCopied] = useState(false);
 
-  // My Team Size (all downlines up to 20 levels)
-  const { data: teamSize } = useReadContract({
-    address: CONTRACTS.REFERRAL_REGISTRY,
-    abi: referralRegistryABI,
-    functionName: "getTeamSize",
-    args: address ? [address] : undefined,
-    chainId: bsc.id,
-    query: { enabled: !!address },
-  });
-
-  // Contract parameters for How It Works section (read from chain)
-  const { data: tier1Min } = useReadContract({ address: CONTRACTS.INVESTMENT_ENGINE, abi: investmentEngineABI, functionName: "TIER1_MIN", chainId: bsc.id });
-  const { data: tier1Max } = useReadContract({ address: CONTRACTS.INVESTMENT_ENGINE, abi: investmentEngineABI, functionName: "TIER1_MAX", chainId: bsc.id });
-  const { data: tier2Min } = useReadContract({ address: CONTRACTS.INVESTMENT_ENGINE, abi: investmentEngineABI, functionName: "TIER2_MIN", chainId: bsc.id });
-  const { data: tier2Max } = useReadContract({ address: CONTRACTS.INVESTMENT_ENGINE, abi: investmentEngineABI, functionName: "TIER2_MAX", chainId: bsc.id });
-  const { data: maxTotalStake } = useReadContract({ address: CONTRACTS.INVESTMENT_ENGINE, abi: investmentEngineABI, functionName: "MAX_TOTAL_STAKE_PER_USER", chainId: bsc.id });
-
-  const fmtUSD = (val: bigint | undefined) => val ? `$${Number(val) / 1e18}` : "$0";
-
-  // Level commission rates from LevelIncomeSystem._initLevels() (immutable, set in constructor)
-  // L1: 3000 bps, L2: 1000 bps, L3-5: 500 bps, L6-10: 250 bps, L11-20: 100 bps
+  // Today's stats (claim + level income)
+  const { todayClaim, todayLevelIncome, totalClaimed, totalCommissions } = useTodayStats();
 
   // Check if user has staked (referral link only shown after staking)
   const { data: hasStaked } = useReadContract({
@@ -45,7 +26,30 @@ export default function DashboardPage() {
     query: { enabled: !!address },
   });
 
-  // DEX Liquidity data
+  // Read total bonus paid (leadership bonus)
+  const { data: totalBonusPaid } = useReadContract({
+    address: CONTRACTS.LEADERSHIP_BONUS,
+    abi: leadershipBonusABI,
+    functionName: "totalBonusPaid",
+    args: address ? [address] : undefined,
+    chainId: bsc.id,
+    query: { enabled: !!address },
+  });
+
+  // Total earnings = staking claimed + level commissions + leadership bonus
+  const totalIncome = totalClaimed + totalCommissions + (totalBonusPaid ?? 0n);
+
+  // My Team Size (all downlines up to 20 levels)
+  const { data: teamSize } = useReadContract({
+    address: CONTRACTS.REFERRAL_REGISTRY,
+    abi: referralRegistryABI,
+    functionName: "getTeamSize",
+    args: address ? [address] : undefined,
+    chainId: bsc.id,
+    query: { enabled: !!address },
+  });
+
+  // DEX price
   const { data: dexPrice } = useReadContract({
     address: CONTRACTS.OSLO_DEX,
     abi: osloDexABI,
@@ -53,42 +57,6 @@ export default function DashboardPage() {
     chainId: bsc.id,
     query: { refetchInterval: 15000 },
   });
-
-  // Read ACTUAL USDT balance of the DEX contract (includes registration fees + staking deposits)
-  const { data: dexUsdtBalance } = useReadContract({
-    address: CONTRACTS.USDT,
-    abi: usdtABI,
-    functionName: "balanceOf",
-    args: [CONTRACTS.OSLO_DEX],
-    chainId: bsc.id,
-    query: { refetchInterval: 30000 },
-  });
-
-  const { data: osloReserve } = useReadContract({
-    address: CONTRACTS.OSLO_TOKEN,
-    abi: osloTokenABI,
-    functionName: "balanceOf",
-    args: [CONTRACTS.OSLO_DEX],
-    chainId: bsc.id,
-    query: { refetchInterval: 30000 },
-  });
-
-  const { data: totalBurned } = useReadContract({
-    address: CONTRACTS.OSLO_DEX,
-    abi: osloDexABI,
-    functionName: "totalBurned",
-    chainId: bsc.id,
-    query: { refetchInterval: 30000 },
-  });
-
-  const { data: burnCap } = useReadContract({
-    address: CONTRACTS.OSLO_DEX,
-    abi: osloDexABI,
-    functionName: "BURN_CAP",
-    chainId: bsc.id,
-  });
-
-  const burnProgress = totalBurned && burnCap ? Number((totalBurned * 100n) / burnCap) : 0;
 
   const referralLink = address
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/register?ref=${address}`
@@ -127,68 +95,68 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-slate-500 mt-1">Oslo Protocol overview and your stake status</p>
+        <p className="text-slate-500 mt-1">Your earnings overview and stake status</p>
       </div>
 
-      {/* Protocol Stats */}
-      <ProtocolStats />
-
-      {/* DEX Liquidity Pool */}
-      <div className="bg-gradient-to-br from-white to-slate-50 border border-slate-200 rounded-xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">DEX Liquidity Pool</h2>
-            <p className="text-sm text-slate-500">Registration fees &amp; sell taxes flow here</p>
-          </div>
-          <Link href="/dex" className="text-sm text-blue-600 hover:text-blue-500 font-medium">
-            Go to DEX →
-          </Link>
+      {/* 5 Key Metric Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        {/* Today's Claim */}
+        <div className="bg-gradient-to-br from-green-50 to-white border border-green-200 rounded-xl p-4">
+          <p className="text-xs text-green-600 font-medium">Today&apos;s Claim</p>
+          <p className="text-xl font-bold text-slate-900 mt-1">${formatUSDT(todayClaim)}</p>
+          <p className="text-[10px] text-slate-400 mt-1">Claimed today</p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-          <div className="bg-slate-100 rounded-lg p-3">
-            <p className="text-xs text-slate-500">USDT Liquidity</p>
-            <p className="text-lg font-bold text-green-600">${formatUSDT(dexUsdtBalance)}</p>
-          </div>
-          <div className="bg-slate-100 rounded-lg p-3">
-            <p className="text-xs text-slate-500">OSLO Reserve</p>
-            <p className="text-lg font-bold text-purple-600">{formatOSLO(osloReserve)}</p>
-          </div>
-          <div className="bg-slate-100 rounded-lg p-3">
-            <p className="text-xs text-slate-500">OSLO Price</p>
-            <p className="text-lg font-bold text-blue-600">${formatPrice(dexPrice)}</p>
-          </div>
-          <div className="bg-slate-100 rounded-lg p-3">
-            <p className="text-xs text-slate-500">Total Burned</p>
-            <p className="text-lg font-bold text-red-600">{formatOSLO(totalBurned)}</p>
-          </div>
+        {/* Total Claim */}
+        <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-200 rounded-xl p-4">
+          <p className="text-xs text-blue-600 font-medium">Total Claim</p>
+          <p className="text-xl font-bold text-slate-900 mt-1">${formatUSDT(totalClaimed)}</p>
+          <p className="text-[10px] text-slate-400 mt-1">Total staking yield claimed</p>
         </div>
 
-        {/* Burn Progress Bar */}
-        <div>
-          <div className="flex justify-between text-xs text-slate-500 mb-1">
-            <span>Burn Progress</span>
-            <span className="font-medium text-orange-600">{burnProgress.toFixed(2)}%</span>
-          </div>
-          <div className="w-full bg-slate-200 rounded-full h-2.5">
-            <div
-              className="bg-gradient-to-r from-orange-500 to-red-500 h-2.5 rounded-full transition-all"
-              style={{ width: `${Math.min(burnProgress, 100)}%` }}
-            />
-          </div>
-          <p className="text-[10px] text-slate-400 mt-1">
-            Every sell burns 50% of OSLO tokens. Max burn: 9.99M OSLO (90% of supply).
-          </p>
+        {/* Total Level Income */}
+        <div className="bg-gradient-to-br from-purple-50 to-white border border-purple-200 rounded-xl p-4">
+          <p className="text-xs text-purple-600 font-medium">Total Level Income</p>
+          <p className="text-xl font-bold text-slate-900 mt-1">${formatUSDT(totalCommissions)}</p>
+          <p className="text-[10px] text-slate-400 mt-1">From 20-level commissions</p>
+        </div>
+
+        {/* Total Income */}
+        <div className="bg-gradient-to-br from-amber-50 to-white border border-amber-200 rounded-xl p-4">
+          <p className="text-xs text-amber-600 font-medium">Income</p>
+          <p className="text-xl font-bold text-slate-900 mt-1">${formatUSDT(totalIncome)}</p>
+          <p className="text-[10px] text-slate-400 mt-1">All sources combined</p>
+        </div>
+
+        {/* Today's Level Income */}
+        <div className="bg-gradient-to-br from-pink-50 to-white border border-pink-200 rounded-xl p-4">
+          <p className="text-xs text-pink-600 font-medium">Today&apos;s Level</p>
+          <p className="text-xl font-bold text-slate-900 mt-1">${formatUSDT(todayLevelIncome)}</p>
+          <p className="text-[10px] text-slate-400 mt-1">Level income today</p>
         </div>
       </div>
 
-      {/* My Team Size */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4">
-        <p className="text-sm text-slate-500">My Team Size</p>
-        <p className="text-2xl font-bold text-slate-900">{teamSize?.toString() || "0"}</p>
+      {/* Quick Stats Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white border border-slate-200 rounded-xl p-4">
+          <p className="text-xs text-slate-500">Team Size</p>
+          <p className="text-lg font-bold text-slate-900">{teamSize?.toString() || "0"}</p>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-xl p-4">
+          <p className="text-xs text-slate-500">OSLO Price</p>
+          <p className="text-lg font-bold text-blue-600">${formatPrice(dexPrice)}</p>
+        </div>
+        <Link href="/team" className="bg-white border border-slate-200 rounded-xl p-4 hover:border-blue-300 transition-colors">
+          <p className="text-xs text-slate-500">Team / Investment</p>
+          <p className="text-lg font-bold text-blue-600">View →</p>
+        </Link>
+        <Link href="/income" className="bg-white border border-slate-200 rounded-xl p-4 hover:border-blue-300 transition-colors">
+          <p className="text-xs text-slate-500">Income Details</p>
+          <p className="text-lg font-bold text-blue-600">View →</p>
+        </Link>
       </div>
 
-      {/* Personal Stake Card */}
+      {/* Personal Stake Card + How It Works */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <StakingCard />
         <div className="bg-white border border-slate-200 rounded-xl p-6">
@@ -196,7 +164,7 @@ export default function DashboardPage() {
           <div className="space-y-3 text-sm text-slate-500">
             <div className="flex gap-3">
               <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs">1</span>
-              <p>Stake USDT (Tier 1: {fmtUSD(tier1Min)}-{fmtUSD(tier1Max)} or Tier 2: {fmtUSD(tier2Min)}-{fmtUSD(tier2Max)}). Max {fmtUSD(maxTotalStake)} total per wallet.</p>
+              <p>Stake USDT (Tier 1: $10-$2,499 or Tier 2: $2,500-$5,000). Max $5,000 total per wallet.</p>
             </div>
             <div className="flex gap-3">
               <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs">2</span>
@@ -208,7 +176,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex gap-3">
               <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs">4</span>
-              <p>Earnings capped at 3X your stake. Max {fmtUSD(maxTotalStake)} total investment per wallet.</p>
+              <p>Earnings capped at 3X your stake. Level income from 20 levels of referrals.</p>
             </div>
           </div>
         </div>

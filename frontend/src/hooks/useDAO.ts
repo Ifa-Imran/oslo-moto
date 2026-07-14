@@ -8,7 +8,7 @@ export function useDAO() {
   const { address } = useAccount();
 
   // Read member info (for isQualified, slotNumber)
-  const { data: memberData } = useReadContract({
+  const { data: memberData, refetch: refetchMemberData } = useReadContract({
     address: CONTRACTS.OSLO_DAO,
     abi: osloDAOABI,
     functionName: "members",
@@ -17,7 +17,7 @@ export function useDAO() {
   });
 
   // Read qualified member count
-  const { data: qualifiedCount } = useReadContract({
+  const { data: qualifiedCount, refetch: refetchQualifiedCount } = useReadContract({
     address: CONTRACTS.OSLO_DAO,
     abi: osloDAOABI,
     functionName: "getQualifiedMemberCount",
@@ -31,7 +31,7 @@ export function useDAO() {
   });
 
   // Read total protocol turnover
-  const { data: totalTurnover } = useReadContract({
+  const { data: totalTurnover, refetch: refetchTurnover } = useReadContract({
     address: CONTRACTS.OSLO_DAO,
     abi: osloDAOABI,
     functionName: "totalProtocolTurnover",
@@ -52,7 +52,7 @@ export function useDAO() {
   });
 
   // Read real-time team size from ReferralRegistry (recursive count)
-  const { data: realTeamSize } = useReadContract({
+  const { data: realTeamSize, refetch: refetchTeamSize } = useReadContract({
     address: CONTRACTS.REFERRAL_REGISTRY,
     abi: referralRegistryABI,
     functionName: "getTeamSize",
@@ -61,7 +61,7 @@ export function useDAO() {
   });
 
   // Read real-time team volume from InvestmentEngine (recursive sum)
-  const { data: realTeamVolume } = useReadContract({
+  const { data: realTeamVolume, refetch: refetchTeamVolume } = useReadContract({
     address: CONTRACTS.INVESTMENT_ENGINE,
     abi: investmentEngineABI,
     functionName: "getTeamVolume",
@@ -70,7 +70,7 @@ export function useDAO() {
   });
 
   // Read real-time leg count from ReferralRegistry
-  const { data: realLegCount } = useReadContract({
+  const { data: realLegCount, refetch: refetchLegCount } = useReadContract({
     address: CONTRACTS.REFERRAL_REGISTRY,
     abi: referralRegistryABI,
     functionName: "getDirectDownlineCount",
@@ -124,7 +124,7 @@ export function useDAO() {
   };
 
   // Read pending royalty for current user
-  const { data: pendingRoyalty } = useReadContract({
+  const { data: pendingRoyalty, refetch: refetchPendingRoyalty } = useReadContract({
     address: CONTRACTS.OSLO_DAO,
     abi: osloDAOABI,
     functionName: "getPendingRoyalty",
@@ -133,30 +133,60 @@ export function useDAO() {
   });
 
   // Read if new cycle is available
-  const { data: newCycleAvailable } = useReadContract({
+  const { data: newCycleAvailable, refetch: refetchNewCycle } = useReadContract({
     address: CONTRACTS.OSLO_DAO,
     abi: osloDAOABI,
     functionName: "isNewCycleAvailable",
   });
 
   // Read current cycle info
-  const { data: currentCycle } = useReadContract({
+  const { data: currentCycle, refetch: refetchCycle } = useReadContract({
     address: CONTRACTS.OSLO_DAO,
     abi: osloDAOABI,
     functionName: "currentCycle",
   });
 
-  const { data: cyclePool } = useReadContract({
+  const { data: cyclePool, refetch: refetchCyclePool } = useReadContract({
     address: CONTRACTS.OSLO_DAO,
     abi: osloDAOABI,
     functionName: "cyclePool",
   });
 
-  const { data: cycleMemberCount } = useReadContract({
+  const { data: cycleMemberCount, refetch: refetchCycleMemberCount } = useReadContract({
     address: CONTRACTS.OSLO_DAO,
     abi: osloDAOABI,
     functionName: "cycleMemberCount",
   });
+
+  // Sync protocol turnover from InvestmentEngine to DAO contract
+  const { writeContract: syncTurnoverWrite, data: syncTurnoverTxHash, isPending: isSyncingTurnover } = useWriteContract();
+  const { isLoading: isSyncConfirming, isSuccess: isSyncSuccess } = useWaitForTransactionReceipt({
+    hash: syncTurnoverTxHash,
+    chainId: bsc.id,
+  });
+
+  const syncTurnover = () => {
+    syncTurnoverWrite({
+      address: CONTRACTS.OSLO_DAO,
+      abi: osloDAOABI,
+      functionName: "syncTurnover",
+    });
+  };
+
+  // Refetch all DAO data after any transaction
+  const refetchAll = () => {
+    refetchTurnover();
+    refetchTeamSize();
+    refetchTeamVolume();
+    refetchLegCount();
+    refetchPendingRoyalty();
+    refetchNewCycle();
+    refetchCycle();
+    refetchCyclePool();
+    refetchCycleMemberCount();
+    refetchMemberData();
+    refetchQualifiedCount();
+  };
 
   return {
     memberData,
@@ -177,10 +207,14 @@ export function useDAO() {
     distributeRoyalties,
     isDistributing: isDistributing || isDistributeConfirming,
     isDistributeSuccess,
+    syncTurnover,
+    isSyncingTurnover: isSyncingTurnover || isSyncConfirming,
+    isSyncSuccess,
     pendingRoyalty,
     newCycleAvailable,
     currentCycle,
     cyclePool,
     cycleMemberCount,
+    refetchAll,
   };
 }
