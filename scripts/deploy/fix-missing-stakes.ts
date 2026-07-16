@@ -24,7 +24,7 @@ const NEW_ENGINE = "0x69C9739089DbC960e83a51C349cB7B0db69E7A80";
 
 // ============ MISSING WALLETS ============
 const MISSING_WALLETS = [
-  "0xb04f2a5570C29B49eAAc39b0C0877116d82Ddacf",
+  "0x502b32ee30C9d1309574965254D358ADC19DaBF2",
 ];
 
 // ============ YIELD CALCULATION (matches contract logic) ============
