@@ -9,11 +9,11 @@ set -e
 apk add --no-cache tar nginx
 
 # Extract standalone build (only on first run)
-if [ ! -f /app/.deployed-v30 ]; then
+if [ ! -f /app/.deployed-v31 ]; then
   echo "[start] First-time setup: extracting build..."
   rm -rf /app/standalone /app/.deployed-*
   tar xzf /app/standalone-build.tar.gz -C /app
-  touch /app/.deployed-v30
+  touch /app/.deployed-v31
   echo "[start] Extraction complete."
 else
   echo "[start] Already deployed, skipping extraction."

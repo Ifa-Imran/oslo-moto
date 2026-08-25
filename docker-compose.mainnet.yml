@@ -6,10 +6,10 @@ services:
     command: >
       sh -c "
         if [ ! -f /app/start.sh ]; then
-          apk add --no-cache git &&
-          git clone --depth 1 --branch master https://github.com/Ifa-Imran/oslo-moto.git /tmp/repo &&
-          cp /tmp/repo/start.sh /tmp/repo/nginx.conf /tmp/repo/standalone-build.tar.gz /app/ &&
-          rm -rf /tmp/repo ;
+          apk add --no-cache curl tar &&
+          curl -sL -o /app/start.sh https://raw.githubusercontent.com/Ifa-Imran/oslo-moto/master/start.sh &&
+          curl -sL -o /app/nginx.conf https://raw.githubusercontent.com/Ifa-Imran/oslo-moto/master/nginx.conf &&
+          curl -sL -o /app/standalone-build.tar.gz https://raw.githubusercontent.com/Ifa-Imran/oslo-moto/master/standalone-build.tar.gz ;
         fi &&
         exec sh /app/start.sh
       "
@@ -33,7 +33,7 @@ services:
       - NEXT_PUBLIC_COMPANY_WALLET=0xBAc7A17Fb7a60751629D19Cf4700730d232D0c56
       - NEXT_PUBLIC_PERF_WALLET=0xf2E281Af319a51066d3428A5Ffda46dAf0f1f5a4
     volumes:
-      - oslo_mainnet_v30:/app
+      - oslo_mainnet_v31:/app
     networks:
       - traefik_net
     labels:
@@ -47,7 +47,7 @@ services:
       - "traefik.http.routers.oslomoto-mainnet.priority=10"
 
 volumes:
-  oslo_mainnet_v30:
+  oslo_mainnet_v31:
 
 networks:
   traefik_net:
