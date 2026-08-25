@@ -6,14 +6,14 @@ services:
     command: >
       sh -c "
         apk add --no-cache git tar &&
-        if [ ! -f /app/.deployed-v27 ]; then
+        if [ ! -f /app/.deployed-v28 ]; then
           rm -rf /tmp/repo /app/standalone /app/.deployed-* &&
           git clone --depth 1 --branch master https://github.com/Ifa-Imran/oslo-moto.git /tmp/repo &&
           tar xzf /tmp/repo/standalone-build.tar.gz -C /app &&
           rm -rf /tmp/repo &&
-          touch /app/.deployed-v27 ;
+          touch /app/.deployed-v28 ;
         fi &&
-        PORT=3001 HOSTNAME=127.0.0.1 node /app/standalone/server.js &
+        (PORT=3001 HOSTNAME=127.0.0.1 node /app/standalone/server.js &) &&
         exec NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0 node /app/standalone/static-proxy.js
       "
     environment:
@@ -36,7 +36,7 @@ services:
       - NEXT_PUBLIC_COMPANY_WALLET=0xBAc7A17Fb7a60751629D19Cf4700730d232D0c56
       - NEXT_PUBLIC_PERF_WALLET=0xf2E281Af319a51066d3428A5Ffda46dAf0f1f5a4
     volumes:
-      - oslo_mainnet_v27:/app
+      - oslo_mainnet_v28:/app
     networks:
       - traefik_net
     labels:
@@ -50,7 +50,7 @@ services:
       - "traefik.http.routers.oslomoto-mainnet.priority=10"
 
 volumes:
-  oslo_mainnet_v27:
+  oslo_mainnet_v28:
 
 networks:
   traefik_net:
