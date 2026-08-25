@@ -13,8 +13,8 @@ export default function DashboardPage() {
   const { address } = useAccount();
   const [copied, setCopied] = useState(false);
 
-  // Today's stats (claim + level income)
-  const { todayClaim, todayLevelIncome, totalClaimed, totalCommissions } = useTodayStats();
+  // Total stats (claim + level income)
+  const { totalClaimed, totalCommissions } = useTodayStats();
 
   // Check if user has staked (referral link only shown after staking)
   const { data: hasStaked } = useReadContract({
@@ -98,15 +98,8 @@ export default function DashboardPage() {
         <p className="text-slate-500 mt-1">Your earnings overview and stake status</p>
       </div>
 
-      {/* 5 Key Metric Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {/* Today's Claim */}
-        <div className="bg-gradient-to-br from-green-50 to-white border border-green-200 rounded-xl p-4">
-          <p className="text-xs text-green-600 font-medium">Today&apos;s Claim</p>
-          <p className="text-xl font-bold text-slate-900 mt-1">${formatUSDT(todayClaim)}</p>
-          <p className="text-[10px] text-slate-400 mt-1">Claimed today</p>
-        </div>
-
+      {/* 3 Key Metric Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Total Claim */}
         <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-200 rounded-xl p-4">
           <p className="text-xs text-blue-600 font-medium">Total Claim</p>
@@ -126,13 +119,6 @@ export default function DashboardPage() {
           <p className="text-xs text-amber-600 font-medium">Income</p>
           <p className="text-xl font-bold text-slate-900 mt-1">${formatUSDT(totalIncome)}</p>
           <p className="text-[10px] text-slate-400 mt-1">All sources combined</p>
-        </div>
-
-        {/* Today's Level Income */}
-        <div className="bg-gradient-to-br from-pink-50 to-white border border-pink-200 rounded-xl p-4">
-          <p className="text-xs text-pink-600 font-medium">Today&apos;s Level</p>
-          <p className="text-xl font-bold text-slate-900 mt-1">${formatUSDT(todayLevelIncome)}</p>
-          <p className="text-[10px] text-slate-400 mt-1">Level income today</p>
         </div>
       </div>
 

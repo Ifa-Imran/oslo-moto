@@ -19,10 +19,10 @@ export function StakeForm() {
 
   const [amount, setAmount] = useState("");
   const [tier, setTier] = useState<1 | 2>(1);
-  const [referrer, setReferrer] = useState(refParam);
   const [error, setError] = useState("");
 
-  const refAddress = referrer || "0x0000000000000000000000000000000000000000";
+  // Referrer comes from the ?ref= URL parameter (referral links) — no manual input
+  const refAddress = refParam || "0x0000000000000000000000000000000000000000";
 
   const {
     usdtBalance,
@@ -80,12 +80,12 @@ export function StakeForm() {
       return false;
     }
 
-    if (referrer && !isAddress(referrer)) {
+    if (refParam && !isAddress(refParam)) {
       setError("Invalid referrer address");
       return false;
     }
 
-    if (referrer && referrer.toLowerCase() === address?.toLowerCase()) {
+    if (refParam && refParam.toLowerCase() === address?.toLowerCase()) {
       setError("You cannot refer yourself");
       return false;
     }
@@ -180,22 +180,6 @@ export function StakeForm() {
             disabled={isBusy}
             placeholder={tier === 1 ? "10 - 2,499" : "2,500 - 5,000"}
             className="w-full bg-slate-100 border border-slate-300 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none disabled:opacity-50"
-          />
-        </div>
-
-        {/* Referrer Input */}
-        <div>
-          <label className="block text-sm text-slate-500 mb-2">Referrer Address (optional)</label>
-          <input
-            type="text"
-            value={referrer}
-            onChange={(e) => {
-              setReferrer(e.target.value);
-              setError("");
-            }}
-            disabled={isBusy}
-            placeholder="0x..."
-            className="w-full bg-slate-100 border border-slate-300 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none disabled:opacity-50 font-mono text-sm"
           />
         </div>
 

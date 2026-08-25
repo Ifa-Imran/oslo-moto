@@ -2,10 +2,10 @@
 
 import { SellInterface } from "@/components/dex/SellInterface";
 import { useDEX } from "@/hooks/useDEX";
-import { formatOSLO, formatUSDT, formatPrice } from "@/lib/utils/format";
+import { formatOSLO, formatPrice } from "@/lib/utils/format";
 
 export default function DexPage() {
-  const { price, totalBurned, burnCap, usdtReserve, osloReserve } = useDEX();
+  const { price, totalBurned, burnCap, osloReserve } = useDEX();
 
   const burnProgress = totalBurned && burnCap ? Number((totalBurned * 100n) / burnCap) : 0;
 
@@ -17,17 +17,13 @@ export default function DexPage() {
       </div>
 
       {/* DEX Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white border border-slate-200 rounded-xl p-4">
           <p className="text-sm text-slate-500">OSLO Price</p>
           <p className="text-xl font-bold text-blue-600">${formatPrice(price)}</p>
         </div>
         <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <p className="text-sm text-slate-500">USDT Liquidity</p>
-          <p className="text-xl font-bold text-slate-900">${formatUSDT(usdtReserve)}</p>
-        </div>
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <p className="text-sm text-slate-500">OSLO Reserve</p>
+          <p className="text-sm text-slate-500">OSLO Remaining</p>
           <p className="text-xl font-bold text-slate-900">{formatOSLO(osloReserve)}</p>
         </div>
         <div className="bg-white border border-slate-200 rounded-xl p-4">
