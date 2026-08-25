@@ -3,7 +3,7 @@
 import { StakingCard } from "@/components/dashboard/StakingCard";
 import { useAccount, useReadContract } from "wagmi";
 import { investmentEngineABI, osloDexABI, osloTokenABI, usdtABI, referralRegistryABI, levelIncomeSystemABI, leadershipBonusABI, CONTRACTS } from "@/lib/contracts";
-import { formatUSDT, formatOSLO, formatPrice } from "@/lib/utils/format";
+import { formatUSDT, formatOSLO, formatPrice, shortenAddress } from "@/lib/utils/format";
 import { useState } from "react";
 import Link from "next/link";
 import { bsc } from "wagmi/chains";
@@ -12,6 +12,7 @@ import { useTodayStats } from "@/hooks/useTodayStats";
 export default function DashboardPage() {
   const { address } = useAccount();
   const [copied, setCopied] = useState(false);
+  const [copiedContract, setCopiedContract] = useState(false);
 
   // Total stats (claim + level income)
   const { totalClaimed, totalCommissions } = useTodayStats();
@@ -58,9 +59,51 @@ export default function DashboardPage() {
     query: { refetchInterval: 15000 },
   });
 
+  // OSLO Reserve (OSLO balance in DEX contract)
+  const { data: osloReserve } = useReadContract({
+    address: CONTRACTS.OSLO_TOKEN,
+    abi: osloTokenABI,
+    functionName: "balanceOf",
+    args: [CONTRACTS.OSLO_DEX],
+    chainId: bsc.id,
+    query: { refetchInterval: 30000 },
+  });
+
+  // Total OSLO burned (deflationary DEX)
+  const { data: totalBurned } = useReadContract({
+    address: CONTRACTS.OSLO_DEX,
+    abi: osloDexABI,
+    functionName: "totalBurned",
+    chainId: bsc.id,
+    query: { refetchInterval: 30000 },
+  });
+
   const referralLink = address
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/register?ref=${address}`
     : "";
+
+  const copyContractAddress = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(CONTRACTS.OSLO_TOKEN);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = CONTRACTS.OSLO_TOKEN;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopiedContract(true);
+      setTimeout(() => setCopiedContract(false), 2000);
+    } catch (err) {
+      setCopiedContract(true);
+      setTimeout(() => setCopiedContract(false), 2000);
+    }
+  };
 
   const copyReferralLink = async () => {
     try {
@@ -140,6 +183,37 @@ export default function DashboardPage() {
           <p className="text-xs text-slate-500">Income Details</p>
           <p className="text-lg font-bold text-blue-600">View →</p>
         </Link>
+      </div>
+
+      {/* Protocol Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white border border-slate-200 rounded-xl p-4">
+          <p className="text-xs text-slate-500">OSLO Reserve</p>
+          <p className="text-lg font-bold text-slate-900">{formatOSLO(osloReserve)}</p>
+          <p className="text-[10px] text-slate-400 mt-1">Tokens in DEX contract</p>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-xl p-4">
+          <p className="text-xs text-slate-500">Total Burned</p>
+          <p className="text-lg font-bold text-red-600">{formatOSLO(totalBurned)}</p>
+          <p className="text-[10px] text-slate-400 mt-1">Permanently removed from supply</p>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-xl p-4">
+          <p className="text-xs text-slate-500">OSLO Token Contract</p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-sm font-mono text-slate-700 truncate">{shortenAddress(CONTRACTS.OSLO_TOKEN)}</p>
+            <button
+              onClick={copyContractAddress}
+              className={`px-2 py-1 rounded text-xs font-medium transition-colors flex-shrink-0 ${
+                copiedContract
+                  ? "bg-green-600 text-white"
+                  : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+              }`}
+            >
+              {copiedContract ? "Copied!" : "Copy"}
+            </button>
+          </div>
+          <p className="text-[10px] text-slate-400 mt-1">BEP-20 | BSC Mainnet</p>
+        </div>
       </div>
 
       {/* Personal Stake Card + How It Works */}
