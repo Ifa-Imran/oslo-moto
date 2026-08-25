@@ -2,32 +2,28 @@
 /**
  * Static file proxy for Next.js standalone mode.
  *
- * Why this exists:
- *   Next.js standalone server.js sometimes returns 404 for static files
- *   that physically exist on disk (CSS/JS chunks). This proxy intercepts
- *   /_next/static/* and public/* requests, serving them directly from
- *   the filesystem, and proxies everything else to the Next.js server
- *   running on an internal port.
+ * Serves /_next/static/* and public/* files directly from the filesystem,
+ * and proxies everything else to the Next.js server on port 3001.
  *
  * Usage:
  *   PORT=3000 HOSTNAME=0.0.0.0 node static-proxy.js
  *
- * The Next.js server.js is spawned as a child process on port 3001.
+ * The Next.js server.js must be started separately on port 3001:
+ *   PORT=3001 HOSTNAME=127.0.0.1 node server.js &
  */
 
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
-const { spawn } = require('child_process');
-const { parse } = require('url');
+var http = require('http');
+var fs = require('fs');
+var path = require('path');
+var url = require('url');
 
-const dir = __dirname;
-const currentPort = parseInt(process.env.PORT, 10) || 3000;
-const hostname = process.env.HOSTNAME || '0.0.0.0';
-const internalPort = 3001;
+var dir = __dirname;
+var currentPort = parseInt(process.env.PORT, 10) || 3000;
+var hostname = process.env.HOSTNAME || '0.0.0.0';
+var targetPort = 3001;
 
 // --- MIME type map ---
-const mimeTypes = {
+var mimeTypes = {
   '.css': 'text/css; charset=UTF-8',
   '.js': 'application/javascript; charset=UTF-8',
   '.mjs': 'application/javascript; charset=UTF-8',
@@ -55,7 +51,7 @@ const mimeTypes = {
 
 // --- Serve a file from the filesystem with proper headers ---
 function serveFile(filePath, req, res) {
-  fs.stat(filePath, (err, stats) => {
+  fs.stat(filePath, function (err, stats) {
     if (err || !stats.isFile()) {
       res.statusCode = 404;
       res.setHeader('Content-Type', 'text/plain');
@@ -63,20 +59,20 @@ function serveFile(filePath, req, res) {
       return;
     }
 
-    const ext = path.extname(filePath);
-    const contentType = mimeTypes[ext] || 'application/octet-stream';
+    var ext = path.extname(filePath);
+    var contentType = mimeTypes[ext] || 'application/octet-stream';
 
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     res.setHeader('Accept-Ranges', 'bytes');
 
     // Range request support
-    const range = req.headers.range;
+    var range = req.headers.range;
     if (range) {
-      const match = /bytes=(\d+)-(\d*)/.exec(range);
+      var match = /bytes=(\d+)-(\d*)/.exec(range);
       if (match) {
-        const start = parseInt(match[1], 10);
-        const end = match[2] ? parseInt(match[2], 10) : stats.size - 1;
+        var start = parseInt(match[1], 10);
+        var end = match[2] ? parseInt(match[2], 10) : stats.size - 1;
         if (start <= end && end < stats.size) {
           res.statusCode = 206;
           res.setHeader('Content-Range', 'bytes ' + start + '-' + end + '/' + stats.size);
@@ -96,7 +92,7 @@ function serveFile(filePath, req, res) {
 function proxyToNext(req, res) {
   var proxyReq = http.request({
     hostname: '127.0.0.1',
-    port: internalPort,
+    port: targetPort,
     path: req.url,
     method: req.method,
     headers: req.headers,
@@ -105,7 +101,7 @@ function proxyToNext(req, res) {
     proxyRes.pipe(res, { end: true });
   });
 
-  proxyReq.on('error', function (err) {
+  proxyReq.on('error', function () {
     if (!res.headersSent) {
       res.statusCode = 502;
       res.setHeader('Content-Type', 'text/plain');
@@ -113,7 +109,6 @@ function proxyToNext(req, res) {
     }
   });
 
-  // If the client disconnects, destroy the upstream request
   res.on('close', function () {
     proxyReq.destroy();
   });
@@ -123,12 +118,10 @@ function proxyToNext(req, res) {
 
 // --- Main proxy HTTP server ---
 var proxy = http.createServer(function (req, res) {
-  var parsedUrl = parse(req.url, true);
+  var parsedUrl = url.parse(req.url, true);
   var pathname = parsedUrl.pathname || '/';
 
   // 1. Serve /_next/static/* directly from .next/static/*
-  //    URL:  /_next/static/chunks/abc.css
-  //    FS:   .next/static/chunks/abc.css
   if (pathname.indexOf('/_next/static/') === 0) {
     var rel = '.next/' + pathname.slice('/_next/'.length);
     var filePath = path.resolve(dir, rel);
@@ -149,13 +142,13 @@ var proxy = http.createServer(function (req, res) {
     var pubPath = path.resolve(dir, 'public', '.' + pathname);
 
     // Path traversal guard
-    if (pubPath.indexOf(path.resolve(dir, 'public')) !== 0) {
+    var pubDir = path.resolve(dir, 'public');
+    if (pubPath.indexOf(pubDir) !== 0) {
       res.statusCode = 403;
       res.end('Forbidden');
       return;
     }
 
-    // Check synchronously (fast path for small public files)
     try {
       var st = fs.statSync(pubPath);
       if (st.isFile()) {
@@ -167,36 +160,20 @@ var proxy = http.createServer(function (req, res) {
     }
   }
 
-  // 3. Everything else -> Next.js
+  // 3. Everything else -> Next.js on port 3001
   proxyToNext(req, res);
 });
 
-// --- Spawn Next.js standalone server.js on internal port 3001 ---
-var child = spawn('node', ['server.js'], {
-  cwd: dir,
-  env: Object.assign({}, process.env, {
-    PORT: String(internalPort),
-    HOSTNAME: '127.0.0.1',
-  }),
-  stdio: ['inherit', 'inherit', 'inherit'],
-});
-
-child.on('exit', function (code, signal) {
-  console.error('[static-proxy] Next.js child exited code=' + code + ' signal=' + signal);
-  process.exit(code || 1);
-});
-
-// --- Start the proxy server on the external port ---
+// --- Start the proxy server ---
 proxy.listen(currentPort, hostname, function () {
-  console.log('[static-proxy] Proxy listening on ' + hostname + ':' + currentPort);
-  console.log('[static-proxy] Next.js child on 127.0.0.1:' + internalPort);
+  console.log('[static-proxy] Listening on ' + hostname + ':' + currentPort);
+  console.log('[static-proxy] Proxying to 127.0.0.1:' + targetPort);
 });
 
 // --- Graceful shutdown ---
 function shutdown(sig) {
   console.log('[static-proxy] Received ' + sig + ', shutting down...');
   proxy.close();
-  child.kill(sig);
   setTimeout(function () { process.exit(0); }, 2000);
 }
 process.on('SIGTERM', function () { shutdown('SIGTERM'); });
