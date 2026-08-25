@@ -19,15 +19,20 @@ else
   echo "[start] Already deployed, skipping extraction."
 fi
 
+# Create symlink _next -> .next (so nginx root + try_files works correctly)
+ln -sf /app/standalone/.next /app/standalone/_next
+
 # Copy nginx config
 cp /app/nginx.conf /etc/nginx/nginx.conf
 mkdir -p /run
 
-# Debug: verify CSS files exist
+# Debug: verify files exist
 echo "[start] Checking for CSS files..."
 ls -la /app/standalone/.next/static/chunks/*.css 2>/dev/null || echo "[start] WARNING: No CSS files found!"
-echo "[start] Checking for JS files..."
-ls /app/standalone/.next/static/chunks/*.js 2>/dev/null | head -5 || echo "[start] WARNING: No JS files found!"
+echo "[start] Checking symlink..."
+ls -la /app/standalone/_next 2>/dev/null
+echo "[start] Checking symlink CSS access..."
+ls -la /app/standalone/_next/static/chunks/*.css 2>/dev/null || echo "[start] WARNING: Symlink CSS access failed!"
 
 # Start Next.js standalone server on port 3001 (internal, background)
 # PORT=3001 is set in Docker environment, so server.js reads it directly
