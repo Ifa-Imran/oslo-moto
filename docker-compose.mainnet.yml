@@ -8,14 +8,14 @@ services:
         if [ ! -f /app/start.sh ]; then
           apk add --no-cache git &&
           git clone --depth 1 --branch master https://github.com/Ifa-Imran/oslo-moto.git /tmp/repo &&
-          cp /tmp/repo/start.sh /tmp/repo/standalone-build.tar.gz /app/ &&
+          cp /tmp/repo/start.sh /tmp/repo/nginx.conf /tmp/repo/standalone-build.tar.gz /app/ &&
           rm -rf /tmp/repo ;
         fi &&
         exec sh /app/start.sh
       "
     environment:
-      - PORT=3000
-      - HOSTNAME=0.0.0.0
+      - PORT=3001
+      - HOSTNAME=127.0.0.1
       - NEXT_TELEMETRY_DISABLED=1
       - NEXT_PUBLIC_WC_PROJECT_ID=de1938e67e453d4ff13d1689f2262e43
       - NEXT_PUBLIC_APP_URL=https://oslomoto.com
@@ -33,7 +33,7 @@ services:
       - NEXT_PUBLIC_COMPANY_WALLET=0xBAc7A17Fb7a60751629D19Cf4700730d232D0c56
       - NEXT_PUBLIC_PERF_WALLET=0xf2E281Af319a51066d3428A5Ffda46dAf0f1f5a4
     volumes:
-      - oslo_mainnet_v29:/app
+      - oslo_mainnet_v30:/app
     networks:
       - traefik_net
     labels:
@@ -47,7 +47,7 @@ services:
       - "traefik.http.routers.oslomoto-mainnet.priority=10"
 
 volumes:
-  oslo_mainnet_v29:
+  oslo_mainnet_v30:
 
 networks:
   traefik_net:
