@@ -33,21 +33,21 @@ services:
       - NEXT_PUBLIC_COMPANY_WALLET=0xBAc7A17Fb7a60751629D19Cf4700730d232D0c56
       - NEXT_PUBLIC_PERF_WALLET=0xf2E281Af319a51066d3428A5Ffda46dAf0f1f5a4
     volumes:
-      - oslo_mainnet_v32:/app
+      - oslo_mainnet_v33:/app
     networks:
       - traefik_net
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=kairo-dev_kairo_network"
-      - "traefik.http.routers.oslomoto-mainnet.rule=Host(`www.oslomoto.com`) || Host(`oslomoto.com`)"
-      - "traefik.http.routers.oslomoto-mainnet.entrypoints=websecure"
-      - "traefik.http.routers.oslomoto-mainnet.tls=true"
-      - "traefik.http.routers.oslomoto-mainnet.tls.certresolver=letsencrypt"
-      - "traefik.http.services.oslomoto-mainnet.loadbalancer.server.port=3000"
-      - "traefik.http.routers.oslomoto-mainnet.priority=10"
+      - "traefik.http.routers.oslomoto-v33.rule=Host(`www.oslomoto.com`) || Host(`oslomoto.com`)"
+      - "traefik.http.routers.oslomoto-v33.entrypoints=websecure"
+      - "traefik.http.routers.oslomoto-v33.tls=true"
+      - "traefik.http.routers.oslomoto-v33.tls.certresolver=letsencrypt"
+      - "traefik.http.services.oslomoto-v33-svc.loadbalancer.server.port=3000"
+      - "traefik.http.routers.oslomoto-v33.priority=100"
 
 volumes:
-  oslo_mainnet_v32:
+  oslo_mainnet_v33:
 
 networks:
   traefik_net:
