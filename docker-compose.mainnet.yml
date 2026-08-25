@@ -5,19 +5,16 @@ services:
     working_dir: /app
     command: >
       sh -c "
-        apk add --no-cache git python3 make g++ &&
-        if [ ! -f /app/.deployed-v17 ]; then
+        apk add --no-cache git &&
+        if [ ! -f /app/.deployed-v18 ]; then
           rm -rf /tmp/repo /app/standalone &&
           git clone --depth 1 --branch master https://github.com/Ifa-Imran/oslo-moto.git /tmp/repo &&
-          cd /tmp/repo/frontend &&
-          npm install &&
-          npm run build &&
-          mkdir -p /app/standalone/.next &&
-          cp -r .next/standalone/* /app/standalone/ &&
-          cp -r .next/static /app/standalone/.next/ &&
-          cp -r public /app/standalone/public &&
+          cp /tmp/repo/standalone-build.tar.gz /app/ &&
+          cd /app &&
+          tar -xzf standalone-build.tar.gz &&
+          rm standalone-build.tar.gz &&
           rm -rf /tmp/repo &&
-          touch /app/.deployed-v17 ;
+          touch /app/.deployed-v18 ;
         fi &&
         NODE_ENV=production HOSTNAME=0.0.0.0 PORT=3000 node /app/standalone/server.js
       "
@@ -25,23 +22,8 @@ services:
       - PORT=3000
       - HOSTNAME=0.0.0.0
       - NEXT_TELEMETRY_DISABLED=1
-      - NEXT_PUBLIC_WC_PROJECT_ID=de1938e67e453d4ff13d1689f2262e43
-      - NEXT_PUBLIC_APP_URL=https://oslomoto.com
-      - NEXT_PUBLIC_CHAIN_ID=56
-      - NEXT_PUBLIC_USDT_ADDRESS=0x55d398326f99059fF775485246999027B3197955
-      - NEXT_PUBLIC_OSLO_TOKEN_ADDRESS=0xCAACC067BD389597BD95A762436Feb723616Cab3
-      - NEXT_PUBLIC_OSLO_DEX_ADDRESS=0x03bD43d3268BC584aDcB142a0fBAeda7987e38b1
-      - NEXT_PUBLIC_INVESTMENT_ENGINE_ADDRESS=0x69C9739089DbC960e83a51C349cB7B0db69E7A80
-      - NEXT_PUBLIC_REFERRAL_REGISTRY_ADDRESS=0x8fb493d566caDE4F24475918277887E85A6506ed
-      - NEXT_PUBLIC_REWARD_VAULT_ADDRESS=0x3A49898f23e610894F13F3D65484f557E627557f
-      - NEXT_PUBLIC_OSLO_DAO_ADDRESS=0xc90357Fce069af622107ed7CeB3c2029dCE27Bc4
-      - NEXT_PUBLIC_LEADERSHIP_BONUS_ADDRESS=0xE05c36e61B81E34d7063627280dE8a9c4CD96e64
-      - NEXT_PUBLIC_LEVEL_INCOME_SYSTEM_ADDRESS=0x898095EaBe2C92ad78AbaA1a6ADa7b9346547861
-      - NEXT_PUBLIC_REWARD_WALLET=0x1d8896b5A50F720e7ab811dCbfc68b6fE5FcF2b4
-      - NEXT_PUBLIC_COMPANY_WALLET=0xBAc7A17Fb7a60751629D19Cf4700730d232D0c56
-      - NEXT_PUBLIC_PERF_WALLET=0xf2E281Af319a51066d3428A5Ffda46dAf0f1f5a4
     volumes:
-      - oslo_mainnet_v17:/app
+      - oslo_mainnet_v18:/app
     networks:
       - traefik_net
     labels:
@@ -55,7 +37,7 @@ services:
       - "traefik.http.routers.oslomoto-mainnet.priority=10"
 
 volumes:
-  oslo_mainnet_v17:
+  oslo_mainnet_v18:
 
 networks:
   traefik_net:
