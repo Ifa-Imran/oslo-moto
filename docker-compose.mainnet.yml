@@ -33,7 +33,7 @@ services:
       - NEXT_PUBLIC_COMPANY_WALLET=0xBAc7A17Fb7a60751629D19Cf4700730d232D0c56
       - NEXT_PUBLIC_PERF_WALLET=0xf2E281Af319a51066d3428A5Ffda46dAf0f1f5a4
     volumes:
-      - oslo_mainnet_v31:/app
+      - oslo_mainnet_v32:/app
     networks:
       - traefik_net
     labels:
@@ -47,7 +47,7 @@ services:
       - "traefik.http.routers.oslomoto-mainnet.priority=10"
 
 volumes:
-  oslo_mainnet_v31:
+  oslo_mainnet_v32:
 
 networks:
   traefik_net:

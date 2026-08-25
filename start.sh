@@ -1,5 +1,5 @@
 #!/bin/sh
-# Oslo Moto - Container startup script v30
+# Oslo Moto - Container startup script v32
 # Uses nginx as reverse proxy for reliable static file serving.
 # nginx serves /_next/static/ from filesystem, proxies everything else to server.js on port 3001.
 
@@ -9,11 +9,11 @@ set -e
 apk add --no-cache tar nginx
 
 # Extract standalone build (only on first run)
-if [ ! -f /app/.deployed-v31 ]; then
+if [ ! -f /app/.deployed-v32 ]; then
   echo "[start] First-time setup: extracting build..."
   rm -rf /app/standalone /app/.deployed-*
   tar xzf /app/standalone-build.tar.gz -C /app
-  touch /app/.deployed-v31
+  touch /app/.deployed-v32
   echo "[start] Extraction complete."
 else
   echo "[start] Already deployed, skipping extraction."
