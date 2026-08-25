@@ -5,16 +5,14 @@ services:
     working_dir: /app
     command: >
       sh -c "
-        apk add --no-cache git &&
-        if [ ! -f /app/.deployed-v18 ]; then
+        apk add --no-cache git tar &&
+        if [ ! -f /app/.deployed-v19 ]; then
           rm -rf /tmp/repo /app/standalone &&
           git clone --depth 1 --branch master https://github.com/Ifa-Imran/oslo-moto.git /tmp/repo &&
-          cp /tmp/repo/standalone-build.tar.gz /app/ &&
           cd /app &&
-          tar -xzf standalone-build.tar.gz &&
-          rm standalone-build.tar.gz &&
+          tar -xzf /tmp/repo/standalone-build.tar.gz &&
           rm -rf /tmp/repo &&
-          touch /app/.deployed-v18 ;
+          touch /app/.deployed-v19 ;
         fi &&
         NODE_ENV=production HOSTNAME=0.0.0.0 PORT=3000 node /app/standalone/server.js
       "
@@ -23,7 +21,7 @@ services:
       - HOSTNAME=0.0.0.0
       - NEXT_TELEMETRY_DISABLED=1
     volumes:
-      - oslo_mainnet_v18:/app
+      - oslo_mainnet_v19:/app
     networks:
       - traefik_net
     labels:
@@ -37,7 +35,7 @@ services:
       - "traefik.http.routers.oslomoto-mainnet.priority=10"
 
 volumes:
-  oslo_mainnet_v18:
+  oslo_mainnet_v19:
 
 networks:
   traefik_net:
