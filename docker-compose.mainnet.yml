@@ -1,19 +1,19 @@
 services:
   app:
-    image: node:20-alpine
+    image: node:20-slim
     restart: unless-stopped
     working_dir: /app
     command: >
       sh -c "
-        apk add --no-cache git tar &&
-        if [ ! -f /app/.deployed-v21 ]; then
+        apt-get update && apt-get install -y git &&
+        if [ ! -f /app/.deployed-v22 ]; then
           rm -rf /tmp/repo /app/standalone /app/.deployed-* &&
           git clone --depth 1 --branch master https://github.com/Ifa-Imran/oslo-moto.git /tmp/repo &&
           cd /app &&
           tar -xzf /tmp/repo/standalone-build.tar.gz &&
           ls -la /app/standalone/.next/static/chunks/*.css &&
           rm -rf /tmp/repo &&
-          touch /app/.deployed-v21 ;
+          touch /app/.deployed-v22 ;
         fi &&
         NODE_ENV=production HOSTNAME=0.0.0.0 PORT=3000 node --max-old-space-size=256 /app/standalone/server.js
       "
@@ -22,7 +22,7 @@ services:
       - HOSTNAME=0.0.0.0
       - NEXT_TELEMETRY_DISABLED=1
     volumes:
-      - oslo_mainnet_v21:/app
+      - oslo_mainnet_v22:/app
     networks:
       - traefik_net
     labels:
@@ -36,7 +36,7 @@ services:
       - "traefik.http.routers.oslomoto-mainnet.priority=10"
 
 volumes:
-  oslo_mainnet_v21:
+  oslo_mainnet_v22:
 
 networks:
   traefik_net:
